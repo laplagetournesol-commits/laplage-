@@ -19,6 +19,7 @@ import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { AnimatedEntry, AnimatedScale } from '@/shared/ui/AnimatedEntry';
+import { i18n } from '@/shared/i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -50,12 +51,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const greeting = () => {
-    switch (period) {
-      case 'morning': return 'Buenos días';
-      case 'day': return 'Bonjour';
-      case 'sunset': return 'Bonsoir';
-      case 'night': return 'Bonne soirée';
-    }
+    const greetings = i18n.t('greeting', { returnObjects: true }) as any;
+    return greetings?.[period] ?? i18n.t(`greeting.${period}`);
   };
 
   return (
@@ -86,7 +83,7 @@ export default function HomeScreen() {
                 {greeting()} ☀️
               </Text>
               <Text style={[styles.heroTitle, { color: theme.text }]}>
-                {profile?.full_name?.split(' ')[0] ?? 'Bienvenue'}
+                {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
               </Text>
             </View>
             <TouchableOpacity
@@ -113,7 +110,7 @@ export default function HomeScreen() {
             <Text style={[styles.locationText, { color: theme.textSecondary }]}>
               Marbella, Costa del Sol
             </Text>
-            <Badge label="Ouvert" variant="success" size="sm" />
+            <Badge label={i18n.t('open')} variant="success" size="sm" />
           </View>
 
           </AnimatedEntry>
@@ -127,10 +124,10 @@ export default function HomeScreen() {
               color={theme.accent}
             />
             <Text style={[styles.sunText, { color: theme.textSecondary }]}>
-              {period === 'morning' && 'Mode Matin — Lumière dorée'}
-              {period === 'day' && 'Mode Jour — Plein soleil'}
-              {period === 'sunset' && 'Mode Sunset — Golden hour'}
-              {period === 'night' && 'Mode Nuit — Ambiance lounge'}
+              {period === 'morning' && i18n.t('sunMorning')}
+              {period === 'day' && i18n.t('sunDay')}
+              {period === 'sunset' && i18n.t('sunSunset')}
+              {period === 'night' && i18n.t('sunNight')}
             </Text>
           </View>
           </AnimatedEntry>
@@ -140,29 +137,29 @@ export default function HomeScreen() {
       {/* Quick Actions */}
       <AnimatedEntry delay={500} direction="up">
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Réserver</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('reserve')}</Text>
         <View style={styles.quickActions}>
           <QuickAction
             icon="umbrella"
-            label="Transat"
+            label={i18n.t('sunbed')}
             onPress={() => router.push('/(tabs)/beach')}
             color={colors.terracotta}
           />
           <QuickAction
             icon="restaurant"
-            label="Restaurant"
+            label={i18n.t('tabRestaurant')}
             onPress={() => router.push('/(tabs)/restaurant')}
             color={colors.deepSea}
           />
           <QuickAction
             icon="calendar"
-            label="Événement"
+            label={i18n.t('event')}
             onPress={() => router.push('/(tabs)/events')}
             color={colors.accentRed}
           />
           <QuickAction
             icon="sparkles"
-            label="Mood AI"
+            label={i18n.t('moodAI')}
             onPress={() => router.push('/mood')}
             color={colors.sage}
           />
@@ -172,26 +169,26 @@ export default function HomeScreen() {
 
       {/* Today's vibe */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Aujourd'hui</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('today')}</Text>
         <Card style={styles.vibeCard}>
           <View style={styles.vibeRow}>
             <View style={styles.vibeInfo}>
               <Text style={[styles.vibeTemp, { color: theme.text }]}>28°C</Text>
               <Text style={[styles.vibeLabel, { color: theme.textSecondary }]}>
-                Ensoleillé • Vent léger
+                {i18n.t('weather')} • {i18n.t('windLight')}
               </Text>
             </View>
             <View style={styles.vibeStats}>
               <View style={styles.vibeStat}>
                 <Ionicons name="people" size={16} color={theme.accent} />
                 <Text style={[styles.vibeStatText, { color: theme.textSecondary }]}>
-                  Affluence modérée
+                  {i18n.t('crowdModerate')}
                 </Text>
               </View>
               <View style={styles.vibeStat}>
                 <Ionicons name="water" size={16} color={colors.deepSea} />
                 <Text style={[styles.vibeStatText, { color: theme.textSecondary }]}>
-                  Mer calme • 22°C
+                  {i18n.t('seaCalm')} • 22°C
                 </Text>
               </View>
             </View>
@@ -202,9 +199,9 @@ export default function HomeScreen() {
       {/* Featured Event */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Prochain événement</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('nextEvent')}</Text>
           <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
-            <Text style={[styles.seeAll, { color: theme.accent }]}>Voir tout</Text>
+            <Text style={[styles.seeAll, { color: theme.accent }]}>{i18n.t('seeAll')}</Text>
           </TouchableOpacity>
         </View>
         <Card padded={false} style={styles.eventCard}>
@@ -223,11 +220,11 @@ export default function HomeScreen() {
               <Text style={styles.eventDate}>Samedi 8 Mars • 16h - 23h</Text>
               <View style={styles.eventFooter}>
                 <View style={styles.eventPrice}>
-                  <Text style={styles.eventPriceLabel}>À partir de</Text>
+                  <Text style={styles.eventPriceLabel}>{i18n.t('from')}</Text>
                   <Text style={styles.eventPriceValue}>45€</Text>
                 </View>
                 <Button
-                  title="Réserver"
+                  title={i18n.t('reserve')}
                   onPress={() => {}}
                   size="sm"
                   variant="primary"
@@ -242,9 +239,9 @@ export default function HomeScreen() {
       {/* Live Beach View */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Beach View</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('beachViewLive')}</Text>
           <TouchableOpacity onPress={() => router.push('/live')}>
-            <Text style={[styles.seeAll, { color: theme.accent }]}>Voir en live</Text>
+            <Text style={[styles.seeAll, { color: theme.accent }]}>{i18n.t('viewLive')}</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={() => router.push('/live')} activeOpacity={0.8}>
@@ -255,9 +252,9 @@ export default function HomeScreen() {
                 <Text style={styles.liveLabel}>LIVE</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.liveTitle, { color: theme.text }]}>Plage en direct</Text>
+                <Text style={[styles.liveTitle, { color: theme.text }]}>{i18n.t('liveBeach')}</Text>
                 <Text style={[styles.liveSubtext, { color: theme.textSecondary }]}>
-                  Affluence modérée — Idéal pour venir maintenant
+                  {i18n.t('crowdModerate')} — {i18n.t('idealNow')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
@@ -269,7 +266,7 @@ export default function HomeScreen() {
       {/* Loyalty tokens preview */}
       {user && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Beach Tokens</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('beachTokens')}</Text>
           <Card>
             <View style={styles.tokensRow}>
               <View style={styles.tokensInfo}>
@@ -277,7 +274,7 @@ export default function HomeScreen() {
                   {profile?.beach_tokens ?? 0}
                 </Text>
                 <Text style={[styles.tokensLabel, { color: theme.textSecondary }]}>
-                  tokens disponibles
+                  {i18n.t('tokensAvailable')}
                 </Text>
               </View>
               <TouchableOpacity
@@ -285,7 +282,7 @@ export default function HomeScreen() {
                 onPress={() => router.push('/(tabs)/tokens')}
               >
                 <Text style={[styles.tokensButtonText, { color: colors.warmWood }]}>
-                  Récompenses →
+                  {i18n.t('rewards')} →
                 </Text>
               </TouchableOpacity>
             </View>
@@ -300,13 +297,13 @@ export default function HomeScreen() {
             <View style={styles.ctaContent}>
               <Ionicons name="sunny" size={32} color={colors.brand} />
               <Text style={[styles.ctaTitle, { color: theme.text }]}>
-                Rejoignez Les Tournesols
+                {i18n.t('joinUs')}
               </Text>
               <Text style={[styles.ctaText, { color: theme.textSecondary }]}>
-                Accédez aux réservations, événements exclusifs et au programme de fidélité.
+                {i18n.t('joinUsDesc')}
               </Text>
               <Button
-                title="Créer un compte"
+                title={i18n.t('signup')}
                 onPress={() => router.push('/(auth)/signup')}
                 size="lg"
                 style={{ width: '100%', marginTop: 8 }}

@@ -9,6 +9,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -97,16 +98,21 @@ export default function OnboardingScreen() {
   const scrollX = useSharedValue(0);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const finishOnboarding = async () => {
+    await AsyncStorage.setItem('tournesol_onboarding_done', '1');
+    router.replace('/(auth)/login');
+  };
+
   const handleNext = () => {
     if (currentIndex < SLIDES.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
     } else {
-      router.replace('/(auth)/login');
+      finishOnboarding();
     }
   };
 
   const handleSkip = () => {
-    router.replace('/(auth)/login');
+    finishOnboarding();
   };
 
   const onScroll = (event: any) => {

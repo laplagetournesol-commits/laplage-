@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSunMode } from '@/shared/theme';
+import { i18n } from '@/shared/i18n';
 
 export default function TabsLayout() {
   const { theme } = useSunMode();
@@ -30,7 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
+          title: i18n.t('tabHome'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="sunny" size={size} color={color} />
           ),
@@ -39,7 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="beach"
         options={{
-          title: 'Plage',
+          title: i18n.t('tabBeach'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="umbrella" size={size} color={color} />
           ),
@@ -48,7 +49,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="restaurant"
         options={{
-          title: 'Restaurant',
+          title: i18n.t('tabRestaurant'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="restaurant" size={size} color={color} />
           ),
@@ -57,7 +58,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="events"
         options={{
-          title: 'Events',
+          title: i18n.t('tabEvents'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
           ),
@@ -72,7 +73,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
+          title: i18n.t('tabProfile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),

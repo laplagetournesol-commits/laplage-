@@ -1,13 +1,26 @@
-import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SunModeProvider, useSunMode } from '@/shared/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 
+const ONBOARDING_KEY = 'tournesol_onboarding_done';
+
 function RootLayoutContent() {
   const { theme } = useSunMode();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
+      if (!value) {
+        router.replace('/onboarding');
+      }
+      setReady(true);
+    });
+  }, []);
 
   return (
     <>
