@@ -5,8 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,80 +17,8 @@ import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
-import type { EventCategory } from '@/shared/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Données mock des événements
-const MOCK_EVENTS: {
-  id: string;
-  title: string;
-  category: EventCategory;
-  date: string;
-  dayLabel: string;
-  time: string;
-  price: number;
-  vipPrice: number | null;
-  ticketsSold: number;
-  capacity: number;
-  isSecret: boolean;
-  lineup?: string[];
-}[] = [
-  {
-    id: '1',
-    title: 'Sunset Beats',
-    category: 'pool_party',
-    date: '2026-03-08',
-    dayLabel: 'Sam. 8 Mars',
-    time: '16h - 23h',
-    price: 45,
-    vipPrice: 120,
-    ticketsSold: 180,
-    capacity: 300,
-    isSecret: false,
-    lineup: ['DJ Marco', 'Lisa Ray'],
-  },
-  {
-    id: '2',
-    title: 'Brunch Méditerranéen',
-    category: 'brunch',
-    date: '2026-03-09',
-    dayLabel: 'Dim. 9 Mars',
-    time: '11h - 15h',
-    price: 65,
-    vipPrice: null,
-    ticketsSold: 40,
-    capacity: 80,
-    isSecret: false,
-  },
-  {
-    id: '3',
-    title: 'Noche Flamenca',
-    category: 'dinner_show',
-    date: '2026-03-14',
-    dayLabel: 'Ven. 14 Mars',
-    time: '20h - 01h',
-    price: 85,
-    vipPrice: 200,
-    ticketsSold: 60,
-    capacity: 120,
-    isSecret: false,
-    lineup: ['Paco de Lucía Jr', 'María Terremoto'],
-  },
-  {
-    id: '4',
-    title: 'Full Moon Secret Party',
-    category: 'special',
-    date: '2026-03-15',
-    dayLabel: 'Sam. 15 Mars',
-    time: '22h - 04h',
-    price: 0,
-    vipPrice: null,
-    ticketsSold: 45,
-    capacity: 50,
-    isSecret: true,
-  },
-];
+import { useEvents } from '@/features/events/hooks/useEvents';
+import type { Event, EventCategory } from '@/shared/types';
 
 const CATEGORY_CONFIG: Record<EventCategory, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   pool_party: { label: 'Pool Party', icon: 'water', color: '#7EC8E3' },
@@ -101,14 +31,27 @@ const CATEGORY_CONFIG: Record<EventCategory, { label: string; icon: keyof typeof
 
 type Filter = 'all' | EventCategory;
 
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+  const num = d.getDate();
+  const month = d.toLocaleDateString('fr-FR', { month: 'short' });
+  return `${day.charAt(0).toUpperCase() + day.slice(1)} ${num} ${month}`;
+}
+
+function formatTimeRange(start: string, end: string | null): string {
+  const s = start?.slice(0, 5).replace(':', 'h');
+  if (!end) return s;
+  const e = end.slice(0, 5).replace(':', 'h');
+  return `${s} - ${e}`;
+}
+
 export default function EventsScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>('all');
-
-  const filteredEvents = filter === 'all'
-    ? MOCK_EVENTS
-    : MOCK_EVENTS.filter((e) => e.category === filter);
+  const { events, loading, refresh } = useEvents(filter);
+  const [refreshing, setRefreshing] = useState(false);
 
   const filters: { key: Filter; label: string }[] = [
     { key: 'all', label: 'Tous' },
@@ -116,7 +59,23 @@ export default function EventsScreen() {
     { key: 'dinner_show', label: 'Dîner' },
     { key: 'brunch', label: 'Brunch' },
     { key: 'special', label: 'Spécial' },
+    { key: 'private', label: 'Privé' },
   ];
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
+
+  const handleOpenEvent = (event: Event) => {
+    router.push(`/event/${event.id}`);
+  };
+
+  // Get current month/year label
+  const monthLabel = events.length > 0
+    ? new Date(events[0].date + 'T00:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -124,7 +83,7 @@ export default function EventsScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={[styles.title, { color: theme.text }]}>Événements</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          Mars 2026
+          {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
         </Text>
       </View>
 
@@ -163,111 +122,136 @@ export default function EventsScreen() {
       </ScrollView>
 
       {/* Liste des événements */}
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {filteredEvents.map((event) => {
-          const cat = CATEGORY_CONFIG[event.category];
-          const fillRate = event.ticketsSold / event.capacity;
+      {loading && events.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.accent} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Chargement des événements...
+          </Text>
+        </View>
+      ) : events.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="calendar-outline" size={48} color={theme.cardBorder} />
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            Aucun événement à venir dans cette catégorie
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />
+          }
+        >
+          {events.map((event) => {
+            const cat = CATEGORY_CONFIG[event.category] ?? CATEGORY_CONFIG.special;
+            const fillRate = event.tickets_sold / event.capacity;
+            const isFree = event.standard_price === 0;
 
-          return (
-            <TouchableOpacity key={event.id} activeOpacity={0.8}>
-              <Card padded={false} style={styles.eventCard}>
-                {/* Header coloré */}
-                <LinearGradient
-                  colors={[cat.color, cat.color + '88']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.eventHeader}
-                >
-                  <View style={styles.eventHeaderContent}>
-                    <View style={styles.eventCategoryRow}>
-                      <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
-                      <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
+            return (
+              <TouchableOpacity
+                key={event.id}
+                activeOpacity={0.8}
+                onPress={() => handleOpenEvent(event)}
+              >
+                <Card padded={false} style={styles.eventCard}>
+                  {/* Header coloré */}
+                  <LinearGradient
+                    colors={[cat.color, cat.color + '88']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.eventHeader}
+                  >
+                    <View style={styles.eventHeaderContent}>
+                      <View style={styles.eventCategoryRow}>
+                        <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
+                        <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
+                        {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+                      </View>
                     </View>
-                    {event.isSecret && (
-                      <Badge label="Secret" variant="vip" size="sm" />
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                  </LinearGradient>
+
+                  {/* Body */}
+                  <View style={styles.eventBody}>
+                    <View style={styles.eventInfoRow}>
+                      <View style={styles.eventInfoItem}>
+                        <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
+                        <Text style={[styles.eventInfoText, { color: theme.text }]}>
+                          {formatDayLabel(event.date)}
+                        </Text>
+                      </View>
+                      <View style={styles.eventInfoItem}>
+                        <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
+                        <Text style={[styles.eventInfoText, { color: theme.text }]}>
+                          {formatTimeRange(event.start_time, event.end_time)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {event.lineup && event.lineup.length > 0 && (
+                      <View style={styles.lineupRow}>
+                        <Ionicons name="musical-notes" size={12} color={theme.textSecondary} />
+                        <Text style={[styles.lineupText, { color: theme.textSecondary }]}>
+                          {event.lineup.join(' • ')}
+                        </Text>
+                      </View>
                     )}
-                  </View>
-                  <Text style={styles.eventTitle}>{event.title}</Text>
-                </LinearGradient>
 
-                {/* Body */}
-                <View style={styles.eventBody}>
-                  <View style={styles.eventInfoRow}>
-                    <View style={styles.eventInfoItem}>
-                      <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
-                      <Text style={[styles.eventInfoText, { color: theme.text }]}>
-                        {event.dayLabel}
+                    {/* Jauge de remplissage */}
+                    <View style={styles.fillRow}>
+                      <View style={[styles.fillBar, { backgroundColor: theme.cardBorder }]}>
+                        <View
+                          style={[
+                            styles.fillProgress,
+                            {
+                              width: `${Math.min(fillRate * 100, 100)}%`,
+                              backgroundColor: fillRate > 0.8 ? colors.accentRed : cat.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.fillText, { color: theme.textSecondary }]}>
+                        {event.tickets_sold}/{event.capacity}
                       </Text>
                     </View>
-                    <View style={styles.eventInfoItem}>
-                      <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
-                      <Text style={[styles.eventInfoText, { color: theme.text }]}>
-                        {event.time}
-                      </Text>
-                    </View>
-                  </View>
 
-                  {event.lineup && (
-                    <View style={styles.lineupRow}>
-                      <Ionicons name="musical-notes" size={12} color={theme.textSecondary} />
-                      <Text style={[styles.lineupText, { color: theme.textSecondary }]}>
-                        {event.lineup.join(' • ')}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Jauge de remplissage */}
-                  <View style={styles.fillRow}>
-                    <View style={[styles.fillBar, { backgroundColor: theme.cardBorder }]}>
-                      <View
-                        style={[
-                          styles.fillProgress,
-                          {
-                            width: `${Math.min(fillRate * 100, 100)}%`,
-                            backgroundColor: fillRate > 0.8 ? colors.accentRed : cat.color,
-                          },
-                        ]}
+                    {/* Footer */}
+                    <View style={styles.eventFooter}>
+                      <View>
+                        {!isFree ? (
+                          <>
+                            <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
+                              À partir de
+                            </Text>
+                            <Text style={[styles.priceValue, { color: theme.text }]}>
+                              {event.standard_price}€
+                            </Text>
+                          </>
+                        ) : (
+                          <Text style={[styles.priceValue, { color: colors.sage }]}>
+                            {event.is_secret ? 'Sur invitation' : 'Gratuit'}
+                          </Text>
+                        )}
+                      </View>
+                      <Button
+                        title={event.is_secret ? 'Code requis' : 'Réserver'}
+                        onPress={() => handleOpenEvent(event)}
+                        size="sm"
+                        variant={event.is_secret ? 'outline' : 'primary'}
                       />
                     </View>
-                    <Text style={[styles.fillText, { color: theme.textSecondary }]}>
-                      {event.ticketsSold}/{event.capacity}
-                    </Text>
                   </View>
-
-                  {/* Footer */}
-                  <View style={styles.eventFooter}>
-                    <View>
-                      {event.price > 0 ? (
-                        <>
-                          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
-                            À partir de
-                          </Text>
-                          <Text style={[styles.priceValue, { color: theme.text }]}>
-                            {event.price}€
-                          </Text>
-                        </>
-                      ) : (
-                        <Text style={[styles.priceValue, { color: colors.sage }]}>
-                          Sur invitation
-                        </Text>
-                      )}
-                    </View>
-                    <Button
-                      title={event.isSecret ? 'Code requis' : 'Réserver'}
-                      onPress={() => {/* Phase 4 */}}
-                      size="sm"
-                      variant={event.isSecret ? 'outline' : 'primary'}
-                    />
-                  </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                </Card>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -285,6 +269,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterLabel: { fontSize: 13, fontWeight: '600' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { fontSize: 14 },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 40 },
+  emptyText: { fontSize: 14, textAlign: 'center' },
   eventCard: { marginBottom: 16 },
   eventHeader: { padding: 16, paddingBottom: 14 },
   eventHeaderContent: {
