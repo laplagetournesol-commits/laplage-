@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
+import { AnimatedEntry, AnimatedScale } from '@/shared/ui/AnimatedEntry';
 
 const { width } = Dimensions.get('window');
 
@@ -78,6 +79,7 @@ export default function HomeScreen() {
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.heroContent}>
+          <AnimatedEntry delay={100} direction="up">
           <View style={styles.heroTop}>
             <View>
               <Text style={[styles.greeting, { color: theme.textSecondary }]}>
@@ -102,7 +104,10 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
+          </AnimatedEntry>
+
           {/* Location badge */}
+          <AnimatedEntry delay={250} direction="up">
           <View style={styles.locationRow}>
             <Ionicons name="location" size={14} color={theme.accentSecondary} />
             <Text style={[styles.locationText, { color: theme.textSecondary }]}>
@@ -111,7 +116,10 @@ export default function HomeScreen() {
             <Badge label="Ouvert" variant="success" size="sm" />
           </View>
 
+          </AnimatedEntry>
+
           {/* Sun Mode indicator */}
+          <AnimatedEntry delay={400} direction="up">
           <View style={[styles.sunIndicator, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
             <Ionicons
               name={period === 'night' ? 'moon' : period === 'sunset' ? 'partly-sunny' : 'sunny'}
@@ -125,10 +133,12 @@ export default function HomeScreen() {
               {period === 'night' && 'Mode Nuit — Ambiance lounge'}
             </Text>
           </View>
+          </AnimatedEntry>
         </View>
       </ImageBackground>
 
       {/* Quick Actions */}
+      <AnimatedEntry delay={500} direction="up">
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Réserver</Text>
         <View style={styles.quickActions}>
@@ -158,6 +168,7 @@ export default function HomeScreen() {
           />
         </View>
       </View>
+      </AnimatedEntry>
 
       {/* Today's vibe */}
       <View style={styles.section}>

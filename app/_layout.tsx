@@ -48,6 +48,10 @@ function RootLayoutContent() {
           name="(admin)"
           options={{ animation: 'slide_from_right' }}
         />
+        <Stack.Screen
+          name="onboarding"
+          options={{ animation: 'fade' }}
+        />
       </Stack>
     </>
   );
