@@ -192,3 +192,35 @@ export interface SeasonalPricing {
   multiplier: number;
   label: string | null;
 }
+
+export interface LiveCamera {
+  id: string;
+  name: string;
+  location: string;
+  stream_url: string | null;
+  thumbnail_url: string | null;
+  is_active: boolean;
+  crowd_level: 'low' | 'medium' | 'high' | null;
+  created_at: string;
+}
+
+export type PreOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+
+export interface PreOrder {
+  id: string;
+  user_id: string;
+  reservation_type: 'beach' | 'restaurant';
+  reservation_id: string;
+  items: PreOrderItem[];
+  special_requests: string | null;
+  estimated_arrival: string | null;
+  status: PreOrderStatus;
+  total_price: number;
+  created_at: string;
+}
+
+export interface PreOrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}

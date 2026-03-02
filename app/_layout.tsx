@@ -32,6 +32,22 @@ function RootLayoutContent() {
           name="event/[id]"
           options={{ animation: 'slide_from_right' }}
         />
+        <Stack.Screen
+          name="mood"
+          options={{ animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="live"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="arrival"
+          options={{ animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="(admin)"
+          options={{ animation: 'slide_from_right' }}
+        />
       </Stack>
     </>
   );

@@ -153,7 +153,7 @@ export default function HomeScreen() {
           <QuickAction
             icon="sparkles"
             label="Mood AI"
-            onPress={() => {/* Phase 6 */}}
+            onPress={() => router.push('/mood')}
             color={colors.sage}
           />
         </View>
@@ -228,6 +228,33 @@ export default function HomeScreen() {
         </Card>
       </View>
 
+      {/* Live Beach View */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Beach View</Text>
+          <TouchableOpacity onPress={() => router.push('/live')}>
+            <Text style={[styles.seeAll, { color: theme.accent }]}>Voir en live</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={() => router.push('/live')} activeOpacity={0.8}>
+          <Card>
+            <View style={styles.liveRow}>
+              <View style={styles.liveIndicator}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveLabel}>LIVE</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.liveTitle, { color: theme.text }]}>Plage en direct</Text>
+                <Text style={[styles.liveSubtext, { color: theme.textSecondary }]}>
+                  Affluence modérée — Idéal pour venir maintenant
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+            </View>
+          </Card>
+        </TouchableOpacity>
+      </View>
+
       {/* Loyalty tokens preview */}
       {user && (
         <View style={styles.section}>
@@ -244,6 +271,7 @@ export default function HomeScreen() {
               </View>
               <TouchableOpacity
                 style={[styles.tokensButton, { backgroundColor: colors.sunYellowLight }]}
+                onPress={() => router.push('/(tabs)/tokens')}
               >
                 <Text style={[styles.tokensButtonText, { color: colors.warmWood }]}>
                   Récompenses →
@@ -479,6 +507,40 @@ const styles = StyleSheet.create({
   tokensButtonText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  liveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(244,67,54,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F44336',
+  },
+  liveLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#F44336',
+    letterSpacing: 0.5,
+  },
+  liveTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  liveSubtext: {
+    fontSize: 12,
+    marginTop: 2,
   },
   ctaContent: {
     alignItems: 'center',

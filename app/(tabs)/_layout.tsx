@@ -64,6 +64,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="tokens"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profil',
