@@ -6,7 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ImageBackground,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,7 +80,21 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        <View style={[styles.centeredContent, { paddingTop: insets.top + 60 }]}>
+        <ImageBackground
+          source={require('../../assets/terrace-view.jpg')}
+          style={styles.noAuthBg}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={[
+              'rgba(0,0,0,0.2)',
+              theme.period === 'night' ? 'rgba(15,27,45,0.9)' : 'rgba(253,248,240,0.85)',
+              theme.background,
+            ]}
+            style={StyleSheet.absoluteFill}
+          />
+        </ImageBackground>
+        <View style={[styles.centeredContent, { marginTop: -60 }]}>
           <View style={[styles.bigAvatar, { backgroundColor: colors.sunYellowLight }]}>
             <Ionicons name="person" size={48} color={colors.sunYellow} />
           </View>
@@ -122,32 +138,45 @@ export default function ProfileScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile header */}
-        <View style={[styles.profileHeader, { paddingTop: insets.top + 16 }]}>
-          <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
-            <Text style={styles.avatarText}>
-              {(profile?.full_name ?? '?')[0].toUpperCase()}
+        {/* Profile header with background photo */}
+        <ImageBackground
+          source={require('../../assets/terrace-view.jpg')}
+          style={styles.profileHeaderBg}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={[
+              'rgba(0,0,0,0.3)',
+              theme.period === 'night' ? 'rgba(15,27,45,0.85)' : 'rgba(253,248,240,0.8)',
+            ]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.profileHeader, { paddingTop: insets.top + 16 }]}>
+            <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
+              <Text style={styles.avatarText}>
+                {(profile?.full_name ?? '?')[0].toUpperCase()}
+              </Text>
+            </View>
+            <Text style={[styles.profileName, { color: colors.white }]}>
+              {profile?.full_name ?? 'Utilisateur'}
             </Text>
+            <Text style={[styles.profileEmail, { color: 'rgba(255,255,255,0.7)' }]}>
+              {user.email}
+            </Text>
+            <View style={styles.badgeRow}>
+              <Badge
+                label={vipLevel.toUpperCase()}
+                variant="vip"
+                size="sm"
+              />
+              <Badge
+                label={`${profile?.beach_tokens ?? 0} tokens`}
+                variant="default"
+                size="sm"
+              />
+            </View>
           </View>
-          <Text style={[styles.profileName, { color: theme.text }]}>
-            {profile?.full_name ?? 'Utilisateur'}
-          </Text>
-          <Text style={[styles.profileEmail, { color: theme.textSecondary }]}>
-            {user.email}
-          </Text>
-          <View style={styles.badgeRow}>
-            <Badge
-              label={vipLevel.toUpperCase()}
-              variant="vip"
-              size="sm"
-            />
-            <Badge
-              label={`${profile?.beach_tokens ?? 0} tokens`}
-              variant="default"
-              size="sm"
-            />
-          </View>
-        </View>
+        </ImageBackground>
 
         {/* Stats */}
         <View style={styles.section}>
@@ -229,6 +258,8 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  noAuthBg: { height: 200 },
+  profileHeaderBg: { overflow: 'hidden' },
   centeredContent: {
     flex: 1,
     paddingHorizontal: 32,

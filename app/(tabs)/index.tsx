@@ -64,9 +64,17 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Hero Section */}
-      <View style={[styles.hero, { paddingTop: insets.top }]}>
+      <ImageBackground
+        source={require('../../assets/beach-hero.jpg')}
+        style={[styles.hero, { paddingTop: insets.top }]}
+        resizeMode="cover"
+      >
         <LinearGradient
-          colors={[theme.gradientStart, theme.gradientEnd]}
+          colors={[
+            'rgba(0,0,0,0.25)',
+            theme.period === 'night' ? 'rgba(15,27,45,0.85)' : 'rgba(253,248,240,0.8)',
+            theme.background,
+          ]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.heroContent}>
@@ -118,7 +126,7 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
-      </View>
+      </ImageBackground>
 
       {/* Quick Actions */}
       <View style={styles.section}>
@@ -189,8 +197,13 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         <Card padded={false} style={styles.eventCard}>
+          <ImageBackground
+            source={require('../../assets/pool-view.jpg')}
+            style={styles.eventImageBg}
+            resizeMode="cover"
+          >
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
             style={styles.eventGradient}
           >
             <View style={styles.eventContent}>
@@ -211,6 +224,7 @@ export default function HomeScreen() {
               </View>
             </View>
           </LinearGradient>
+          </ImageBackground>
         </Card>
       </View>
 
@@ -407,6 +421,9 @@ const styles = StyleSheet.create({
     height: 220,
     overflow: 'hidden',
     backgroundColor: colors.deepSea,
+  },
+  eventImageBg: {
+    flex: 1,
   },
   eventGradient: {
     flex: 1,

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  ImageBackground,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -79,13 +80,28 @@ export default function EventsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Événements</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
-        </Text>
-      </View>
+      {/* Header with background photo */}
+      <ImageBackground
+        source={require('../../assets/pool-view.jpg')}
+        style={styles.headerBg}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={[
+            'rgba(0,0,0,0.35)',
+            theme.period === 'night' ? 'rgba(15,27,45,0.9)' : 'rgba(253,248,240,0.85)',
+          ]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <Text style={[styles.title, { color: theme.period === 'night' ? colors.white : theme.text }]}>
+            Événements
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.period === 'night' ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
+            {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+          </Text>
+        </View>
+      </ImageBackground>
 
       {/* Filtres */}
       <ScrollView
@@ -258,6 +274,7 @@ export default function EventsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  headerBg: { overflow: 'hidden' },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 28, fontWeight: '800', letterSpacing: 0.5 },
   subtitle: { fontSize: 14, marginTop: 4 },

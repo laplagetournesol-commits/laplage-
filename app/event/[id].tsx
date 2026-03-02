@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -132,13 +133,19 @@ export default function EventDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero header */}
-        <LinearGradient
-          colors={[cat.color, cat.color + '66']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.hero, { paddingTop: insets.top + 8 }]}
+        {/* Hero header with background photo */}
+        <ImageBackground
+          source={require('../../assets/club-view.jpg')}
+          style={[styles.heroBg, { paddingTop: insets.top + 8 }]}
+          resizeMode="cover"
         >
+          <LinearGradient
+            colors={[cat.color + 'AA', cat.color + 'DD', cat.color + '99']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+
           {/* Back button */}
           <TouchableOpacity
             onPress={() => router.back()}
@@ -166,7 +173,7 @@ export default function EventDetailScreen() {
               <Text style={styles.countdownText}>{countdown}</Text>
             </View>
           </View>
-        </LinearGradient>
+        </ImageBackground>
 
         {/* Body */}
         <View style={styles.body}>
@@ -350,7 +357,7 @@ export default function EventDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  hero: { paddingBottom: 32, paddingHorizontal: 20 },
+  heroBg: { paddingBottom: 32, paddingHorizontal: 20, overflow: 'hidden' },
   backBtn: {
     width: 40,
     height: 40,
