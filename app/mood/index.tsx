@@ -19,6 +19,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { useMoodAI, MOOD_OPTIONS } from '@/features/mood/hooks/useMoodAI';
 import type { MoodType } from '@/features/mood/hooks/useMoodAI';
+import { i18n } from '@/shared/i18n';
 
 export default function MoodScreen() {
   const { theme } = useSunMode();
@@ -40,9 +41,9 @@ export default function MoodScreen() {
 
         <View style={styles.header}>
           <Text style={styles.aiEmoji}>✨</Text>
-          <Text style={[styles.title, { color: theme.text }]}>Mood Beach AI</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{i18n.t('moodTitle')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Dites-nous votre humeur, on s'occupe du reste
+            {i18n.t('moodSubtitle')}
           </Text>
         </View>
 
@@ -69,7 +70,7 @@ export default function MoodScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-              L'IA analyse votre mood...
+              {i18n.t('moodAnalyzing')}
             </Text>
             <Text style={[styles.loadingEmoji]}>
               {MOOD_OPTIONS.find((m) => m.id === selectedMood)?.emoji}
@@ -87,7 +88,7 @@ export default function MoodScreen() {
                 variant="vip"
               />
               <TouchableOpacity onPress={reset}>
-                <Text style={[styles.changeText, { color: theme.accent }]}>Changer</Text>
+                <Text style={[styles.changeText, { color: theme.accent }]}>{i18n.t('moodChange')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -99,7 +100,7 @@ export default function MoodScreen() {
                   size={20}
                   color={recommendation.spot.type === 'beach' ? colors.terracotta : colors.deepSea}
                 />
-                <Text style={[styles.resultTitle, { color: theme.text }]}>Votre spot idéal</Text>
+                <Text style={[styles.resultTitle, { color: theme.text }]}>{i18n.t('idealSpot')}</Text>
               </View>
               <Badge
                 label={`Zone ${recommendation.spot.zone}`}
@@ -122,7 +123,7 @@ export default function MoodScreen() {
             <Card style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <Ionicons name="wine-outline" size={20} color={colors.accentRed} />
-                <Text style={[styles.resultTitle, { color: theme.text }]}>Boissons recommandées</Text>
+                <Text style={[styles.resultTitle, { color: theme.text }]}>{i18n.t('recommendedDrinks')}</Text>
               </View>
               {recommendation.drinks.map((drink, i) => (
                 <View key={i} style={styles.listItem}>
@@ -136,7 +137,7 @@ export default function MoodScreen() {
             <Card style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <Ionicons name="restaurant-outline" size={20} color={colors.sage} />
-                <Text style={[styles.resultTitle, { color: theme.text }]}>À grignoter</Text>
+                <Text style={[styles.resultTitle, { color: theme.text }]}>{i18n.t('snacks')}</Text>
               </View>
               {recommendation.food.map((item, i) => (
                 <View key={i} style={styles.listItem}>
@@ -150,7 +151,7 @@ export default function MoodScreen() {
             <Card style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <Ionicons name="musical-notes" size={20} color={colors.sunYellow} />
-                <Text style={[styles.resultTitle, { color: theme.text }]}>Playlist du moment</Text>
+                <Text style={[styles.resultTitle, { color: theme.text }]}>{i18n.t('playlist')}</Text>
               </View>
               <Text style={[styles.playlistName, { color: theme.accent }]}>
                 {recommendation.playlist}
@@ -167,7 +168,7 @@ export default function MoodScreen() {
 
             {/* CTA */}
             <Button
-              title="Réserver maintenant"
+              title={i18n.t('reserveNow')}
               onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach' : '/(tabs)/restaurant')}
               size="lg"
               style={{ marginTop: 8 }}

@@ -19,6 +19,7 @@ import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import type { SunPeriod } from '@/shared/theme/colors';
+import { i18n } from '@/shared/i18n';
 
 const VIP_COLORS = {
   standard: colors.gray[400],
@@ -60,11 +61,11 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      i18n.t('logout'),
+      i18n.t('logoutConfirm'),
       [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Déconnecter', style: 'destructive', onPress: signOut },
+        { text: i18n.t('cancel'), style: 'cancel' },
+        { text: i18n.t('logout'), style: 'destructive', onPress: signOut },
       ]
     );
   };
@@ -99,19 +100,19 @@ export default function ProfileScreen() {
             <Ionicons name="person" size={48} color={colors.sunYellow} />
           </View>
           <Text style={[styles.noAuthTitle, { color: theme.text }]}>
-            Mon Profil
+            {i18n.t('myProfile')}
           </Text>
           <Text style={[styles.noAuthText, { color: theme.textSecondary }]}>
-            Connectez-vous pour accéder à vos réservations, tokens et plus encore.
+            {i18n.t('profileDesc')}
           </Text>
           <Button
-            title="Se connecter"
+            title={i18n.t('login')}
             onPress={() => router.push('/(auth)/login')}
             size="lg"
             style={{ width: '100%', marginTop: 16 }}
           />
           <Button
-            title="Créer un compte"
+            title={i18n.t('signup')}
             onPress={() => router.push('/(auth)/signup')}
             size="lg"
             variant="outline"
@@ -186,21 +187,21 @@ export default function ProfileScreen() {
                 <Text style={[styles.statValue, { color: theme.text }]}>
                   {profile?.visit_count ?? 0}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Visites</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{i18n.t('visits')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.cardBorder }]} />
               <View style={styles.stat}>
                 <Text style={[styles.statValue, { color: theme.text }]}>
                   {profile?.beach_tokens ?? 0}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Tokens</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{i18n.t('tokens')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.cardBorder }]} />
               <View style={styles.stat}>
                 <Text style={[styles.statValue, { color: theme.text }]}>
                   {profile?.total_spent ? `${profile.total_spent}€` : '0€'}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Dépensé</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{i18n.t('spent')}</Text>
               </View>
             </View>
           </Card>
@@ -212,17 +213,17 @@ export default function ProfileScreen() {
             <Card padded={false}>
               <MenuItem
                 icon="speedometer-outline"
-                label="Dashboard Admin"
+                label={i18n.t('adminDashboard')}
                 onPress={() => router.push('/(admin)/dashboard')}
               />
               <MenuItem
                 icon="qr-code-outline"
-                label="Scanner QR"
+                label={i18n.t('scanQR')}
                 onPress={() => router.push('/(admin)/scanner')}
               />
               <MenuItem
                 icon="list-outline"
-                label="Réservations du jour"
+                label={i18n.t('todayReservations')}
                 onPress={() => router.push('/(admin)/reservations')}
               />
             </Card>
@@ -232,18 +233,18 @@ export default function ProfileScreen() {
         {/* Menu */}
         <View style={styles.section}>
           <Card padded={false}>
-            <MenuItem icon="receipt-outline" label="Mes réservations" />
-            <MenuItem icon="ticket-outline" label="Mes tickets" />
-            <MenuItem icon="diamond-outline" label="Beach Tokens" value={`${profile?.beach_tokens ?? 0}`} />
-            <MenuItem icon="gift-outline" label="Récompenses" />
+            <MenuItem icon="receipt-outline" label={i18n.t('myReservations')} />
+            <MenuItem icon="ticket-outline" label={i18n.t('myTickets')} />
+            <MenuItem icon="diamond-outline" label={i18n.t('beachTokens')} value={`${profile?.beach_tokens ?? 0}`} />
+            <MenuItem icon="gift-outline" label={i18n.t('rewards')} />
           </Card>
         </View>
 
         <View style={styles.section}>
           <Card padded={false}>
-            <MenuItem icon="person-outline" label="Informations personnelles" />
-            <MenuItem icon="notifications-outline" label="Notifications" />
-            <MenuItem icon="language-outline" label="Langue" value={profile?.preferred_language?.toUpperCase() ?? 'FR'} />
+            <MenuItem icon="person-outline" label={i18n.t('personalInfo')} />
+            <MenuItem icon="notifications-outline" label={i18n.t('notifications')} />
+            <MenuItem icon="language-outline" label={i18n.t('language')} value={profile?.preferred_language?.toUpperCase() ?? 'FR'} />
             <MenuItem
               icon="sunny-outline"
               label="Sun Mode"
@@ -255,16 +256,16 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Card padded={false}>
-            <MenuItem icon="help-circle-outline" label="Aide & Contact" />
-            <MenuItem icon="document-text-outline" label="CGU" />
-            <MenuItem icon="shield-checkmark-outline" label="Confidentialité" />
+            <MenuItem icon="help-circle-outline" label={i18n.t('helpContact')} />
+            <MenuItem icon="document-text-outline" label={i18n.t('terms')} />
+            <MenuItem icon="shield-checkmark-outline" label={i18n.t('privacy')} />
           </Card>
         </View>
 
         {/* Sign out */}
         <View style={styles.section}>
           <Button
-            title="Se déconnecter"
+            title={i18n.t('logout')}
             onPress={handleSignOut}
             variant="ghost"
             textStyle={{ color: colors.accentRed }}
@@ -272,7 +273,7 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={[styles.version, { color: theme.textSecondary }]}>
-          Les Tournesols v1.0.0
+          {i18n.t('version')}
         </Text>
       </ScrollView>
     </View>

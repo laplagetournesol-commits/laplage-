@@ -20,6 +20,7 @@ import { Button } from '@/shared/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTokenHistory, useRewards, useRedeemReward } from '@/features/tokens/hooks/useTokens';
 import type { Reward } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 const TYPE_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   earn: { icon: 'add-circle', color: colors.sage, label: '+' },
@@ -48,23 +49,23 @@ export default function TokensScreen() {
     const tokens = profile?.beach_tokens ?? 0;
     if (tokens < reward.token_cost) {
       Alert.alert(
-        'Tokens insuffisants',
-        `Il vous faut ${reward.token_cost} tokens. Vous en avez ${tokens}.`,
+        i18n.t('insufficientTokens'),
+        `${reward.token_cost} tokens. ${tokens} disponibles.`,
       );
       return;
     }
 
     Alert.alert(
-      'Échanger',
+      i18n.t('exchange'),
       `Utiliser ${reward.token_cost} tokens pour "${reward.name}" ?`,
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('cancel'), style: 'cancel' },
         {
-          text: 'Confirmer',
+          text: i18n.t('confirm'),
           onPress: async () => {
             const result = await redeem(reward);
             if (result.success) {
-              Alert.alert('Récompense obtenue !', `${reward.name} a été ajouté à votre compte.`);
+              Alert.alert(i18n.t('rewardObtained'), reward.name);
               refreshHistory();
               refreshProfile();
             }
@@ -81,9 +82,9 @@ export default function TokensScreen() {
           <Text style={{ fontSize: 48 }}>🏖️</Text>
           <Text style={[styles.noAuthTitle, { color: theme.text }]}>Beach Tokens</Text>
           <Text style={[styles.noAuthText, { color: theme.textSecondary }]}>
-            Connectez-vous pour consulter vos tokens et échanger des récompenses.
+            {i18n.t('profileDesc')}
           </Text>
-          <Button title="Se connecter" onPress={() => router.push('/(auth)/login')} size="lg" />
+          <Button title={i18n.t('login')} onPress={() => router.push('/(auth)/login')} size="lg" />
         </View>
       </View>
     );
@@ -106,19 +107,19 @@ export default function TokensScreen() {
           <View style={[styles.tokenCard, { backgroundColor: colors.sunYellowLight }]}>
             <Text style={styles.tokenEmoji}>🏖️</Text>
             <Text style={[styles.tokenCount, { color: colors.warmWood }]}>{tokens}</Text>
-            <Text style={[styles.tokenLabel, { color: colors.warmWood }]}>tokens disponibles</Text>
+            <Text style={[styles.tokenLabel, { color: colors.warmWood }]}>{i18n.t('tokensAvailable')}</Text>
           </View>
 
           {/* How to earn */}
           <View style={[styles.earnInfo, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.earnTitle, { color: theme.text }]}>Comment gagner des tokens ?</Text>
+            <Text style={[styles.earnTitle, { color: theme.text }]}>{i18n.t('howToEarn')}</Text>
             <View style={styles.earnRow}>
               <Ionicons name="umbrella" size={14} color={colors.terracotta} />
-              <Text style={[styles.earnText, { color: theme.textSecondary }]}>Réservation plage : +10 tokens</Text>
+              <Text style={[styles.earnText, { color: theme.textSecondary }]}>{i18n.t('beachReservation')} : +10 tokens</Text>
             </View>
             <View style={styles.earnRow}>
               <Ionicons name="restaurant" size={14} color={colors.deepSea} />
-              <Text style={[styles.earnText, { color: theme.textSecondary }]}>Réservation restaurant : +10 tokens</Text>
+              <Text style={[styles.earnText, { color: theme.textSecondary }]}>{i18n.t('restaurantReservation')} : +10 tokens</Text>
             </View>
             <View style={styles.earnRow}>
               <Ionicons name="ticket" size={14} color={colors.accentRed} />
@@ -134,7 +135,7 @@ export default function TokensScreen() {
             style={[styles.tabBtn, tab === 'rewards' && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
           >
             <Text style={[styles.tabText, { color: tab === 'rewards' ? theme.text : theme.textSecondary }]}>
-              Récompenses
+              {i18n.t('rewards')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -142,7 +143,7 @@ export default function TokensScreen() {
             style={[styles.tabBtn, tab === 'history' && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
           >
             <Text style={[styles.tabText, { color: tab === 'history' ? theme.text : theme.textSecondary }]}>
-              Historique
+              {i18n.t('history')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -203,7 +204,7 @@ export default function TokensScreen() {
               <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 32 }} />
             ) : transactions.length === 0 ? (
               <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                Aucune transaction pour le moment
+                {i18n.t('noTransactions')}
               </Text>
             ) : (
               transactions.map((tx) => {

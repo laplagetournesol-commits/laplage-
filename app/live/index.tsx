@@ -17,6 +17,7 @@ import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { useLiveCameras, getCrowdInfo } from '@/features/live/hooks/useLiveCameras';
+import { i18n } from '@/shared/i18n';
 
 export default function LiveScreen() {
   const { theme } = useSunMode();
@@ -62,9 +63,9 @@ export default function LiveScreen() {
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>LIVE</Text>
           </View>
-          <Text style={[styles.title, { color: theme.text }]}>Beach View</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{i18n.t('liveTitle')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Visualisez la plage en temps réel
+            {i18n.t('liveSubtitle')}
           </Text>
         </View>
 
@@ -73,7 +74,7 @@ export default function LiveScreen() {
           <Card style={styles.crowdCard}>
             <View style={styles.crowdRow}>
               <View>
-                <Text style={[styles.crowdTitle, { color: theme.text }]}>Affluence actuelle</Text>
+                <Text style={[styles.crowdTitle, { color: theme.text }]}>{i18n.t('currentCrowd')}</Text>
                 <Text style={[styles.crowdLabel, { color: getCrowdInfo(overallCrowd).color }]}>
                   {getCrowdInfo(overallCrowd).icon} {getCrowdInfo(overallCrowd).label}
                 </Text>
@@ -104,7 +105,7 @@ export default function LiveScreen() {
         ) : cameras.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="videocam-off-outline" size={48} color={theme.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>Pas de caméras actives</Text>
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>{i18n.t('noCameras')}</Text>
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
               Les caméras seront bientôt disponibles pour visualiser la plage en direct.
             </Text>
@@ -153,7 +154,7 @@ export default function LiveScreen() {
         <View style={[styles.tipCard, { backgroundColor: colors.sunYellowLight }]}>
           <Ionicons name="bulb-outline" size={18} color={colors.warmWood} />
           <Text style={[styles.tipText, { color: colors.warmWood }]}>
-            L'affluence est mise à jour toutes les 15 minutes. Venez tôt le matin pour les meilleures places !
+            {i18n.t('liveTip')}
           </Text>
         </View>
       </ScrollView>

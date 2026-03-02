@@ -17,13 +17,14 @@ import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { useArrival, ARRIVAL_MENU } from '@/features/arrival/hooks/useArrival';
+import { i18n } from '@/shared/i18n';
 
 type MenuCategory = 'drinks' | 'food' | 'comfort';
 
 const CATEGORY_CONFIG: Record<MenuCategory, { icon: keyof typeof Ionicons.glyphMap; label: string; color: string }> = {
-  drinks: { icon: 'wine-outline', label: 'Boissons', color: colors.accentRed },
-  food: { icon: 'restaurant-outline', label: 'À manger', color: colors.sage },
-  comfort: { icon: 'sunny-outline', label: 'Confort', color: colors.sunYellow },
+  drinks: { icon: 'wine-outline', label: i18n.t('drinks'), color: colors.accentRed },
+  food: { icon: 'restaurant-outline', label: i18n.t('food'), color: colors.sage },
+  comfort: { icon: 'sunny-outline', label: i18n.t('comfort'), color: colors.sunYellow },
 };
 
 export default function ArrivalScreen() {
@@ -52,27 +53,27 @@ export default function ArrivalScreen() {
 
   const handleSubmit = async () => {
     if (totalItems === 0) {
-      Alert.alert('Panier vide', 'Ajoutez au moins un article à votre pré-commande.');
+      Alert.alert(i18n.t('emptyCart'), i18n.t('addItems'));
       return;
     }
 
     Alert.alert(
-      'Confirmer la pré-commande',
-      `${totalItems} article${totalItems > 1 ? 's' : ''} pour ${totalPrice}€. Votre commande sera prête à votre arrivée.`,
+      i18n.t('confirmPreOrder'),
+      `${totalItems} ${i18n.t('articles')} — ${totalPrice}€`,
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('cancel'), style: 'cancel' },
         {
-          text: 'Confirmer',
+          text: i18n.t('confirm'),
           onPress: async () => {
             const result = await submit();
             if (result.success) {
               Alert.alert(
-                'Pré-commande confirmée !',
-                'Tout sera prêt à votre arrivée. Bon voyage !',
+                i18n.t('preOrderConfirmed'),
+                i18n.t('preOrderReady'),
                 [{ text: 'OK', onPress: () => router.back() }],
               );
             } else {
-              Alert.alert('Erreur', 'Impossible de soumettre la pré-commande.');
+              Alert.alert(i18n.t('error'), '');
             }
           },
         },
@@ -95,7 +96,7 @@ export default function ArrivalScreen() {
           </TouchableOpacity>
           <View style={styles.header}>
             <Text style={{ fontSize: 48 }}>🎉</Text>
-            <Text style={[styles.title, { color: theme.text }]}>Pré-commande envoyée</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{i18n.t('preOrderConfirmed')}</Text>
             <Badge label={existingOrder.status.toUpperCase()} variant="success" />
           </View>
           <Card style={{ gap: 8 }}>
@@ -136,7 +137,7 @@ export default function ArrivalScreen() {
 
         <View style={styles.header}>
           <Text style={{ fontSize: 40 }}>🏖️</Text>
-          <Text style={[styles.title, { color: theme.text }]}>Arrival Experience</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{i18n.t('arrivalTitle')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Pré-commandez pour un accueil VIP à votre arrivée
           </Text>
@@ -144,7 +145,7 @@ export default function ArrivalScreen() {
 
         {/* Heure d'arrivée estimée */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Heure d'arrivée estimée</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('estimatedArrival')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timeRow}>
             {ARRIVAL_TIMES.map((time) => (
               <TouchableOpacity
@@ -234,7 +235,7 @@ export default function ArrivalScreen() {
 
         {/* Special requests */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Demandes spéciales</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('specialRequests')}</Text>
           <TextInput
             style={[
               styles.textArea,
@@ -264,7 +265,7 @@ export default function ArrivalScreen() {
             <Text style={[styles.bottomTotal, { color: theme.text }]}>{totalPrice}€</Text>
           </View>
           <Button
-            title="Confirmer la pré-commande"
+            title={i18n.t('confirmPreOrder')}
             onPress={handleSubmit}
             loading={submitting}
             size="lg"

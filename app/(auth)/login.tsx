@@ -16,6 +16,7 @@ import { colors } from '@/shared/theme/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { i18n } from '@/shared/i18n';
 
 export default function LoginScreen() {
   const { theme } = useSunMode();
@@ -67,7 +68,7 @@ export default function LoginScreen() {
         {/* Form */}
         <View style={styles.form}>
           <Input
-            label="Email"
+            label={i18n.t('email')}
             icon="mail-outline"
             placeholder="votre@email.com"
             value={email}
@@ -78,7 +79,7 @@ export default function LoginScreen() {
           />
 
           <Input
-            label="Mot de passe"
+            label={i18n.t('password')}
             icon="lock-closed-outline"
             placeholder="Votre mot de passe"
             value={password}
@@ -90,7 +91,7 @@ export default function LoginScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button
-            title="Se connecter"
+            title={i18n.t('login')}
             onPress={handleLogin}
             loading={loading}
             size="lg"
@@ -104,7 +105,7 @@ export default function LoginScreen() {
             Pas encore de compte ?
           </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={[styles.link, { color: theme.accent }]}> Créer un compte</Text>
+            <Text style={[styles.link, { color: theme.accent }]}> {i18n.t('signup')}</Text>
           </TouchableOpacity>
         </View>
 
