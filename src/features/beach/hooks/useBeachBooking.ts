@@ -160,11 +160,11 @@ export function useBeachBooking() {
       }
 
       setSubmitting(false);
-      return { success: true, reservationId: reservation.id };
+      return { success: true, reservationId: reservation.id, qrCode: reservation.qr_code };
     } catch (err: any) {
       setError(err.message);
       setSubmitting(false);
-      return { success: false };
+      return { success: false, reservationId: undefined, qrCode: undefined };
     }
   }, [state, totalPrice, depositAmount]);
 

@@ -206,6 +206,29 @@ export default function ProfileScreen() {
           </Card>
         </View>
 
+        {/* Admin / Staff section */}
+        {profile && (profile.role === 'admin' || profile.role === 'staff') && (
+          <View style={styles.section}>
+            <Card padded={false}>
+              <MenuItem
+                icon="speedometer-outline"
+                label="Dashboard Admin"
+                onPress={() => router.push('/(admin)/dashboard')}
+              />
+              <MenuItem
+                icon="qr-code-outline"
+                label="Scanner QR"
+                onPress={() => router.push('/(admin)/scanner')}
+              />
+              <MenuItem
+                icon="list-outline"
+                label="Réservations du jour"
+                onPress={() => router.push('/(admin)/reservations')}
+              />
+            </Card>
+          </View>
+        )}
+
         {/* Menu */}
         <View style={styles.section}>
           <Card padded={false}>

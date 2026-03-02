@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { colors } from '@/shared/theme/colors';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Sunbed, BeachZone, Addon } from '@/shared/types';
 
@@ -24,7 +25,7 @@ interface SunbedSheetProps {
   selectedAddons: SelectedAddon[];
   onToggleAddon: (addon: Addon) => void;
   onUpdateQuantity: (addonId: string, quantity: number) => void;
-  onBook: () => Promise<{ success: boolean }>;
+  onBook: () => Promise<{ success: boolean; qrCode?: string }>;
   booking: boolean;
   step: 'select' | 'addons' | 'confirm';
   onGoToAddons: () => void;
@@ -62,6 +63,8 @@ export function SunbedSheet({
 }: SunbedSheetProps) {
   const { theme } = useSunMode();
   const { user } = useAuth();
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [showQR, setShowQR] = useState(false);
 
   if (!sunbed) return null;
 
@@ -77,7 +80,11 @@ export function SunbedSheet({
       return;
     }
     const result = await onBook();
-    if (result.success) {
+    if (result.success && result.qrCode) {
+      setQrCode(result.qrCode);
+      onClose();
+      setTimeout(() => setShowQR(true), 400);
+    } else if (result.success) {
       Alert.alert(
         'Réservation confirmée !',
         `Votre transat ${sunbed.label} est réservé pour le ${formattedDate}. +10 Beach Tokens gagnés !`,
@@ -86,12 +93,18 @@ export function SunbedSheet({
     }
   };
 
+  const handleCloseQR = () => {
+    setShowQR(false);
+    setQrCode(null);
+  };
+
   const title =
     step === 'select' ? `Transat ${sunbed.label}` :
     step === 'addons' ? 'Options & Extras' :
     'Confirmation';
 
   return (
+    <>
     <BottomSheet visible={visible} onClose={onClose} title={title}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
         {/* Étape 1 : Détails du transat */}
@@ -315,6 +328,26 @@ export function SunbedSheet({
         )}
       </ScrollView>
     </BottomSheet>
+
+    {qrCode && (
+      <ReservationQRCode
+        visible={showQR}
+        onClose={handleCloseQR}
+        qrCode={qrCode}
+        type="beach"
+        title={`Transat ${sunbed.label}`}
+        subtitle={`Zone ${sunbed.zone.name}`}
+        details={[
+          { label: 'Date', value: formattedDate, icon: 'calendar-outline' },
+          { label: 'Horaires', value: '10h00 — 19h00', icon: 'time-outline' },
+          { label: 'Emplacement', value: `${sunbed.zone.name} — ${sunbed.label}`, icon: 'location-outline' },
+          { label: 'Personnes', value: `${guestCount}`, icon: 'people-outline' },
+        ]}
+        price={`${totalPrice}€`}
+        deposit={`${depositAmount}€`}
+      />
+    )}
+    </>
   );
 }
 

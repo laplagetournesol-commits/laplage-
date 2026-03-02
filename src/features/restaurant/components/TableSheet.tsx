@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { colors } from '@/shared/theme/colors';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import type { RestaurantTable, RestaurantZone } from '@/shared/types';
 
@@ -19,7 +20,7 @@ interface TableSheetProps {
   step: 'select' | 'confirm';
   onGoToConfirm: () => void;
   onGoBack: () => void;
-  onBook: () => Promise<{ success: boolean }>;
+  onBook: () => Promise<{ success: boolean; qrCode?: string }>;
   booking: boolean;
   minSpend: number;
   depositAmount: number;
@@ -47,6 +48,8 @@ export function TableSheet({
 }: TableSheetProps) {
   const { theme } = useSunMode();
   const { user } = useAuth();
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [showQR, setShowQR] = useState(false);
 
   if (!table) return null;
 
@@ -59,7 +62,11 @@ export function TableSheet({
   const handleBook = async () => {
     if (!user) { router.push('/(auth)/login'); return; }
     const result = await onBook();
-    if (result.success) {
+    if (result.success && result.qrCode) {
+      setQrCode(result.qrCode);
+      onClose();
+      setTimeout(() => setShowQR(true), 400);
+    } else if (result.success) {
       Alert.alert(
         'Table réservée !',
         `Votre table ${table.label} est réservée pour le ${formattedDate} (${timeSlot === 'lunch' ? 'déjeuner' : 'dîner'}). +10 Beach Tokens !`,
@@ -68,9 +75,15 @@ export function TableSheet({
     }
   };
 
+  const handleCloseQR = () => {
+    setShowQR(false);
+    setQrCode(null);
+  };
+
   const title = step === 'select' ? `Table ${table.label}` : 'Confirmation';
 
   return (
+    <>
     <BottomSheet visible={visible} onClose={onClose} title={title}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
         {step === 'select' && (
@@ -201,6 +214,25 @@ export function TableSheet({
         )}
       </ScrollView>
     </BottomSheet>
+
+    {qrCode && (
+      <ReservationQRCode
+        visible={showQR}
+        onClose={handleCloseQR}
+        qrCode={qrCode}
+        type="restaurant"
+        title={`Table ${table.label}`}
+        subtitle={`Zone ${table.zone.name}`}
+        details={[
+          { label: 'Date', value: formattedDate, icon: 'calendar-outline' },
+          { label: 'Service', value: timeSlot === 'lunch' ? 'Déjeuner (12h-16h)' : 'Dîner (19h30-23h30)', icon: 'time-outline' },
+          { label: 'Table', value: `${table.label} — ${table.zone.name}`, icon: 'location-outline' },
+          { label: 'Convives', value: `${guestCount}`, icon: 'people-outline' },
+        ]}
+        deposit={depositAmount > 0 ? `${depositAmount}€` : undefined}
+      />
+    )}
+    </>
   );
 }
 
