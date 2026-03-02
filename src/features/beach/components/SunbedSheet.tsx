@@ -1,0 +1,376 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSunMode } from '@/shared/theme';
+import { colors } from '@/shared/theme/colors';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
+import { Button } from '@/shared/ui/Button';
+import { Badge } from '@/shared/ui/Badge';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Sunbed, BeachZone, Addon } from '@/shared/types';
+
+interface SelectedAddon {
+  addon: Addon;
+  quantity: number;
+}
+
+interface SunbedSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  sunbed: (Sunbed & { zone: BeachZone }) | null;
+  date: string;
+  addons: Addon[];
+  selectedAddons: SelectedAddon[];
+  onToggleAddon: (addon: Addon) => void;
+  onUpdateQuantity: (addonId: string, quantity: number) => void;
+  onBook: () => Promise<{ success: boolean }>;
+  booking: boolean;
+  step: 'select' | 'addons' | 'confirm';
+  onGoToAddons: () => void;
+  onGoToConfirm: () => void;
+  onGoBack: () => void;
+  basePrice: number;
+  addonsTotal: number;
+  totalPrice: number;
+  depositAmount: number;
+  guestCount: number;
+  onSetGuestCount: (n: number) => void;
+}
+
+export function SunbedSheet({
+  visible,
+  onClose,
+  sunbed,
+  date,
+  addons,
+  selectedAddons,
+  onToggleAddon,
+  onUpdateQuantity,
+  onBook,
+  booking,
+  step,
+  onGoToAddons,
+  onGoToConfirm,
+  onGoBack,
+  basePrice,
+  addonsTotal,
+  totalPrice,
+  depositAmount,
+  guestCount,
+  onSetGuestCount,
+}: SunbedSheetProps) {
+  const { theme } = useSunMode();
+  const { user } = useAuth();
+
+  if (!sunbed) return null;
+
+  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const handleBook = async () => {
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    const result = await onBook();
+    if (result.success) {
+      Alert.alert(
+        'Réservation confirmée !',
+        `Votre transat ${sunbed.label} est réservé pour le ${formattedDate}. +10 Beach Tokens gagnés !`,
+        [{ text: 'Super !', onPress: onClose }]
+      );
+    }
+  };
+
+  const title =
+    step === 'select' ? `Transat ${sunbed.label}` :
+    step === 'addons' ? 'Options & Extras' :
+    'Confirmation';
+
+  return (
+    <BottomSheet visible={visible} onClose={onClose} title={title}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+        {/* Étape 1 : Détails du transat */}
+        {step === 'select' && (
+          <View style={styles.content}>
+            <View style={styles.row}>
+              <Badge
+                label={sunbed.zone.zone_type === 'vip_cabana' ? 'VIP Cabana' : sunbed.zone.name}
+                variant={sunbed.zone.zone_type === 'vip_cabana' ? 'vip' : 'default'}
+              />
+              {sunbed.is_double && <Badge label="Double" variant="success" size="sm" />}
+            </View>
+
+            <Text style={[styles.description, { color: theme.textSecondary }]}>
+              {sunbed.zone.description}
+            </Text>
+
+            <View style={[styles.infoCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <View style={styles.infoRow}>
+                <Ionicons name="calendar-outline" size={16} color={theme.accent} />
+                <Text style={[styles.infoText, { color: theme.text }]}>{formattedDate}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="time-outline" size={16} color={theme.accent} />
+                <Text style={[styles.infoText, { color: theme.text }]}>10h00 — 19h00</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="location-outline" size={16} color={theme.accent} />
+                <Text style={[styles.infoText, { color: theme.text }]}>
+                  Zone {sunbed.zone.name} — {sunbed.label}
+                </Text>
+              </View>
+            </View>
+
+            {/* Nombre de personnes */}
+            <View style={styles.guestRow}>
+              <Text style={[styles.guestLabel, { color: theme.text }]}>Personnes</Text>
+              <View style={styles.guestCounter}>
+                <TouchableOpacity
+                  onPress={() => onSetGuestCount(guestCount - 1)}
+                  style={[styles.guestBtn, { borderColor: theme.cardBorder }]}
+                >
+                  <Ionicons name="remove" size={18} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={[styles.guestNum, { color: theme.text }]}>{guestCount}</Text>
+                <TouchableOpacity
+                  onPress={() => onSetGuestCount(guestCount + 1)}
+                  style={[styles.guestBtn, { borderColor: theme.cardBorder }]}
+                >
+                  <Ionicons name="add" size={18} color={theme.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Prix */}
+            <View style={[styles.priceRow, { borderTopColor: theme.cardBorder }]}>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Prix du transat</Text>
+              <Text style={[styles.priceValue, { color: theme.text }]}>{basePrice}€</Text>
+            </View>
+
+            <Button title="Choisir les options" onPress={onGoToAddons} style={{ marginTop: 16 }} />
+          </View>
+        )}
+
+        {/* Étape 2 : Add-ons */}
+        {step === 'addons' && (
+          <View style={styles.content}>
+            <TouchableOpacity onPress={onGoBack} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={18} color={theme.accent} />
+              <Text style={[styles.backText, { color: theme.accent }]}>Retour</Text>
+            </TouchableOpacity>
+
+            {addons.map((addon) => {
+              const selected = selectedAddons.find((a) => a.addon.id === addon.id);
+              const isSelected = !!selected;
+
+              return (
+                <TouchableOpacity
+                  key={addon.id}
+                  onPress={() => onToggleAddon(addon)}
+                  style={[
+                    styles.addonItem,
+                    {
+                      backgroundColor: isSelected ? colors.sunYellowLight : theme.backgroundSecondary,
+                      borderColor: isSelected ? colors.sunYellow : 'transparent',
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.addonInfo}>
+                    <View style={styles.addonHeader}>
+                      <Ionicons
+                        name={(addon.icon as any) ?? 'add-circle-outline'}
+                        size={18}
+                        color={isSelected ? colors.brand : theme.textSecondary}
+                      />
+                      <Text style={[styles.addonName, { color: theme.text }]}>{addon.name}</Text>
+                    </View>
+                    {addon.description && (
+                      <Text style={[styles.addonDesc, { color: theme.textSecondary }]}>
+                        {addon.description}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.addonRight}>
+                    <Text style={[styles.addonPrice, { color: theme.accent }]}>{addon.price}€</Text>
+                    {isSelected && (
+                      <View style={styles.qtyRow}>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            onUpdateQuantity(addon.id, (selected?.quantity ?? 1) - 1);
+                          }}
+                        >
+                          <Ionicons name="remove-circle" size={22} color={colors.brand} />
+                        </TouchableOpacity>
+                        <Text style={[styles.qtyText, { color: theme.text }]}>{selected?.quantity}</Text>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            onUpdateQuantity(addon.id, (selected?.quantity ?? 1) + 1);
+                          }}
+                        >
+                          <Ionicons name="add-circle" size={22} color={colors.brand} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            <View style={[styles.priceRow, { borderTopColor: theme.cardBorder, marginTop: 12 }]}>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Transat</Text>
+              <Text style={[styles.priceValue, { color: theme.text }]}>{basePrice}€</Text>
+            </View>
+            {addonsTotal > 0 && (
+              <View style={styles.priceSubRow}>
+                <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Options</Text>
+                <Text style={[styles.priceValue, { color: theme.text }]}>+{addonsTotal}€</Text>
+              </View>
+            )}
+            <View style={styles.priceSubRow}>
+              <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+              <Text style={[styles.totalValue, { color: colors.brand }]}>{totalPrice}€</Text>
+            </View>
+
+            <Button title="Confirmer la réservation" onPress={onGoToConfirm} style={{ marginTop: 16 }} />
+          </View>
+        )}
+
+        {/* Étape 3 : Confirmation */}
+        {step === 'confirm' && (
+          <View style={styles.content}>
+            <TouchableOpacity onPress={onGoBack} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={18} color={theme.accent} />
+              <Text style={[styles.backText, { color: theme.accent }]}>Retour</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <Text style={[styles.summaryTitle, { color: theme.text }]}>Récapitulatif</Text>
+
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Transat</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>
+                  {sunbed.label} ({sunbed.zone.name})
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Date</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>{formattedDate}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Horaires</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>10h00 — 19h00</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Personnes</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>{guestCount}</Text>
+              </View>
+              {selectedAddons.length > 0 && (
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Options</Text>
+                  <Text style={[styles.summaryValue, { color: theme.text }]}>
+                    {selectedAddons.map((a) =>
+                      a.quantity > 1 ? `${a.addon.name} x${a.quantity}` : a.addon.name
+                    ).join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.priceRow, { borderTopColor: theme.cardBorder }]}>
+              <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+              <Text style={[styles.totalValue, { color: colors.brand }]}>{totalPrice}€</Text>
+            </View>
+            <View style={styles.priceSubRow}>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
+                Acompte (30%)
+              </Text>
+              <Text style={[styles.priceValue, { color: theme.text }]}>{depositAmount}€</Text>
+            </View>
+
+            <Text style={[styles.policyText, { color: theme.textSecondary }]}>
+              En confirmant, vous acceptez notre politique anti no-show.
+              L'acompte de {depositAmount}€ sera perdu en cas d'absence.
+            </Text>
+
+            <Button
+              title={user ? `Réserver — ${depositAmount}€ d'acompte` : 'Se connecter pour réserver'}
+              onPress={handleBook}
+              loading={booking}
+              size="lg"
+              style={{ marginTop: 16 }}
+            />
+
+            <Text style={[styles.tokenBonus, { color: colors.sage }]}>
+              +10 Beach Tokens offerts avec cette réservation
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </BottomSheet>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { paddingBottom: 8 },
+  row: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  description: { fontSize: 13, lineHeight: 19, marginBottom: 16 },
+  infoCard: { padding: 14, borderRadius: 12, gap: 10, marginBottom: 16 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  infoText: { fontSize: 14, fontWeight: '500' },
+  guestRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  guestLabel: { fontSize: 15, fontWeight: '600' },
+  guestCounter: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  guestBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestNum: { fontSize: 18, fontWeight: '700', minWidth: 20, textAlign: 'center' },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1 },
+  priceSubRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  priceLabel: { fontSize: 14 },
+  priceValue: { fontSize: 14, fontWeight: '600' },
+  totalLabel: { fontSize: 16, fontWeight: '700' },
+  totalValue: { fontSize: 20, fontWeight: '800' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
+  backText: { fontSize: 14, fontWeight: '600' },
+  addonItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 8,
+  },
+  addonInfo: { flex: 1 },
+  addonHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  addonName: { fontSize: 14, fontWeight: '600' },
+  addonDesc: { fontSize: 11, marginTop: 3, marginLeft: 26 },
+  addonRight: { alignItems: 'flex-end', gap: 6 },
+  addonPrice: { fontSize: 15, fontWeight: '700' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  qtyText: { fontSize: 14, fontWeight: '600', minWidth: 16, textAlign: 'center' },
+  summaryCard: { padding: 16, borderRadius: 14, gap: 10, marginBottom: 16 },
+  summaryTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  summaryLabel: { fontSize: 13 },
+  summaryValue: { fontSize: 13, fontWeight: '600', maxWidth: '60%', textAlign: 'right' },
+  policyText: { fontSize: 11, lineHeight: 16, marginTop: 12, textAlign: 'center' },
+  tokenBonus: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 10 },
+});
