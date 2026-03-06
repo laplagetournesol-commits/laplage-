@@ -19,6 +19,7 @@ import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 
 type Segment = 'all' | 'vip' | 'gold+' | 'event_attendees';
 type Channel = 'push' | 'email';
@@ -133,38 +134,21 @@ export default function BroadcastScreen() {
 
               if (error) throw error;
 
-              // Send push notifications
+              // Envoyer via le serveur API
               if (channels.includes('push')) {
-                let tokenQuery = supabase.from('push_tokens').select('token');
+                await apiCall('/api/notifications/push', {
+                  title: title.trim(),
+                  body: body.trim(),
+                  segment,
+                });
+              }
 
-                if (segment === 'vip') {
-                  tokenQuery = supabase
-                    .from('push_tokens')
-                    .select('token, profile:profiles!inner(vip_level)')
-                    .in('profiles.vip_level', ['silver', 'gold', 'platinum']);
-                } else if (segment === 'gold+') {
-                  tokenQuery = supabase
-                    .from('push_tokens')
-                    .select('token, profile:profiles!inner(vip_level)')
-                    .in('profiles.vip_level', ['gold', 'platinum']);
-                }
-
-                const { data: tokens } = await tokenQuery;
-                if (tokens && tokens.length > 0) {
-                  // Send via Expo Push API
-                  const messages = tokens.map((t: any) => ({
-                    to: t.token,
-                    title: title.trim(),
-                    body: body.trim(),
-                    sound: 'default',
-                  }));
-
-                  await fetch('https://exp.host/--/api/v2/push/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(messages),
-                  });
-                }
+              if (channels.includes('email')) {
+                await apiCall('/api/emails/broadcast', {
+                  subject: title.trim(),
+                  html: `<h2>${title.trim()}</h2><p>${body.trim().replace(/\n/g, '<br>')}</p>`,
+                  segment,
+                });
               }
 
               // Add to history
