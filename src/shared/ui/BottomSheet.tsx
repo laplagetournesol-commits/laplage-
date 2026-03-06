@@ -34,38 +34,37 @@ export function BottomSheet({ visible, onClose, title, children, style }: Bottom
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.keyboardView}
+      <View style={styles.overlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.overlayTap} />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
+        >
+          <View
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: theme.card,
+                paddingBottom: insets.bottom + 16,
+              },
+              style,
+            ]}
           >
-            <TouchableWithoutFeedback>
-              <View
-                style={[
-                  styles.sheet,
-                  {
-                    backgroundColor: theme.card,
-                    paddingBottom: insets.bottom + 16,
-                  },
-                  style,
-                ]}
-              >
-                <View style={[styles.handle, { backgroundColor: theme.cardBorder }]} />
-                {title && (
-                  <View style={styles.header}>
-                    <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-                    <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="close" size={24} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {children}
+            <View style={[styles.handle, { backgroundColor: theme.cardBorder }]} />
+            {title && (
+              <View style={styles.header}>
+                <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={24} color={theme.textSecondary} />
+                </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
+            )}
+            {children}
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -76,6 +75,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
+  overlayTap: {
+    flex: 1,
+  },
   keyboardView: {
     justifyContent: 'flex-end',
   },
@@ -84,7 +86,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingTop: 12,
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   handle: {
     width: 40,

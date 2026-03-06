@@ -60,7 +60,15 @@ export default function ScannerScreen() {
   if (!permission.granted) {
     return (
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        <Stack.Screen options={{ title: 'Scanner', headerShown: true }} />
+        <Stack.Screen options={{
+            title: 'Scanner',
+            headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="arrow-back" size={24} color={theme.text} />
+              </TouchableOpacity>
+            ),
+          }} />
         <View style={styles.centeredContent}>
           <Ionicons name="camera-outline" size={64} color={theme.cardBorder} />
           <Text style={[styles.permissionText, { color: theme.text }]}>
@@ -101,7 +109,15 @@ export default function ScannerScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <Stack.Screen options={{ title: 'Scanner QR', headerShown: true }} />
+      <Stack.Screen options={{
+            title: 'Scanner QR',
+            headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="arrow-back" size={24} color={theme.text} />
+              </TouchableOpacity>
+            ),
+          }} />
 
       {!reservation ? (
         <>

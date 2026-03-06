@@ -143,6 +143,9 @@ export const translations = {
     addItems: 'Ajoutez au moins un article à votre pré-commande.',
     articles: 'articles',
 
+    // Language
+    chooseLanguage: 'Choisir la langue',
+
     // Profile
     myProfile: 'Mon Profil',
     profileDesc: 'Connectez-vous pour accéder à vos réservations, tokens et plus encore.',
@@ -308,6 +311,9 @@ export const translations = {
     addItems: 'Añade al menos un artículo.',
     articles: 'artículos',
 
+    // Language
+    chooseLanguage: 'Elegir idioma',
+
     // Profile
     myProfile: 'Mi Perfil',
     profileDesc: 'Inicia sesión para acceder a tus reservas, tokens y más.',
@@ -472,6 +478,9 @@ export const translations = {
     emptyCart: 'Empty cart',
     addItems: 'Add at least one item to your pre-order.',
     articles: 'items',
+
+    // Language
+    chooseLanguage: 'Choose language',
 
     // Profile
     myProfile: 'My Profile',

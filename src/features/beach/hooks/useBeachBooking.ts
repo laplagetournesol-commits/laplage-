@@ -54,7 +54,7 @@ export function useBeachBooking() {
   }, []);
 
   const setGuestCount = useCallback((count: number) => {
-    setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 10)) }));
+    setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 2)) }));
   }, []);
 
   const toggleAddon = useCallback((addon: Addon) => {
@@ -88,14 +88,15 @@ export function useBeachBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  // Calculs de prix
-  const basePrice = state.sunbed?.zone?.base_price ?? 0;
+  // Calculs de prix — 1 transat par personne
+  const unitPrice = state.sunbed?.zone?.base_price ?? 0;
+  const basePrice = unitPrice * state.guestCount;
   const addonsTotal = state.selectedAddons.reduce(
     (sum, a) => sum + a.addon.price * a.quantity,
     0
   );
   const totalPrice = basePrice + addonsTotal;
-  const depositAmount = Math.ceil(totalPrice * 0.3); // 30% d'acompte
+  const depositAmount = totalPrice; // Plage : paiement 100% d'avance
 
   // Soumettre la réservation
   const submitBooking = useCallback(async () => {

@@ -106,68 +106,68 @@ export function SunbedSheet({
   return (
     <>
     <BottomSheet visible={visible} onClose={onClose} title={title}>
-      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-        {/* Étape 1 : Détails du transat */}
-        {step === 'select' && (
-          <View style={styles.content}>
-            <View style={styles.row}>
-              <Badge
-                label={sunbed.zone.zone_type === 'vip_cabana' ? 'VIP Cabana' : sunbed.zone.name}
-                variant={sunbed.zone.zone_type === 'vip_cabana' ? 'vip' : 'default'}
-              />
-              {sunbed.is_double && <Badge label="Double" variant="success" size="sm" />}
+      {/* Étape 1 : Détails du transat — PAS de scroll, tout visible */}
+      {step === 'select' && (
+        <View style={styles.content}>
+          <View style={styles.row}>
+            <Badge
+              label={sunbed.zone.zone_type === 'vip_cabana' ? 'VIP Cabana' : sunbed.zone.name}
+              variant={sunbed.zone.zone_type === 'vip_cabana' ? 'vip' : 'default'}
+            />
+            {sunbed.is_double && <Badge label="Double" variant="success" size="sm" />}
+            <View style={[styles.includedBadge, { backgroundColor: colors.sage + '15' }]}>
+              <Ionicons name="checkmark-circle" size={12} color={colors.sage} />
+              <Text style={[styles.includedBadgeText, { color: colors.sage }]}>Serviettes incluses</Text>
             </View>
+          </View>
 
-            <Text style={[styles.description, { color: theme.textSecondary }]}>
-              {sunbed.zone.description}
-            </Text>
-
-            <View style={[styles.infoCard, { backgroundColor: theme.backgroundSecondary }]}>
-              <View style={styles.infoRow}>
-                <Ionicons name="calendar-outline" size={16} color={theme.accent} />
-                <Text style={[styles.infoText, { color: theme.text }]}>{formattedDate}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="time-outline" size={16} color={theme.accent} />
-                <Text style={[styles.infoText, { color: theme.text }]}>10h00 — 19h00</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={16} color={theme.accent} />
-                <Text style={[styles.infoText, { color: theme.text }]}>
-                  Zone {sunbed.zone.name} — {sunbed.label}
-                </Text>
-              </View>
+          <View style={[styles.infoCardCompact, { backgroundColor: theme.backgroundSecondary }]}>
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={14} color={theme.accent} />
+              <Text style={[styles.infoTextCompact, { color: theme.text }]}>{formattedDate}  •  10h — 19h</Text>
             </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={14} color={theme.accent} />
+              <Text style={[styles.infoTextCompact, { color: theme.text }]}>{sunbed.zone.name} — {sunbed.label}</Text>
+            </View>
+          </View>
 
-            {/* Nombre de personnes */}
-            <View style={styles.guestRow}>
-              <Text style={[styles.guestLabel, { color: theme.text }]}>Personnes</Text>
+          <View style={styles.compactRow}>
+            <View style={styles.guestRowCompact}>
+              <Text style={[styles.guestLabelCompact, { color: theme.text }]}>Personnes</Text>
               <View style={styles.guestCounter}>
                 <TouchableOpacity
                   onPress={() => onSetGuestCount(guestCount - 1)}
                   style={[styles.guestBtn, { borderColor: theme.cardBorder }]}
                 >
-                  <Ionicons name="remove" size={18} color={theme.text} />
+                  <Ionicons name="remove" size={16} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={[styles.guestNum, { color: theme.text }]}>{guestCount}</Text>
                 <TouchableOpacity
                   onPress={() => onSetGuestCount(guestCount + 1)}
                   style={[styles.guestBtn, { borderColor: theme.cardBorder }]}
                 >
-                  <Ionicons name="add" size={18} color={theme.text} />
+                  <Ionicons name="add" size={16} color={theme.text} />
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* Prix */}
-            <View style={[styles.priceRow, { borderTopColor: theme.cardBorder }]}>
-              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Prix du transat</Text>
-              <Text style={[styles.priceValue, { color: theme.text }]}>{basePrice}€</Text>
+            <View style={styles.priceCompact}>
+              <Text style={[styles.priceValueBig, { color: colors.brand }]}>{basePrice}€</Text>
+              {guestCount > 1 && (
+                <Text style={[styles.priceDetail, { color: theme.textSecondary }]}>
+                  {basePrice / guestCount}€ × {guestCount}
+                </Text>
+              )}
             </View>
-
-            <Button title="Choisir les options" onPress={onGoToAddons} style={{ marginTop: 16 }} />
           </View>
-        )}
+
+          <Button title="Choisir les options →" onPress={onGoToAddons} style={{ marginTop: 8 }} />
+        </View>
+      )}
+
+      {/* Étapes 2 et 3 avec scroll */}
+      {step !== 'select' && (
+      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 600 }}>
 
         {/* Étape 2 : Add-ons */}
         {step === 'addons' && (
@@ -308,17 +308,28 @@ export function SunbedSheet({
               <Text style={[styles.priceValue, { color: theme.text }]}>{depositAmount}€</Text>
             </View>
 
-            <Text style={[styles.policyText, { color: theme.textSecondary }]}>
-              En confirmant, vous acceptez notre politique anti no-show.
-              L'acompte de {depositAmount}€ sera perdu en cas d'absence.
-            </Text>
+            <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
+              <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>Conditions de réservation</Text>
+              <View style={styles.policyItem}>
+                <Ionicons name="pencil-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Modifiable jusqu'à 24h avant</Text>
+              </View>
+              <View style={styles.policyItem}>
+                <Ionicons name="close-circle-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Non annulable, non remboursable</Text>
+              </View>
+              <View style={styles.policyItem}>
+                <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : montant total perdu</Text>
+              </View>
+            </View>
 
             <Button
-              title={user ? `Réserver — ${depositAmount}€ d'acompte` : 'Se connecter pour réserver'}
+              title={user ? `Réserver — ${totalPrice}€` : 'Se connecter pour réserver'}
               onPress={handleBook}
               loading={booking}
               size="lg"
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 12 }}
             />
 
             <Text style={[styles.tokenBonus, { color: colors.sage }]}>
@@ -327,6 +338,7 @@ export function SunbedSheet({
           </View>
         )}
       </ScrollView>
+      )}
     </BottomSheet>
 
     {qrCode && (
@@ -353,18 +365,34 @@ export function SunbedSheet({
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 8 },
-  row: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  description: { fontSize: 13, lineHeight: 19, marginBottom: 16 },
-  infoCard: { padding: 14, borderRadius: 12, gap: 10, marginBottom: 16 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoText: { fontSize: 14, fontWeight: '500' },
-  guestRow: {
+  row: { flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' },
+  includedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  includedBadgeText: { fontSize: 11, fontWeight: '600' },
+  infoCardCompact: { padding: 10, borderRadius: 10, gap: 6, marginBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoTextCompact: { fontSize: 13, fontWeight: '500' },
+  compactRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  guestLabel: { fontSize: 15, fontWeight: '600' },
+  guestRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  guestLabelCompact: { fontSize: 14, fontWeight: '600' },
+  priceCompact: { alignItems: 'flex-end' },
+  priceValueBig: { fontSize: 22, fontWeight: '800' },
+  priceDetail: { fontSize: 11, marginTop: 2 },
   guestCounter: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   guestBtn: {
     width: 32,
@@ -404,6 +432,15 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { fontSize: 13 },
   summaryValue: { fontSize: 13, fontWeight: '600', maxWidth: '60%', textAlign: 'right' },
-  policyText: { fontSize: 11, lineHeight: 16, marginTop: 12, textAlign: 'center' },
+  policyCard: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 14,
+    gap: 6,
+  },
+  policyCardTitle: { fontSize: 12, fontWeight: '700', marginBottom: 2 },
+  policyItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  policyItemText: { fontSize: 11, fontWeight: '500' },
   tokenBonus: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 10 },
 });

@@ -7,7 +7,6 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  type NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
@@ -15,17 +14,9 @@ import { colors } from '@/shared/theme/colors';
 import type { Sunbed, BeachZone } from '@/shared/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// La carte fait 2x la largeur de l'écran pour permettre le zoom
-const MAP_WIDTH = SCREEN_WIDTH * 2;
-const MAP_HEIGHT = MAP_WIDTH * 1.4;
-
-// Couleurs des zones sur la carte
-const ZONE_COLORS: Record<string, string> = {
-  standard: colors.sage,
-  premium: '#4A90D9',
-  front_row: colors.sunYellow,
-  vip_cabana: colors.accentRed,
-};
+// Photo transat.png est en portrait — on affiche toute la photo
+const MAP_WIDTH = SCREEN_WIDTH;
+const MAP_HEIGHT = MAP_WIDTH * 1.5;
 
 interface SunbedWithZone extends Sunbed {
   zone: BeachZone;
@@ -42,29 +33,22 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
   const { theme } = useSunMode();
   const scrollRef = useRef<ScrollView>(null);
 
-  const getMarkerColor = (sunbed: SunbedWithZone) => {
-    if (sunbed.isReserved) return colors.gray[400];
-    return ZONE_COLORS[sunbed.zone.zone_type] ?? colors.sage;
-  };
-
   return (
     <View style={styles.container}>
-      {/* Légende en haut */}
+      {/* Légende discrète */}
       <View style={[styles.legend, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <View style={styles.legendRow}>
-          {Object.entries(ZONE_COLORS).map(([type, color]) => (
-            <View key={type} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: color }]} />
-              <Text style={[styles.legendText, { color: theme.textSecondary }]}>
-                {type === 'standard' ? 'Standard' :
-                 type === 'premium' ? 'Premium' :
-                 type === 'front_row' ? 'Front Row' : 'VIP'}
-              </Text>
-            </View>
-          ))}
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.gray[400] }]} />
+            <View style={[styles.legendDot, { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.sunYellow }]} />
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Disponible</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.accentRed + '60' }]} />
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>Réservé</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.sunYellow }]} />
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Sélectionné</Text>
           </View>
         </View>
       </View>
@@ -74,63 +58,31 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
         ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        maximumZoomScale={3}
-        minimumZoomScale={0.8}
+        maximumZoomScale={4}
+        minimumZoomScale={1}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         bouncesZoom
         centerContent
       >
         <View style={styles.mapContainer}>
-          {/* Image de fond de la plage */}
+          {/* Photo pleine — PAS d'overlay */}
           <Image
-            source={require('../../../../assets/beach-map.jpg')}
+            source={require('../../../../assets/transat.png')}
             style={styles.mapImage}
             resizeMode="cover"
           />
 
-          {/* Overlay sable semi-transparent pour lisibilité */}
-          <View style={styles.mapOverlay} />
-
-          {/* Indicateurs de zone */}
-          <View style={[styles.zoneLabel, { top: '5%', left: '35%' }]}>
-            <Text style={styles.zoneLabelText}>Restaurant ↑</Text>
-          </View>
-          <View style={[styles.zoneLabel, { top: '8%', left: '30%' }]}>
-            <Text style={[styles.zoneLabelText, { color: ZONE_COLORS.standard }]}>
-              — Standard —
-            </Text>
-          </View>
-          <View style={[styles.zoneLabel, { top: '32%', left: '32%' }]}>
-            <Text style={[styles.zoneLabelText, { color: ZONE_COLORS.premium }]}>
-              — Premium —
-            </Text>
-          </View>
-          <View style={[styles.zoneLabel, { top: '50%', left: '30%' }]}>
-            <Text style={[styles.zoneLabelText, { color: ZONE_COLORS.front_row }]}>
-              — Front Row —
-            </Text>
-          </View>
-          <View style={[styles.zoneLabel, { top: '64%', left: '28%' }]}>
-            <Text style={[styles.zoneLabelText, { color: ZONE_COLORS.vip_cabana }]}>
-              — VIP Cabanas —
-            </Text>
-          </View>
-          <View style={[styles.zoneLabel, { bottom: '3%', left: '35%' }]}>
-            <Ionicons name="water" size={14} color={colors.deepSea} />
-            <Text style={[styles.zoneLabelText, { color: colors.deepSea }]}> Mer</Text>
-          </View>
-
-          {/* Marqueurs des transats */}
+          {/* Zones cliquables transparentes sur la photo */}
           {sunbeds.map((sunbed) => {
             const isSelected = sunbed.id === selectedId;
-            const markerColor = getMarkerColor(sunbed);
+            const isReserved = sunbed.isReserved;
 
             return (
               <TouchableOpacity
                 key={sunbed.id}
-                activeOpacity={sunbed.isReserved ? 1 : 0.6}
-                onPress={() => !sunbed.isReserved && onSelect(sunbed)}
+                activeOpacity={isReserved ? 1 : 0.6}
+                onPress={() => !isReserved && onSelect(sunbed)}
                 style={[
                   styles.marker,
                   {
@@ -141,31 +93,19 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
                   },
                 ]}
               >
+                {/* Zone transparente — visible uniquement si sélectionné ou réservé */}
                 <View
                   style={[
                     styles.markerInner,
-                    {
-                      backgroundColor: markerColor,
-                      borderColor: isSelected ? colors.white : 'transparent',
-                      borderWidth: isSelected ? 2.5 : 0,
-                      opacity: sunbed.isReserved ? 0.4 : 0.85,
-                    },
                     isSelected && styles.markerSelected,
+                    isReserved && styles.markerReserved,
                   ]}
                 >
-                  {/* Icône parasol */}
-                  <Ionicons
-                    name={sunbed.is_double ? 'bed' : 'umbrella'}
-                    size={sunbed.is_double ? 14 : 12}
-                    color={colors.white}
-                  />
-                  <Text style={styles.markerLabel}>{sunbed.label}</Text>
+                  {/* Numéro discret seulement si sélectionné */}
+                  {isSelected && (
+                    <Text style={styles.selectedLabel}>{sunbed.label}</Text>
+                  )}
                 </View>
-
-                {/* Indicateur sélectionné */}
-                {isSelected && (
-                  <View style={styles.selectedPulse} />
-                )}
               </TouchableOpacity>
             );
           })}
@@ -176,7 +116,7 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
       <View style={[styles.zoomHint, { backgroundColor: theme.card + 'DD' }]}>
         <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
         <Text style={[styles.zoomHintText, { color: theme.textSecondary }]}>
-          Pincez pour zoomer
+          Pincez pour zoomer • Touchez un transat
         </Text>
       </View>
     </View>
@@ -195,7 +135,7 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 16,
     justifyContent: 'center',
   },
   legendItem: {
@@ -204,12 +144,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '500',
   },
   scrollView: {
@@ -229,24 +169,6 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'absolute',
   },
-  mapOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(245, 230, 200, 0.55)',
-  },
-  zoneLabel: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  zoneLabelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    textShadowColor: 'rgba(255,255,255,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
   marker: {
     position: 'absolute',
     alignItems: 'center',
@@ -258,33 +180,33 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    // Transparent par défaut — on voit la photo
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   markerSelected: {
-    shadowOpacity: 0.4,
+    backgroundColor: 'rgba(247, 217, 78, 0.3)',
+    borderColor: colors.sunYellow,
+    borderWidth: 2.5,
+    shadowColor: colors.sunYellow,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 6,
-    transform: [{ scale: 1.1 }],
   },
-  markerLabel: {
+  markerReserved: {
+    backgroundColor: 'rgba(201, 64, 64, 0.3)',
+    borderColor: 'rgba(201, 64, 64, 0.5)',
+    borderWidth: 1,
+  },
+  selectedLabel: {
     color: colors.white,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  selectedPulse: {
-    position: 'absolute',
-    width: '120%',
-    height: '120%',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: colors.white,
-    opacity: 0.5,
+    fontSize: 10,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   zoomHint: {
     position: 'absolute',

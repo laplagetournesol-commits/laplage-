@@ -36,10 +36,15 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      ["expo-build-properties", {
+        "ios": {
+          "buildReactNativeFromSource": true
+        }
+      }]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     }
   }
 }

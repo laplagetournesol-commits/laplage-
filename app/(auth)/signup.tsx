@@ -53,11 +53,7 @@ export default function SignupScreen() {
     if (err) {
       setError(err.message);
     } else {
-      Alert.alert(
-        'Compte créé !',
-        'Vérifiez votre email pour confirmer votre inscription.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-      );
+      router.replace('/(tabs)');
     }
   };
 

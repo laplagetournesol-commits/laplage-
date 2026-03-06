@@ -195,16 +195,28 @@ export function TableSheet({
               </View>
             )}
 
-            <Text style={[styles.policyText, { color: theme.textSecondary }]}>
-              L'acompte sera déduit de l'addition. En cas de no-show, il ne sera pas remboursé.
-            </Text>
+            <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
+              <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>Conditions de réservation</Text>
+              <View style={styles.policyItem}>
+                <Ionicons name="pencil-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Modifiable jusqu'à 24h avant</Text>
+              </View>
+              <View style={styles.policyItem}>
+                <Ionicons name="close-circle-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Non annulable, non remboursable</Text>
+              </View>
+              <View style={styles.policyItem}>
+                <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : acompte perdu</Text>
+              </View>
+            </View>
 
             <Button
               title={user ? `Confirmer — ${depositAmount}€ d'acompte` : 'Se connecter pour réserver'}
               onPress={handleBook}
               loading={booking}
               size="lg"
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 12 }}
             />
 
             <Text style={[styles.tokenBonus, { color: colors.sage }]}>
@@ -228,6 +240,7 @@ export function TableSheet({
           { label: 'Service', value: timeSlot === 'lunch' ? 'Déjeuner (12h-16h)' : 'Dîner (19h30-23h30)', icon: 'time-outline' },
           { label: 'Table', value: `${table.label} — ${table.zone.name}`, icon: 'location-outline' },
           { label: 'Convives', value: `${guestCount}`, icon: 'people-outline' },
+          { label: 'Acompte payé', value: `${depositAmount}€ (à déduire)`, icon: 'card-outline' },
         ]}
         deposit={depositAmount > 0 ? `${depositAmount}€` : undefined}
       />
@@ -260,6 +273,15 @@ const styles = StyleSheet.create({
   depositRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1 },
   depositLabel: { fontSize: 14 },
   depositValue: { fontSize: 20, fontWeight: '800' },
-  policyText: { fontSize: 11, lineHeight: 16, marginTop: 12, textAlign: 'center' },
+  policyCard: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 14,
+    gap: 6,
+  },
+  policyCardTitle: { fontSize: 12, fontWeight: '700', marginBottom: 2 },
+  policyItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  policyItemText: { fontSize: 11, fontWeight: '500' },
   tokenBonus: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 10 },
 });

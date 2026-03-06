@@ -13,3 +13,4 @@ i18n.defaultLocale = 'fr';
 export { i18n };
 export { translations } from './translations';
 export type { TranslationKey, Language } from './translations';
+export { LanguageProvider, useLanguage, LANGUAGE_LABELS } from './LanguageContext';

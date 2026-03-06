@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SunModeProvider, useSunMode } from '@/shared/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { LanguageProvider } from '@/shared/i18n';
 
 const ONBOARDING_KEY = 'tournesol_onboarding_done';
 
@@ -62,6 +63,10 @@ function RootLayoutContent() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="profile"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
           name="onboarding"
           options={{ animation: 'fade' }}
         />
@@ -75,9 +80,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SunModeProvider>
-          <AuthProvider>
-            <RootLayoutContent />
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <RootLayoutContent />
+            </AuthProvider>
+          </LanguageProvider>
         </SunModeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -30,6 +30,8 @@ export interface BeachZone {
   capacity: number;
   description: string | null;
   svg_path_data: string | null;
+  is_active: boolean;
+  sort_order: number;
 }
 
 export interface Sunbed {
@@ -71,6 +73,7 @@ export interface Addon {
   category: 'comfort' | 'food' | 'drink' | 'pack';
   icon: string | null;
   is_available: boolean;
+  sort_order: number;
 }
 
 export interface ReservationAddon {
@@ -92,6 +95,8 @@ export interface RestaurantZone {
   capacity: number;
   description: string | null;
   svg_path_data: string | null;
+  is_active: boolean;
+  sort_order: number;
 }
 
 export interface RestaurantTable {

@@ -19,7 +19,8 @@ import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import type { SunPeriod } from '@/shared/theme/colors';
-import { i18n } from '@/shared/i18n';
+import { i18n, useLanguage, LANGUAGE_LABELS } from '@/shared/i18n';
+import type { Language } from '@/shared/i18n';
 
 const VIP_COLORS = {
   standard: colors.gray[400],
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
   const { theme, period, override, isOverridden } = useSunMode();
   const { user, profile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
+  const { locale, setLanguage, languageLabel } = useLanguage();
 
   const handleSignOut = () => {
     Alert.alert(
@@ -67,6 +69,19 @@ export default function ProfileScreen() {
         { text: i18n.t('cancel'), style: 'cancel' },
         { text: i18n.t('logout'), style: 'destructive', onPress: signOut },
       ]
+    );
+  };
+
+  const handleLanguageChange = () => {
+    const languages: Language[] = ['fr', 'es', 'en'];
+    Alert.alert(
+      i18n.t('chooseLanguage'),
+      '',
+      languages.map((lang) => ({
+        text: `${lang === 'fr' ? '🇫🇷' : lang === 'es' ? '🇪🇸' : '🇬🇧'} ${LANGUAGE_LABELS[lang]}`,
+        onPress: () => setLanguage(lang),
+        style: lang === locale ? ('cancel' as const) : ('default' as const),
+      })),
     );
   };
 
@@ -82,7 +97,7 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
         <ImageBackground
-          source={require('../../assets/terrace-view.jpg')}
+          source={require('../../assets/poisson.jpeg')}
           style={styles.noAuthBg}
           resizeMode="cover"
         >
@@ -141,7 +156,7 @@ export default function ProfileScreen() {
       >
         {/* Profile header with background photo */}
         <ImageBackground
-          source={require('../../assets/terrace-view.jpg')}
+          source={require('../../assets/poisson.jpeg')}
           style={styles.profileHeaderBg}
           resizeMode="cover"
         >
@@ -233,18 +248,18 @@ export default function ProfileScreen() {
         {/* Menu */}
         <View style={styles.section}>
           <Card padded={false}>
-            <MenuItem icon="receipt-outline" label={i18n.t('myReservations')} />
-            <MenuItem icon="ticket-outline" label={i18n.t('myTickets')} />
-            <MenuItem icon="diamond-outline" label={i18n.t('beachTokens')} value={`${profile?.beach_tokens ?? 0}`} />
-            <MenuItem icon="gift-outline" label={i18n.t('rewards')} />
+            <MenuItem icon="receipt-outline" label={i18n.t('myReservations')} onPress={() => router.push('/profile/reservations')} />
+            <MenuItem icon="ticket-outline" label={i18n.t('myTickets')} onPress={() => router.push('/profile/tickets')} />
+            <MenuItem icon="diamond-outline" label={i18n.t('beachTokens')} value={`${profile?.beach_tokens ?? 0}`} onPress={() => router.push('/profile/tokens')} />
+            <MenuItem icon="gift-outline" label={i18n.t('rewards')} onPress={() => router.push('/profile/rewards')} />
           </Card>
         </View>
 
         <View style={styles.section}>
           <Card padded={false}>
-            <MenuItem icon="person-outline" label={i18n.t('personalInfo')} />
-            <MenuItem icon="notifications-outline" label={i18n.t('notifications')} />
-            <MenuItem icon="language-outline" label={i18n.t('language')} value={profile?.preferred_language?.toUpperCase() ?? 'FR'} />
+            <MenuItem icon="person-outline" label={i18n.t('personalInfo')} onPress={() => router.push('/profile/personal-info')} />
+            <MenuItem icon="notifications-outline" label={i18n.t('notifications')} onPress={() => router.push('/profile/notifications')} />
+            <MenuItem icon="language-outline" label={i18n.t('language')} value={languageLabel} onPress={handleLanguageChange} />
             <MenuItem
               icon="sunny-outline"
               label="Sun Mode"
@@ -256,9 +271,9 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Card padded={false}>
-            <MenuItem icon="help-circle-outline" label={i18n.t('helpContact')} />
-            <MenuItem icon="document-text-outline" label={i18n.t('terms')} />
-            <MenuItem icon="shield-checkmark-outline" label={i18n.t('privacy')} />
+            <MenuItem icon="help-circle-outline" label={i18n.t('helpContact')} onPress={() => router.push('/profile/help')} />
+            <MenuItem icon="document-text-outline" label={i18n.t('terms')} onPress={() => router.push('/profile/terms')} />
+            <MenuItem icon="shield-checkmark-outline" label={i18n.t('privacy')} onPress={() => router.push('/profile/privacy')} />
           </Card>
         </View>
 

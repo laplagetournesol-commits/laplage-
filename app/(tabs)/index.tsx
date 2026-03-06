@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   ImageBackground,
+  Image,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
@@ -20,8 +21,9 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { AnimatedEntry, AnimatedScale } from '@/shared/ui/AnimatedEntry';
 import { i18n } from '@/shared/i18n';
+import { useWeather, windDescription } from '@/shared/hooks/useWeather';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 function QuickAction({
   icon,
@@ -50,89 +52,96 @@ export default function HomeScreen() {
   const { user, profile } = useAuth();
   const insets = useSafeAreaInsets();
 
+  const { weather } = useWeather();
+
   const greeting = () => {
     const greetings = i18n.t('greeting', { returnObjects: true }) as any;
     return greetings?.[period] ?? i18n.t(`greeting.${period}`);
   };
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: theme.background }]}
-      contentContainerStyle={{ paddingBottom: 32 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Hero Section */}
-      <ImageBackground
+    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+      {/* Background image — pleine page, en transparence */}
+      <Image
         source={require('../../assets/beach-hero.jpg')}
-        style={[styles.hero, { paddingTop: insets.top }]}
+        style={styles.bgImage}
         resizeMode="cover"
+      />
+      <LinearGradient
+        colors={[
+          'transparent',
+          theme.period === 'night' ? 'rgba(15,27,45,0.6)' : 'rgba(253,248,240,0.55)',
+          theme.period === 'night' ? 'rgba(15,27,45,0.92)' : 'rgba(253,248,240,0.88)',
+        ]}
+        locations={[0, 0.3, 0.6]}
+        style={styles.bgOverlay}
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={[
-            'rgba(0,0,0,0.25)',
-            theme.period === 'night' ? 'rgba(15,27,45,0.85)' : 'rgba(253,248,240,0.8)',
-            theme.background,
-          ]}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.heroContent}>
-          <AnimatedEntry delay={100} direction="up">
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={[styles.greeting, { color: theme.textSecondary }]}>
-                {greeting()} ☀️
+        {/* Hero Section */}
+        <View style={[styles.hero, { paddingTop: insets.top }]}>
+          <View style={styles.heroContent}>
+            <AnimatedEntry delay={100} direction="up">
+            <View style={styles.heroTop}>
+              <View>
+                <Text style={[styles.greeting, { color: theme.textSecondary }]}>
+                  {greeting()} ☀️
+                </Text>
+                <Text style={[styles.heroTitle, { color: theme.text }]}>
+                  {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  if (user) {
+                    router.push('/(tabs)/profile');
+                  } else {
+                    router.push('/(auth)/login');
+                  }
+                }}
+              >
+                <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
+                  <Ionicons name="person" size={20} color={colors.black} />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            </AnimatedEntry>
+
+            {/* Location badge */}
+            <AnimatedEntry delay={250} direction="up">
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={14} color={theme.accentSecondary} />
+              <Text style={[styles.locationText, { color: theme.textSecondary }]}>
+                Marbella, Costa del Sol
               </Text>
-              <Text style={[styles.heroTitle, { color: theme.text }]}>
-                {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
+              <Badge label={i18n.t('open')} variant="success" size="sm" />
+            </View>
+
+            </AnimatedEntry>
+
+            {/* Sun Mode indicator */}
+            <AnimatedEntry delay={400} direction="up">
+            <View style={[styles.sunIndicator, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+              <Ionicons
+                name={period === 'night' ? 'moon' : period === 'sunset' ? 'partly-sunny' : 'sunny'}
+                size={16}
+                color={theme.accent}
+              />
+              <Text style={[styles.sunText, { color: theme.textSecondary }]}>
+                {period === 'morning' && i18n.t('sunMorning')}
+                {period === 'day' && i18n.t('sunDay')}
+                {period === 'sunset' && i18n.t('sunSunset')}
+                {period === 'night' && i18n.t('sunNight')}
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                if (user) {
-                  router.push('/(tabs)/profile');
-                } else {
-                  router.push('/(auth)/login');
-                }
-              }}
-            >
-              <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
-                <Ionicons name="person" size={20} color={colors.black} />
-              </View>
-            </TouchableOpacity>
+            </AnimatedEntry>
           </View>
-
-          </AnimatedEntry>
-
-          {/* Location badge */}
-          <AnimatedEntry delay={250} direction="up">
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={14} color={theme.accentSecondary} />
-            <Text style={[styles.locationText, { color: theme.textSecondary }]}>
-              Marbella, Costa del Sol
-            </Text>
-            <Badge label={i18n.t('open')} variant="success" size="sm" />
-          </View>
-
-          </AnimatedEntry>
-
-          {/* Sun Mode indicator */}
-          <AnimatedEntry delay={400} direction="up">
-          <View style={[styles.sunIndicator, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-            <Ionicons
-              name={period === 'night' ? 'moon' : period === 'sunset' ? 'partly-sunny' : 'sunny'}
-              size={16}
-              color={theme.accent}
-            />
-            <Text style={[styles.sunText, { color: theme.textSecondary }]}>
-              {period === 'morning' && i18n.t('sunMorning')}
-              {period === 'day' && i18n.t('sunDay')}
-              {period === 'sunset' && i18n.t('sunSunset')}
-              {period === 'night' && i18n.t('sunNight')}
-            </Text>
-          </View>
-          </AnimatedEntry>
         </View>
-      </ImageBackground>
 
       {/* Quick Actions */}
       <AnimatedEntry delay={500} direction="up">
@@ -173,22 +182,25 @@ export default function HomeScreen() {
         <Card style={styles.vibeCard}>
           <View style={styles.vibeRow}>
             <View style={styles.vibeInfo}>
-              <Text style={[styles.vibeTemp, { color: theme.text }]}>28°C</Text>
+              <Text style={[styles.vibeTemp, { color: theme.text }]}>
+                {weather ? `${weather.temperature}°C` : '—'}
+              </Text>
               <Text style={[styles.vibeLabel, { color: theme.textSecondary }]}>
-                {i18n.t('weather')} • {i18n.t('windLight')}
+                {weather ? `${weather.icon} ${weather.description}` : i18n.t('weather')}
               </Text>
             </View>
             <View style={styles.vibeStats}>
               <View style={styles.vibeStat}>
-                <Ionicons name="people" size={16} color={theme.accent} />
+                <Ionicons name="flag" size={16} color={theme.accent} />
                 <Text style={[styles.vibeStatText, { color: theme.textSecondary }]}>
-                  {i18n.t('crowdModerate')}
+                  {weather ? windDescription(weather.windSpeed) : i18n.t('windLight')}
+                  {weather ? ` • ${weather.windSpeed} km/h` : ''}
                 </Text>
               </View>
               <View style={styles.vibeStat}>
-                <Ionicons name="water" size={16} color={colors.deepSea} />
+                <Ionicons name="location" size={16} color={colors.deepSea} />
                 <Text style={[styles.vibeStatText, { color: theme.textSecondary }]}>
-                  {i18n.t('seaCalm')} • 22°C
+                  Marbella
                 </Text>
               </View>
             </View>
@@ -206,7 +218,7 @@ export default function HomeScreen() {
         </View>
         <Card padded={false} style={styles.eventCard}>
           <ImageBackground
-            source={require('../../assets/pool-view.jpg')}
+            source={require('../../assets/event.png')}
             style={styles.eventImageBg}
             resizeMode="cover"
           >
@@ -225,7 +237,7 @@ export default function HomeScreen() {
                 </View>
                 <Button
                   title={i18n.t('reserve')}
-                  onPress={() => {}}
+                  onPress={() => router.push('/(tabs)/events')}
                   size="sm"
                   variant="primary"
                 />
@@ -312,13 +324,30 @@ export default function HomeScreen() {
           </Card>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  bgImage: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    width: width,
+    height: height,
+    opacity: 0.5,
+  },
+  bgOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   hero: {
     minHeight: 260,

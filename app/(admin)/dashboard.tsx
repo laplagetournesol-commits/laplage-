@@ -118,7 +118,15 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <Stack.Screen options={{ title: 'Admin', headerShown: true }} />
+      <Stack.Screen options={{
+        title: 'Admin',
+        headerShown: true,
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+        ),
+      }} />
 
       <ScrollView
         contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 20 }]}
@@ -198,6 +206,61 @@ export default function DashboardScreen() {
             </View>
           </View>
         </Card>
+
+        {/* Gestion */}
+        <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 28 }]}>Gestion</Text>
+        <View style={styles.managementGrid}>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.terracotta + '12', borderColor: colors.terracotta + '30' }]}
+            onPress={() => router.push('/(admin)/beach-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.terracotta + '20' }]}>
+              <Ionicons name="umbrella" size={22} color={colors.terracotta} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Plage</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Zones & transats</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.deepSea + '10', borderColor: colors.deepSea + '25' }]}
+            onPress={() => router.push('/(admin)/restaurant-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.deepSea + '18' }]}>
+              <Ionicons name="restaurant" size={22} color={colors.deepSea} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Restaurant</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Zones & tables</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.accentRed + '10', borderColor: colors.accentRed + '25' }]}
+            onPress={() => router.push('/(admin)/events-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.accentRed + '18' }]}>
+              <Ionicons name="calendar" size={22} color={colors.accentRed} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Événements</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Créer & éditer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.sage + '15', borderColor: colors.sage + '30' }]}
+            onPress={() => router.push('/(admin)/addons-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.sage + '22' }]}>
+              <Ionicons name="gift" size={22} color={colors.sage} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Addons</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Extras & packs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.sunYellow + '12', borderColor: colors.sunYellow + '30' }]}
+            onPress={() => router.push('/(admin)/broadcast')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.sunYellow + '20' }]}>
+              <Ionicons name="megaphone" size={22} color={colors.warmWood} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Broadcast</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Push & emails</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -245,4 +308,28 @@ const styles = StyleSheet.create({
   },
   tokensLabel: { fontSize: 13 },
   tokensValue: { fontSize: 22, fontWeight: '800', marginTop: 2 },
+  managementGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  managementBtn: {
+    width: '47%',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 6,
+  },
+  managementIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  managementLabel: { fontSize: 14, fontWeight: '700' },
+  managementSub: { fontSize: 11 },
 });
