@@ -102,30 +102,41 @@ export default function ReservationsScreen() {
     setRefreshing(false);
   };
 
+  const updateStatus = async (id: string, status: string) => {
+    const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+    const { error } = await supabase.from(table).update({ status }).eq('id', id);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+    } else {
+      await fetchReservations();
+    }
+  };
+
   const handleCardPress = (r: ReservationRow) => {
-    if (r.status === 'checked_in' || r.status === 'completed' || r.status === 'cancelled') return;
-    Alert.alert(
-      r.clientName,
-      `${r.locationLabel} — ${r.guestCount} pers.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Check-in',
-          onPress: async () => {
-            const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
-            const { error } = await supabase
-              .from(table)
-              .update({ status: 'checked_in' })
-              .eq('id', r.id);
-            if (error) {
-              Alert.alert('Erreur', error.message);
-            } else {
-              await fetchReservations();
-            }
-          },
-        },
-      ],
-    );
+    if (r.status === 'completed' || r.status === 'cancelled') return;
+
+    const buttons: any[] = [{ text: 'Fermer', style: 'cancel' }];
+
+    if (r.status !== 'checked_in') {
+      buttons.push({ text: 'Check-in', onPress: () => updateStatus(r.id, 'checked_in') });
+    }
+
+    buttons.push({
+      text: 'Annuler la réservation',
+      style: 'destructive',
+      onPress: () => {
+        Alert.alert(
+          'Confirmer l\'annulation',
+          `Annuler la réservation de ${r.clientName} ?`,
+          [
+            { text: 'Non', style: 'cancel' },
+            { text: 'Oui, annuler', style: 'destructive', onPress: () => updateStatus(r.id, 'cancelled') },
+          ],
+        );
+      },
+    });
+
+    Alert.alert(r.clientName, `${r.locationLabel} — ${r.guestCount} pers.`, buttons);
   };
 
   return (

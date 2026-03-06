@@ -19,11 +19,20 @@ import { supabase } from '@/shared/lib/supabase';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { i18n } from '@/shared/i18n';
+import { useLanguage, LANGUAGE_LABELS } from '@/shared/i18n/LanguageContext';
+import type { Language } from '@/shared/i18n/translations';
 
 export default function LoginScreen() {
   const { theme } = useSunMode();
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
+  const { locale, setLanguage } = useLanguage();
+
+  const LANGS: { key: Language; flag: string }[] = [
+    { key: 'fr', flag: '🇫🇷' },
+    { key: 'es', flag: '🇪🇸' },
+    { key: 'en', flag: '🇬🇧' },
+  ];
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -136,6 +145,28 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Language selector */}
+        <View style={styles.langRow}>
+          {LANGS.map((l) => (
+            <TouchableOpacity
+              key={l.key}
+              style={[
+                styles.langBtn,
+                {
+                  backgroundColor: locale === l.key ? colors.brand + '15' : 'transparent',
+                  borderColor: locale === l.key ? colors.brand : theme.cardBorder,
+                },
+              ]}
+              onPress={() => setLanguage(l.key)}
+            >
+              <Text style={styles.langFlag}>{l.flag}</Text>
+              <Text style={[styles.langLabel, { color: locale === l.key ? colors.brand : theme.textSecondary }]}>
+                {LANGUAGE_LABELS[l.key]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Close button */}
         <TouchableOpacity
           style={[styles.closeBtn, { top: insets.top + 16 }]}
@@ -197,6 +228,29 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  langRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  langBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  langFlag: {
+    fontSize: 16,
+  },
+  langLabel: {
+    fontSize: 13,
     fontWeight: '600',
   },
   closeBtn: {
