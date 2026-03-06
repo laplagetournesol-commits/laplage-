@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -101,6 +102,32 @@ export default function ReservationsScreen() {
     setRefreshing(false);
   };
 
+  const handleCardPress = (r: ReservationRow) => {
+    if (r.status === 'checked_in' || r.status === 'completed' || r.status === 'cancelled') return;
+    Alert.alert(
+      r.clientName,
+      `${r.locationLabel} — ${r.guestCount} pers.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Check-in',
+          onPress: async () => {
+            const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+            const { error } = await supabase
+              .from(table)
+              .update({ status: 'checked_in' })
+              .eq('id', r.id);
+            if (error) {
+              Alert.alert('Erreur', error.message);
+            } else {
+              await fetchReservations();
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
@@ -162,19 +189,33 @@ export default function ReservationsScreen() {
 
           {reservations.map((r) => {
             const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.pending;
+            const canCheckIn = r.status !== 'checked_in' && r.status !== 'completed' && r.status !== 'cancelled';
             return (
-              <Card key={r.id} style={styles.resCard}>
-                <View style={styles.resRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.resClient, { color: theme.text }]}>{r.clientName}</Text>
-                    <Text style={[styles.resLocation, { color: theme.textSecondary }]}>
-                      {r.locationLabel} — {r.guestCount} pers.
-                      {r.timeSlot ? ` — ${r.timeSlot === 'lunch' ? 'Déjeuner' : 'Dîner'}` : ''}
-                    </Text>
+              <TouchableOpacity key={r.id} onPress={() => handleCardPress(r)} activeOpacity={canCheckIn ? 0.7 : 1}>
+                <Card style={styles.resCard}>
+                  <View style={styles.resRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.resClient, { color: theme.text }]}>{r.clientName}</Text>
+                      <Text style={[styles.resLocation, { color: theme.textSecondary }]}>
+                        {r.locationLabel} — {r.guestCount} pers.
+                        {r.timeSlot ? ` — ${r.timeSlot === 'lunch' ? 'Déjeuner' : 'Dîner'}` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.resRight}>
+                      <Badge label={status.label} variant={status.variant} size="sm" />
+                      {canCheckIn && (
+                        <TouchableOpacity
+                          style={styles.checkInBtn}
+                          onPress={() => handleCardPress(r)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="checkmark-circle-outline" size={22} color={colors.sage} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                  <Badge label={status.label} variant={status.variant} size="sm" />
-                </View>
-              </Card>
+                </Card>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -200,4 +241,6 @@ const styles = StyleSheet.create({
   resRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   resClient: { fontSize: 15, fontWeight: '600' },
   resLocation: { fontSize: 12, marginTop: 3 },
+  resRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  checkInBtn: { padding: 2 },
 });

@@ -193,6 +193,12 @@ export default function AddonsManagementScreen() {
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           {addons.length} addon{addons.length > 1 ? 's' : ''}
         </Text>
+        <View style={styles.hintRow}>
+          <Ionicons name="hand-left-outline" size={13} color={theme.textSecondary} />
+          <Text style={[styles.hintText, { color: theme.textSecondary }]}>
+            Appui long pour supprimer
+          </Text>
+        </View>
 
         {grouped.map((group) => (
           <View key={group.category} style={styles.categoryGroup}>
@@ -363,7 +369,9 @@ const styles = StyleSheet.create({
   container: { padding: 20 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 24, fontWeight: '800' },
-  subtitle: { fontSize: 13, marginTop: 4, marginBottom: 20 },
+  subtitle: { fontSize: 13, marginTop: 4, marginBottom: 8 },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 20 },
+  hintText: { fontSize: 11, fontStyle: 'italic' },
   categoryGroup: { marginBottom: 20 },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   categoryDot: { width: 10, height: 10, borderRadius: 5 },

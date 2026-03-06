@@ -118,7 +118,32 @@ export default function BroadcastScreen() {
           onPress: async () => {
             setSending(true);
             try {
-              // Save to push_notifications table
+              // Envoyer via le serveur API et récupérer le nombre réel envoyé
+              let actualSentCount = recipientCount ?? 0;
+
+              if (channels.includes('push')) {
+                const pushRes = await apiCall<{ sent?: number }>('/api/notifications/push', {
+                  title: title.trim(),
+                  body: body.trim(),
+                  segment,
+                });
+                if (typeof pushRes.sent === 'number') {
+                  actualSentCount = pushRes.sent;
+                }
+              }
+
+              if (channels.includes('email')) {
+                const emailRes = await apiCall<{ sent?: number }>('/api/emails/broadcast', {
+                  subject: title.trim(),
+                  html: `<h2>${title.trim()}</h2><p>${body.trim().replace(/\n/g, '<br>')}</p>`,
+                  segment,
+                });
+                if (typeof emailRes.sent === 'number') {
+                  actualSentCount = emailRes.sent;
+                }
+              }
+
+              // Save to push_notifications table with actual sent count
               const { data: notif, error } = await supabase
                 .from('push_notifications')
                 .insert({
@@ -127,36 +152,19 @@ export default function BroadcastScreen() {
                   target_segment: segment,
                   data: { channels },
                   sent_at: new Date().toISOString(),
-                  sent_count: recipientCount ?? 0,
+                  sent_count: actualSentCount,
                 })
                 .select()
                 .single();
 
               if (error) throw error;
 
-              // Envoyer via le serveur API
-              if (channels.includes('push')) {
-                await apiCall('/api/notifications/push', {
-                  title: title.trim(),
-                  body: body.trim(),
-                  segment,
-                });
-              }
-
-              if (channels.includes('email')) {
-                await apiCall('/api/emails/broadcast', {
-                  subject: title.trim(),
-                  html: `<h2>${title.trim()}</h2><p>${body.trim().replace(/\n/g, '<br>')}</p>`,
-                  segment,
-                });
-              }
-
               // Add to history
               if (notif) {
                 setHistory((prev) => [notif as PastBroadcast, ...prev]);
               }
 
-              Alert.alert('Envoyé !', `Broadcast envoyé à ${recipientCount ?? 0} personne(s).`);
+              Alert.alert('Envoyé !', `Broadcast envoyé à ${actualSentCount} personne(s).`);
               setTitle('');
               setBody('');
             } catch (err: any) {

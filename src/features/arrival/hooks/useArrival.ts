@@ -31,6 +31,7 @@ export function useArrival(reservationType?: 'beach' | 'restaurant', reservation
   const [specialRequests, setSpecialRequests] = useState('');
   const [estimatedArrival, setEstimatedArrival] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [existingOrder, setExistingOrder] = useState<PreOrder | null>(null);
 
   // Charger une pré-commande existante
@@ -89,11 +90,12 @@ export function useArrival(reservationType?: 'beach' | 'restaurant', reservation
     if (!reservationType || !reservationId || items.size === 0) return { success: false };
 
     setSubmitting(true);
+    setError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Connectez-vous');
 
-      const { error } = await supabase.from('pre_orders').insert({
+      const { error: insertError } = await supabase.from('pre_orders').insert({
         user_id: user.id,
         reservation_type: reservationType,
         reservation_id: reservationId,
@@ -104,11 +106,12 @@ export function useArrival(reservationType?: 'beach' | 'restaurant', reservation
         status: 'pending',
       });
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       setSubmitting(false);
       return { success: true };
-    } catch {
+    } catch (err: any) {
+      setError(err.message ?? 'Une erreur est survenue');
       setSubmitting(false);
       return { success: false };
     }
@@ -126,6 +129,7 @@ export function useArrival(reservationType?: 'beach' | 'restaurant', reservation
     setEstimatedArrival,
     submit,
     submitting,
+    error,
     existingOrder,
   };
 }

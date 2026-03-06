@@ -63,7 +63,7 @@ export default function RewardsScreen() {
                     <Badge label={`${r.token_cost} tokens`} variant={canAfford ? 'success' : 'default'} size="sm" />
                     <Button
                       title="Échanger"
-                      onPress={() => redeem(r.id)}
+                      onPress={() => redeem(r)}
                       size="sm"
                       variant={canAfford ? 'primary' : 'outline'}
                       loading={redeeming}

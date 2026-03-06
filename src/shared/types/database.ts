@@ -53,8 +53,6 @@ export interface BeachReservation {
   user_id: string;
   sunbed_id: string;
   date: string;
-  start_time: string;
-  end_time: string;
   status: ReservationStatus;
   total_price: number;
   deposit_amount: number;
@@ -62,6 +60,7 @@ export interface BeachReservation {
   stripe_payment_intent_id: string | null;
   guest_count: number;
   special_requests: string | null;
+  qr_code?: string;
   created_at: string;
 }
 
@@ -124,6 +123,7 @@ export interface RestaurantReservation {
   deposit_paid: boolean;
   stripe_payment_intent_id: string | null;
   special_requests: string | null;
+  qr_code?: string;
   created_at: string;
 }
 

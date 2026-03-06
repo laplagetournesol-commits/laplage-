@@ -24,6 +24,14 @@ import { supabase } from '@/shared/lib/supabase';
 import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
 import type { Event, EventCategory } from '@/shared/types';
 
+const VIP_LEVELS: { value: string; label: string }[] = [
+  { value: '', label: 'Aucun' },
+  { value: 'standard', label: 'Standard' },
+  { value: 'silver', label: 'Silver' },
+  { value: 'gold', label: 'Gold' },
+  { value: 'platinum', label: 'Platinum' },
+];
+
 const CATEGORIES: { value: EventCategory; label: string }[] = [
   { value: 'pool_party', label: 'Pool Party' },
   { value: 'dj_set', label: 'DJ Set' },
@@ -128,6 +136,12 @@ export default function EventFormScreen() {
       return;
     }
 
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!dateRegex.test(form.date)) { Alert.alert('Erreur', 'Format de date invalide (AAAA-MM-JJ)'); return; }
+    if (!timeRegex.test(form.start_time)) { Alert.alert('Erreur', "Format d'heure invalide (HH:MM)"); return; }
+    if (form.end_time && !timeRegex.test(form.end_time)) { Alert.alert('Erreur', "Format d'heure de fin invalide (HH:MM)"); return; }
+
     setSaving(true);
     try {
       const payload = {
@@ -183,7 +197,7 @@ export default function EventFormScreen() {
           style: 'destructive',
           onPress: async () => {
             await supabase.from('events').delete().eq('id', eventId);
-            router.back();
+            router.replace('/(admin)/events-management');
           },
         },
       ],
@@ -409,13 +423,31 @@ export default function EventFormScreen() {
             />
           )}
 
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.cardBorder, backgroundColor: theme.background }]}
-            value={form.required_vip_level}
-            onChangeText={(t) => setField('required_vip_level', t)}
-            placeholder="Niveau VIP requis (ex: gold)"
-            placeholderTextColor={theme.textSecondary}
-          />
+          <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Niveau VIP requis</Text>
+          <View style={styles.categoryRow}>
+            {VIP_LEVELS.map((level) => (
+              <TouchableOpacity
+                key={level.value}
+                style={[
+                  styles.categoryBtn,
+                  {
+                    backgroundColor: form.required_vip_level === level.value ? colors.accentRed : theme.card,
+                    borderColor: form.required_vip_level === level.value ? colors.accentRed : theme.cardBorder,
+                  },
+                ]}
+                onPress={() => setField('required_vip_level', level.value)}
+              >
+                <Text
+                  style={[
+                    styles.categoryBtnText,
+                    { color: form.required_vip_level === level.value ? colors.white : theme.text },
+                  ]}
+                >
+                  {level.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <TextInput
             style={[styles.input, { color: theme.text, borderColor: theme.cardBorder, backgroundColor: theme.background }]}

@@ -21,6 +21,10 @@ export const translations = {
     logoutConfirm: 'Êtes-vous sûr de vouloir vous déconnecter ?',
     email: 'Email',
     password: 'Mot de passe',
+    confirmPassword: 'Confirmer le mot de passe',
+    forgotPassword: 'Mot de passe oublié ?',
+    resetPasswordSent: 'Un email de réinitialisation a été envoyé',
+    checkEmail: 'Vérifiez votre boîte email pour confirmer votre compte',
     fullName: 'Nom complet',
 
     // Onboarding
@@ -189,6 +193,10 @@ export const translations = {
     logoutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
     email: 'Email',
     password: 'Contraseña',
+    confirmPassword: 'Confirmar contraseña',
+    forgotPassword: '¿Olvidaste tu contraseña?',
+    resetPasswordSent: 'Se ha enviado un correo de restablecimiento',
+    checkEmail: 'Revisa tu correo para confirmar tu cuenta',
     fullName: 'Nombre completo',
 
     // Onboarding
@@ -357,6 +365,10 @@ export const translations = {
     logoutConfirm: 'Are you sure you want to log out?',
     email: 'Email',
     password: 'Password',
+    confirmPassword: 'Confirm password',
+    forgotPassword: 'Forgot password?',
+    resetPasswordSent: 'A password reset email has been sent',
+    checkEmail: 'Check your email to confirm your account',
     fullName: 'Full name',
 
     // Onboarding

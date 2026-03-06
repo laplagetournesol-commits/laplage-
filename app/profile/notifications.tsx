@@ -14,7 +14,7 @@ interface Notification {
   title: string;
   body: string;
   created_at: string;
-  read: boolean;
+  read?: boolean;
 }
 
 export default function NotificationsScreen() {
@@ -33,10 +33,7 @@ export default function NotificationsScreen() {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    setNotifications((data ?? []).map((n: any) => ({
-      ...n,
-      read: true,
-    })));
+    setNotifications((data ?? []).map((n: any) => ({ ...n })));
     setLoading(false);
   };
 

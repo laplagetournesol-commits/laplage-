@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -22,6 +23,8 @@ function RootLayoutContent() {
       setReady(true);
     });
   }, []);
+
+  if (!ready) return <View style={{ flex: 1, backgroundColor: theme.background }} />;
 
   return (
     <>

@@ -36,11 +36,16 @@ export function usePurchaseTicket() {
 
       if (ticketError) throw new Error(ticketError.message);
 
-      // Mettre à jour le compteur
-      await supabase
+      // Mettre à jour le compteur (filtre atomique : rejeté si complet entre-temps)
+      const { data: updated, error: updateError } = await supabase
         .from('events')
         .update({ tickets_sold: event.tickets_sold + 1 })
-        .eq('id', event.id);
+        .eq('id', event.id)
+        .lt('tickets_sold', event.capacity)
+        .select()
+        .single();
+
+      if (updateError || !updated) throw new Error('Événement complet');
 
       // +5 Beach Tokens
       await supabase.from('token_transactions').insert({

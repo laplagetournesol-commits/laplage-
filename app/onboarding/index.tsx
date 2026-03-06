@@ -32,8 +32,6 @@ interface OnboardingSlide {
   image: any;
   titleKey: string;
   subtitleKey: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
 }
 
 const SLIDES: OnboardingSlide[] = [
@@ -43,8 +41,6 @@ const SLIDES: OnboardingSlide[] = [
     image: require('../../assets/beach-hero.jpg'),
     titleKey: 'onboarding1Title',
     subtitleKey: 'onboarding1Subtitle',
-    icon: 'sunny',
-    color: colors.sunYellow,
   },
   {
     id: '2',
@@ -52,8 +48,6 @@ const SLIDES: OnboardingSlide[] = [
     image: require('../../assets/pool-view.jpg'),
     titleKey: 'onboarding2Title',
     subtitleKey: 'onboarding2Subtitle',
-    icon: 'calendar',
-    color: colors.terracotta,
   },
   {
     id: '3',
@@ -61,8 +55,6 @@ const SLIDES: OnboardingSlide[] = [
     image: require('../../assets/terrace-view.jpg'),
     titleKey: 'onboarding3Title',
     subtitleKey: 'onboarding3Subtitle',
-    icon: 'sparkles',
-    color: colors.deepSea,
   },
 ];
 

@@ -7,26 +7,6 @@ interface SunbedWithAvailability extends Sunbed {
   isReserved: boolean;
 }
 
-export function useBeachZones() {
-  const [zones, setZones] = useState<BeachZone[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('beach_zones')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (data) setZones(data as BeachZone[]);
-      setLoading(false);
-    };
-    fetch();
-  }, []);
-
-  return { zones, loading };
-}
-
 export function useSunbeds(date: string) {
   const [sunbeds, setSunbeds] = useState<SunbedWithAvailability[]>([]);
   const [zones, setZones] = useState<BeachZone[]>([]);

@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/shared/lib/supabase';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { i18n } from '@/shared/i18n';
@@ -27,6 +29,25 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleForgotPassword = () => {
+    Alert.prompt(
+      i18n.t('forgotPassword'),
+      'Entrez votre adresse email',
+      async (emailInput) => {
+        if (!emailInput) return;
+        const { error } = await supabase.auth.resetPasswordForEmail(emailInput.trim());
+        if (error) {
+          Alert.alert(i18n.t('error'), error.message);
+        } else {
+          Alert.alert('Email envoyé', i18n.t('resetPasswordSent'));
+        }
+      },
+      'plain-text',
+      email,
+      'email-address'
+    );
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -88,6 +109,12 @@ export default function LoginScreen() {
             autoComplete="password"
           />
 
+          <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
+            <Text style={[styles.forgotPasswordText, { color: theme.accent }]}>
+              {i18n.t('forgotPassword')}
+            </Text>
+          </TouchableOpacity>
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button
@@ -112,7 +139,7 @@ export default function LoginScreen() {
         {/* Close button */}
         <TouchableOpacity
           style={[styles.closeBtn, { top: insets.top + 16 }]}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)')}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="close" size={28} color={theme.textSecondary} />
@@ -144,6 +171,15 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: 32,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  forgotPasswordText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   error: {
     color: colors.accentRed,

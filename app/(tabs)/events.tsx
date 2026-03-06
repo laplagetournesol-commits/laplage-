@@ -57,6 +57,7 @@ export default function EventsScreen() {
   const filters: { key: Filter; label: string }[] = [
     { key: 'all', label: 'Tous' },
     { key: 'pool_party', label: 'Pool Party' },
+    { key: 'dj_set', label: 'DJ Set' },
     { key: 'dinner_show', label: 'Dîner' },
     { key: 'brunch', label: 'Brunch' },
     { key: 'special', label: 'Spécial' },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { Button } from '@/shared/ui/Button';
 import { AnimatedEntry, AnimatedScale } from '@/shared/ui/AnimatedEntry';
 import { i18n } from '@/shared/i18n';
 import { useWeather, windDescription } from '@/shared/hooks/useWeather';
+import { supabase } from '@/shared/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -53,6 +54,11 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const { weather } = useWeather();
+
+  const [featuredEvent, setFeaturedEvent] = useState<any>(null);
+  useEffect(() => {
+    supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date').limit(1).single().then(({ data }) => { if (data) setFeaturedEvent(data); });
+  }, []);
 
   const greeting = () => {
     const greetings = i18n.t('greeting', { returnObjects: true }) as any;
@@ -193,7 +199,7 @@ export default function HomeScreen() {
               <View style={styles.vibeStat}>
                 <Ionicons name="flag" size={16} color={theme.accent} />
                 <Text style={[styles.vibeStatText, { color: theme.textSecondary }]}>
-                  {weather ? windDescription(weather.windSpeed) : i18n.t('windLight')}
+                  {weather ? windDescription(weather.windSpeed) : '—'}
                   {weather ? ` • ${weather.windSpeed} km/h` : ''}
                 </Text>
               </View>
@@ -209,44 +215,54 @@ export default function HomeScreen() {
       </View>
 
       {/* Featured Event */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('nextEvent')}</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
-            <Text style={[styles.seeAll, { color: theme.accent }]}>{i18n.t('seeAll')}</Text>
-          </TouchableOpacity>
-        </View>
-        <Card padded={false} style={styles.eventCard}>
-          <ImageBackground
-            source={require('../../assets/event.png')}
-            style={styles.eventImageBg}
-            resizeMode="cover"
-          >
-          <LinearGradient
-            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
-            style={styles.eventGradient}
-          >
-            <View style={styles.eventContent}>
-              <Badge label="Pool Party" variant="vip" size="sm" />
-              <Text style={styles.eventTitle}>Sunset Beats</Text>
-              <Text style={styles.eventDate}>Samedi 8 Mars • 16h - 23h</Text>
-              <View style={styles.eventFooter}>
-                <View style={styles.eventPrice}>
-                  <Text style={styles.eventPriceLabel}>{i18n.t('from')}</Text>
-                  <Text style={styles.eventPriceValue}>45€</Text>
+      {featuredEvent && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('nextEvent')}</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
+              <Text style={[styles.seeAll, { color: theme.accent }]}>{i18n.t('seeAll')}</Text>
+            </TouchableOpacity>
+          </View>
+          <Card padded={false} style={styles.eventCard}>
+            <ImageBackground
+              source={require('../../assets/event.png')}
+              style={styles.eventImageBg}
+              resizeMode="cover"
+            >
+            <LinearGradient
+              colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+              style={styles.eventGradient}
+            >
+              <View style={styles.eventContent}>
+                {featuredEvent.category && (
+                  <Badge label={featuredEvent.category.replace('_', ' ')} variant="vip" size="sm" />
+                )}
+                <Text style={styles.eventTitle}>{featuredEvent.title}</Text>
+                <Text style={styles.eventDate}>
+                  {new Date(featuredEvent.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {featuredEvent.start_time ? ` • ${featuredEvent.start_time.slice(0, 5).replace(':', 'h')}` : ''}
+                  {featuredEvent.end_time ? ` - ${featuredEvent.end_time.slice(0, 5).replace(':', 'h')}` : ''}
+                </Text>
+                <View style={styles.eventFooter}>
+                  <View style={styles.eventPrice}>
+                    <Text style={styles.eventPriceLabel}>{i18n.t('from')}</Text>
+                    <Text style={styles.eventPriceValue}>
+                      {featuredEvent.standard_price > 0 ? `${featuredEvent.standard_price}€` : 'Gratuit'}
+                    </Text>
+                  </View>
+                  <Button
+                    title={i18n.t('reserve')}
+                    onPress={() => router.push('/(tabs)/events')}
+                    size="sm"
+                    variant="primary"
+                  />
                 </View>
-                <Button
-                  title={i18n.t('reserve')}
-                  onPress={() => router.push('/(tabs)/events')}
-                  size="sm"
-                  variant="primary"
-                />
               </View>
-            </View>
-          </LinearGradient>
-          </ImageBackground>
-        </Card>
-      </View>
+            </LinearGradient>
+            </ImageBackground>
+          </Card>
+        </View>
+      )}
 
       {/* Live Beach View */}
       <View style={styles.section}>
@@ -259,15 +275,9 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={() => router.push('/live')} activeOpacity={0.8}>
           <Card>
             <View style={styles.liveRow}>
-              <View style={styles.liveIndicator}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveLabel}>LIVE</Text>
-              </View>
+              <Ionicons name="videocam-outline" size={22} color={theme.textSecondary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.liveTitle, { color: theme.text }]}>{i18n.t('liveBeach')}</Text>
-                <Text style={[styles.liveSubtext, { color: theme.textSecondary }]}>
-                  {i18n.t('crowdModerate')} — {i18n.t('idealNow')}
-                </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
             </View>

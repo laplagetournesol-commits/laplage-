@@ -140,7 +140,7 @@ export function useBeachBooking() {
           .from('reservation_addons')
           .insert(addonRows);
 
-        if (addonError) console.warn('Erreur addons:', addonError.message);
+        if (addonError) throw new Error(addonError.message);
       }
 
       // Ajouter des Beach Tokens (10 tokens par réservation)
@@ -154,10 +154,9 @@ export function useBeachBooking() {
       });
 
       // Mettre à jour les tokens du profil
-      try {
-        await supabase.rpc('increment_tokens', { user_id: user.id, amount: 10 });
-      } catch {
-        // RPC pas encore créée, pas grave
+      const { data: currentProfile } = await supabase.from('profiles').select('beach_tokens').eq('id', user.id).single();
+      if (currentProfile) {
+        await supabase.from('profiles').update({ beach_tokens: (currentProfile.beach_tokens || 0) + 10 }).eq('id', user.id);
       }
 
       setSubmitting(false);

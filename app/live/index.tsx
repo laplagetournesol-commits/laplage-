@@ -59,10 +59,6 @@ export default function LiveScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <View style={styles.liveIndicator}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
-          </View>
           <Text style={[styles.title, { color: theme.text }]}>{i18n.t('liveTitle')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             {i18n.t('liveSubtitle')}
@@ -127,11 +123,7 @@ export default function LiveScreen() {
                     ) : (
                       <Ionicons name="videocam" size={32} color={colors.deepSea} />
                     )}
-                    {/* Live badge */}
-                    <View style={styles.cameraBadge}>
-                      <View style={styles.cameraBadgeDot} />
-                      <Text style={styles.cameraBadgeText}>LIVE</Text>
-                    </View>
+                    {/* Pas de badge LIVE — les caméras ne sont pas en direct */}
                   </View>
                   <View style={styles.cameraInfo}>
                     <Text style={[styles.cameraName, { color: theme.text }]}>{camera.name}</Text>

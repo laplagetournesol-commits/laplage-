@@ -134,13 +134,15 @@ export default function ProfileScreen() {
             style={{ width: '100%', marginTop: 8 }}
           />
 
-          {/* Sun Mode debug */}
-          <TouchableOpacity style={styles.sunDebug} onPress={cycleSunMode}>
-            <Ionicons name="sunny" size={16} color={theme.accent} />
-            <Text style={[styles.sunDebugText, { color: theme.textSecondary }]}>
-              Sun Mode : {isOverridden ? period : 'auto'} (tap pour changer)
-            </Text>
-          </TouchableOpacity>
+          {/* Sun Mode debug — visible uniquement en développement */}
+          {__DEV__ && (
+            <TouchableOpacity style={styles.sunDebug} onPress={cycleSunMode}>
+              <Ionicons name="sunny" size={16} color={theme.accent} />
+              <Text style={[styles.sunDebugText, { color: theme.textSecondary }]}>
+                Sun Mode : {isOverridden ? period : 'auto'} (tap pour changer)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
@@ -45,6 +45,8 @@ export function TableSheet({
   depositAmount,
   guestCount,
   onSetGuestCount,
+  specialRequests,
+  onSetSpecialRequests,
 }: TableSheetProps) {
   const { theme } = useSunMode();
   const { user } = useAuth();
@@ -143,6 +145,24 @@ export function TableSheet({
               <Text style={[styles.minSpendText, { color: colors.warmWood }]}>
                 Minimum de consommation : {minSpend}€/pers.
               </Text>
+            </View>
+
+            {/* Demandes spéciales */}
+            <View style={{ marginTop: 16 }}>
+              <Text style={[styles.guestLabel, { color: theme.text, marginBottom: 8 }]}>
+                Demandes spéciales
+              </Text>
+              <TextInput
+                style={[
+                  styles.specialRequestsInput,
+                  { color: theme.text, backgroundColor: theme.backgroundSecondary, borderColor: theme.cardBorder },
+                ]}
+                value={specialRequests}
+                onChangeText={onSetSpecialRequests}
+                placeholder="Allergies, occasion spéciale..."
+                placeholderTextColor={theme.textSecondary}
+                multiline
+              />
             </View>
 
             <Button title="Réserver cette table" onPress={onGoToConfirm} style={{ marginTop: 16 }} />
@@ -284,4 +304,12 @@ const styles = StyleSheet.create({
   policyItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   policyItemText: { fontSize: 11, fontWeight: '500' },
   tokenBonus: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 10 },
+  specialRequestsInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
 });

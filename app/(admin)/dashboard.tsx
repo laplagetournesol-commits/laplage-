@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
-import { Badge } from '@/shared/ui/Badge';
 import { supabase } from '@/shared/lib/supabase';
 
 interface DashboardStats {

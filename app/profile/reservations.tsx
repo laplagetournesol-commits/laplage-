@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
@@ -27,6 +26,7 @@ interface Reservation {
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
+  pending: { label: 'En attente', variant: 'default' },
   confirmed: { label: 'Confirmé', variant: 'success' },
   checked_in: { label: 'Check-in', variant: 'warning' },
   completed: { label: 'Terminé', variant: 'default' },
@@ -138,11 +138,6 @@ export default function MyReservationsScreen() {
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
-        ),
       }} />
 
       {loading ? (

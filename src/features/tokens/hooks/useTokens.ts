@@ -74,10 +74,23 @@ export function useRedeemReward() {
       }
 
       // Déduire les tokens
-      await supabase
+      const { error: deductError } = await supabase
         .from('profiles')
         .update({ beach_tokens: profile.beach_tokens - reward.token_cost })
         .eq('id', user.id);
+
+      if (deductError) throw new Error('Erreur lors de la déduction des tokens');
+
+      // Vérifier que la déduction a bien eu lieu
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('beach_tokens')
+        .eq('id', user.id)
+        .single();
+
+      if (updatedProfile && updatedProfile.beach_tokens > profile.beach_tokens - reward.token_cost) {
+        throw new Error('La déduction des tokens a échoué, veuillez réessayer');
+      }
 
       // Enregistrer la transaction
       await supabase.from('token_transactions').insert({

@@ -47,11 +47,17 @@ export default function SignupScreen() {
 
     setLoading(true);
     setError('');
-    const { error: err } = await signUp(email.trim(), password, fullName.trim());
+    const { error: err, hasSession } = await signUp(email.trim(), password, fullName.trim());
     setLoading(false);
 
     if (err) {
       setError(err.message);
+    } else if (!hasSession) {
+      Alert.alert(
+        'Vérifiez votre email',
+        i18n.t('checkEmail'),
+        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+      );
     } else {
       router.replace('/(tabs)');
     }
@@ -111,7 +117,7 @@ export default function SignupScreen() {
           />
 
           <Input
-            label="Confirmer le mot de passe"
+            label={i18n.t('confirmPassword')}
             icon="lock-closed-outline"
             placeholder="Répétez le mot de passe"
             value={confirmPassword}
@@ -135,7 +141,7 @@ export default function SignupScreen() {
           <Text style={[styles.footerText, { color: theme.textSecondary }]}>
             Déjà un compte ?
           </Text>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
             <Text style={[styles.link, { color: theme.accent }]}> {i18n.t('login')}</Text>
           </TouchableOpacity>
         </View>
