@@ -3,6 +3,7 @@ import express from 'express';
 import { Resend } from 'resend';
 import { verifyStripeWebhook, StripeWebhookRequest } from '../middleware/stripe-webhook';
 import { supabase } from '../lib/supabase';
+import { sendPushToUser } from '../lib/push';
 
 const router = Router();
 
@@ -75,25 +76,11 @@ router.post(
             }
 
             // Envoyer push de confirmation
-            const { data: tokens } = await supabase
-              .from('push_tokens')
-              .select('token')
-              .eq('user_id', userId);
-
-            if (tokens && tokens.length > 0) {
-              const messages = tokens.map((t) => ({
-                to: t.token,
-                title: 'Réservation confirmée',
-                body: `Votre acompte pour votre réservation ${type} a été reçu.`,
-                sound: 'default' as const,
-              }));
-
-              await fetch('https://exp.host/--/api/v2/push/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(messages),
-              });
-            }
+            await sendPushToUser(
+              userId,
+              'Réservation confirmée',
+              `Votre acompte pour votre réservation ${type} a été reçu.`,
+            );
           }
           break;
         }

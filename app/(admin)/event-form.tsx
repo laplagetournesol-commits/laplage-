@@ -21,6 +21,7 @@ import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
 import type { Event, EventCategory } from '@/shared/types';
 
@@ -167,8 +168,20 @@ export default function EventFormScreen() {
         const { error } = await supabase.from('events').update(payload).eq('id', eventId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('events').insert({ ...payload, tickets_sold: 0 });
+        const { data: newEvent, error } = await supabase
+          .from('events')
+          .insert({ ...payload, tickets_sold: 0 })
+          .select('id')
+          .single();
         if (error) throw error;
+
+        // Notifier tous les utilisateurs si l'événement est publié
+        if (payload.is_published && newEvent) {
+          apiCall('/api/notifications/event-published', {
+            eventId: newEvent.id,
+            title: payload.title,
+          }).catch(() => {});
+        }
       }
 
       router.back();

@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SunModeProvider, useSunMode } from '@/shared/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/shared/i18n';
+import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 
 const ONBOARDING_KEY = 'tournesol_onboarding_done';
 
@@ -15,11 +16,19 @@ function RootLayoutContent() {
   const { theme } = useSunMode();
   const [ready, setReady] = useState(false);
 
+  usePushNotifications();
+
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
       if (!value) {
-        router.replace('/onboarding');
+        AsyncStorage.setItem(ONBOARDING_KEY, 'true').then(() => {
+          setReady(true);
+          router.replace('/onboarding');
+        });
+      } else {
+        setReady(true);
       }
+    }).catch(() => {
       setReady(true);
     });
   }, []);
@@ -39,10 +48,6 @@ function RootLayoutContent() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="(auth)"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="booking"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen

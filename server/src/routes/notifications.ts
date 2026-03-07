@@ -1,8 +1,36 @@
 import { Router } from 'express';
-import { requireAdmin, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
+import { sendPushToTokens, sendPushToUser, sendPushToAll } from '../lib/push';
+import { sendReminders } from '../cron/reminders';
 
 const router = Router();
+
+/**
+ * POST /api/notifications/register-token
+ * Enregistre un push token Expo pour l'utilisateur connecté.
+ */
+router.post('/register-token', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { token, platform } = req.body;
+    const userId = req.user!.id;
+
+    if (!token) {
+      res.status(400).json({ error: 'token est requis' });
+      return;
+    }
+
+    await supabase.from('push_tokens').upsert(
+      { user_id: userId, token, platform: platform ?? 'ios' },
+      { onConflict: 'token' },
+    );
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Erreur register-token:', err);
+    res.status(500).json({ error: 'Erreur interne' });
+  }
+});
 
 /**
  * POST /api/notifications/push
@@ -59,32 +87,7 @@ router.post('/push', requireAdmin, async (req: AuthenticatedRequest, res) => {
       return;
     }
 
-    // Envoyer via Expo Push API (max 100 par requête)
-    const BATCH_SIZE = 100;
-    let totalSent = 0;
-
-    for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
-      const batch = tokens.slice(i, i + BATCH_SIZE);
-      const messages = batch.map((token) => ({
-        to: token,
-        title,
-        body,
-        sound: 'default' as const,
-        ...(data ? { data } : {}),
-      }));
-
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(messages),
-      });
-
-      if (response.ok) {
-        totalSent += batch.length;
-      } else {
-        console.error(`Erreur Expo Push batch [${i}-${i + batch.length}]:`, await response.text());
-      }
-    }
+    const totalSent = await sendPushToTokens(tokens, title, body, data);
 
     // Sauvegarder dans l'historique
     await supabase.from('push_notifications').insert({
@@ -99,6 +102,75 @@ router.post('/push', requireAdmin, async (req: AuthenticatedRequest, res) => {
     res.json({ success: true, sent: totalSent });
   } catch (err: any) {
     console.error('Erreur push notification:', err);
+    res.status(500).json({ error: 'Erreur interne' });
+  }
+});
+
+/**
+ * POST /api/notifications/event-published
+ * Notifie tous les utilisateurs qu'un nouvel événement est publié (admin uniquement).
+ */
+router.post('/event-published', requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { eventId, title } = req.body;
+
+    if (!eventId || !title) {
+      res.status(400).json({ error: 'eventId et title sont requis' });
+      return;
+    }
+
+    const sent = await sendPushToAll(
+      'Nouvel événement',
+      `${title} — Réserve ta place !`,
+      { type: 'event_published', eventId },
+    );
+
+    res.json({ success: true, sent });
+  } catch (err: any) {
+    console.error('Erreur event-published:', err);
+    res.status(500).json({ error: 'Erreur interne' });
+  }
+});
+
+/**
+ * POST /api/notifications/booking-confirmed
+ * Envoie une push de confirmation de réservation à l'utilisateur.
+ */
+router.post('/booking-confirmed', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { type, reservationId } = req.body;
+
+    if (!type || !reservationId) {
+      res.status(400).json({ error: 'type et reservationId sont requis' });
+      return;
+    }
+
+    const label = type === 'beach' ? 'plage' : 'restaurant';
+    const sent = await sendPushToUser(
+      userId,
+      'Réservation confirmée',
+      `Votre réservation ${label} a été enregistrée. À bientôt !`,
+      { type: 'booking_confirmed', reservationType: type, reservationId },
+    );
+
+    res.json({ success: true, sent });
+  } catch (err: any) {
+    console.error('Erreur booking-confirmed:', err);
+    res.status(500).json({ error: 'Erreur interne' });
+  }
+});
+
+/**
+ * POST /api/notifications/trigger-reminders
+ * Déclenche manuellement les rappels J-1 (admin uniquement).
+ */
+router.post('/trigger-reminders', requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await sendReminders();
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error('Erreur trigger-reminders:', err);
     res.status(500).json({ error: 'Erreur interne' });
   }
 });

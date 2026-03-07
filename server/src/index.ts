@@ -4,6 +4,7 @@ import paymentsRouter from './routes/payments';
 import webhooksRouter from './routes/webhooks';
 import emailsRouter from './routes/emails';
 import notificationsRouter from './routes/notifications';
+import { startRemindersCron } from './cron/reminders';
 
 const app = express();
 const port = process.env.PORT ?? 3001;
@@ -37,4 +38,5 @@ app.get('/health', (_req, res) => {
 
 app.listen(port, () => {
   console.log(`Tournesol API running on port ${port}`);
+  startRemindersCron();
 });

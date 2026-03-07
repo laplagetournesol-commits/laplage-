@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import type { RestaurantTable, RestaurantZone } from '@/shared/types';
 
 export type RestaurantBookingStep = 'select' | 'confirm';
@@ -92,6 +93,12 @@ export function useRestaurantBooking() {
         reference_type: 'restaurant_reservation',
         reference_id: reservation.id,
       });
+
+      // Push de confirmation
+      apiCall('/api/notifications/booking-confirmed', {
+        type: 'restaurant',
+        reservationId: reservation.id,
+      }).catch(() => {});
 
       setSubmitting(false);
       return { success: true, reservationId: reservation.id, qrCode: reservation.qr_code };

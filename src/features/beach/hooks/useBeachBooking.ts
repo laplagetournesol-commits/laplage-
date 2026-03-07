@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import type { Sunbed, BeachZone, Addon } from '@/shared/types';
 
 export type BookingStep = 'select' | 'addons' | 'confirm';
@@ -158,6 +159,12 @@ export function useBeachBooking() {
       if (currentProfile) {
         await supabase.from('profiles').update({ beach_tokens: (currentProfile.beach_tokens || 0) + 10 }).eq('id', user.id);
       }
+
+      // Push de confirmation
+      apiCall('/api/notifications/booking-confirmed', {
+        type: 'beach',
+        reservationId: reservation.id,
+      }).catch(() => {});
 
       setSubmitting(false);
       return { success: true, reservationId: reservation.id, qrCode: reservation.qr_code };
