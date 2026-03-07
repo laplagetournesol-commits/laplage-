@@ -21,7 +21,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 
-type Segment = 'all' | 'vip' | 'gold+' | 'event_attendees';
+type Segment = 'all' | 'vip' | 'gold+' | 'event_attendees' | 'beach_clients' | 'restaurant_clients';
 type Channel = 'push' | 'email';
 
 const SEGMENTS: { value: Segment; label: string; icon: string }[] = [
@@ -29,6 +29,8 @@ const SEGMENTS: { value: Segment; label: string; icon: string }[] = [
   { value: 'vip', label: 'VIP (Silver+)', icon: 'star' },
   { value: 'gold+', label: 'Gold & Platinum', icon: 'diamond' },
   { value: 'event_attendees', label: 'Participants events', icon: 'ticket' },
+  { value: 'beach_clients', label: 'Clients plage', icon: 'sunny' },
+  { value: 'restaurant_clients', label: 'Clients restaurant', icon: 'restaurant' },
 ];
 
 interface PastBroadcast {
@@ -69,6 +71,22 @@ export default function BroadcastScreen() {
           .select('user_id', { count: 'exact', head: true })
           .in('status', ['active', 'used']);
         setRecipientCount(count ?? 0);
+        return;
+      } else if (segment === 'beach_clients') {
+        const { data: reservations } = await supabase
+          .from('beach_reservations')
+          .select('user_id')
+          .eq('status', 'confirmed');
+        const uniqueUsers = new Set(reservations?.map((r) => r.user_id) ?? []);
+        setRecipientCount(uniqueUsers.size);
+        return;
+      } else if (segment === 'restaurant_clients') {
+        const { data: reservations } = await supabase
+          .from('restaurant_reservations')
+          .select('user_id')
+          .eq('status', 'confirmed');
+        const uniqueUsers = new Set(reservations?.map((r) => r.user_id) ?? []);
+        setRecipientCount(uniqueUsers.size);
         return;
       }
 

@@ -37,14 +37,30 @@
       "expo-font",
       "expo-secure-store",
       "expo-localization",
-      ["expo-build-properties", {
-        "ios": {
-          "buildReactNativeFromSource": true
+      [
+        "expo-notifications",
+        {
+          "sounds": []
         }
-      }]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "buildReactNativeFromSource": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2fe3c6e2-e73f-4115-820b-a60280e443ef"
+      }
+    },
+    "owner": "shydating"
   }
 }

@@ -93,6 +93,32 @@ router.post('/broadcast', requireAdmin, async (req: AuthenticatedRequest, res) =
         res.json({ success: true, sent: 0 });
         return;
       }
+    } else if (segment === 'beach_clients') {
+      const { data: reservations } = await supabase
+        .from('beach_reservations')
+        .select('user_id')
+        .eq('status', 'confirmed');
+
+      if (reservations && reservations.length > 0) {
+        const userIds = [...new Set(reservations.map((r) => r.user_id))];
+        query = query.in('id', userIds);
+      } else {
+        res.json({ success: true, sent: 0 });
+        return;
+      }
+    } else if (segment === 'restaurant_clients') {
+      const { data: reservations } = await supabase
+        .from('restaurant_reservations')
+        .select('user_id')
+        .eq('status', 'confirmed');
+
+      if (reservations && reservations.length > 0) {
+        const userIds = [...new Set(reservations.map((r) => r.user_id))];
+        query = query.in('id', userIds);
+      } else {
+        res.json({ success: true, sent: 0 });
+        return;
+      }
     }
 
     const { data: profiles } = await query;

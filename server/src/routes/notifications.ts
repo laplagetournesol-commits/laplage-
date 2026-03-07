@@ -74,6 +74,34 @@ router.post('/push', requireAdmin, async (req: AuthenticatedRequest, res) => {
           .in('user_id', userIds);
         tokens = result?.map((r) => r.token) ?? [];
       }
+    } else if (segment === 'beach_clients') {
+      const { data: reservations } = await supabase
+        .from('beach_reservations')
+        .select('user_id')
+        .eq('status', 'confirmed');
+
+      if (reservations && reservations.length > 0) {
+        const userIds = [...new Set(reservations.map((r) => r.user_id))];
+        const { data: result } = await supabase
+          .from('push_tokens')
+          .select('token')
+          .in('user_id', userIds);
+        tokens = result?.map((r) => r.token) ?? [];
+      }
+    } else if (segment === 'restaurant_clients') {
+      const { data: reservations } = await supabase
+        .from('restaurant_reservations')
+        .select('user_id')
+        .eq('status', 'confirmed');
+
+      if (reservations && reservations.length > 0) {
+        const userIds = [...new Set(reservations.map((r) => r.user_id))];
+        const { data: result } = await supabase
+          .from('push_tokens')
+          .select('token')
+          .in('user_id', userIds);
+        tokens = result?.map((r) => r.token) ?? [];
+      }
     } else {
       // all
       const { data: result } = await supabase
