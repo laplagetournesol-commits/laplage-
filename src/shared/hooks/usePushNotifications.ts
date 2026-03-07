@@ -1,18 +1,9 @@
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiCall } from '@/shared/lib/api';
 
-// Configurer le comportement des notifications reçues en foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+let notificationsConfigured = false;
 
 export function usePushNotifications() {
   const { user } = useAuth();
@@ -22,7 +13,30 @@ export function usePushNotifications() {
     if (!user || registered.current) return;
 
     (async () => {
+      // Import dynamique pour éviter le crash si le module natif n'est pas lié
+      let Notifications: typeof import('expo-notifications');
+      let Device: typeof import('expo-device');
+      try {
+        Notifications = await import('expo-notifications');
+        Device = await import('expo-device');
+      } catch {
+        console.warn('expo-notifications ou expo-device non disponible');
+        return;
+      }
+
       if (!Device.isDevice) return;
+
+      // Configurer le handler une seule fois
+      if (!notificationsConfigured) {
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          }),
+        });
+        notificationsConfigured = true;
+      }
 
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
