@@ -175,18 +175,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   markerInner: {
-    width: '80%',
-    height: '80%',
-    borderRadius: 4,
+    width: '50%',
+    height: '50%',
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 0,
   },
   markerSelected: {
-    backgroundColor: 'rgba(247, 217, 78, 0.3)',
+    backgroundColor: 'rgba(247, 217, 78, 0.5)',
     borderColor: colors.sunYellow,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   markerReserved: {
     backgroundColor: 'rgba(201, 64, 64, 0.3)',
