@@ -149,6 +149,14 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          style={[styles.bookBtn, { backgroundColor: colors.sage }]}
+          onPress={() => router.push('/(admin)/admin-booking')}
+        >
+          <Ionicons name="add-circle" size={22} color={colors.white} />
+          <Text style={styles.bookBtnText}>Réserver pour un ami</Text>
+        </TouchableOpacity>
+
         {/* Stats grid */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Aujourd'hui</Text>
         <View style={styles.statsGrid}>
@@ -255,6 +263,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickActionLabel: { fontSize: 14, fontWeight: '700', color: colors.black },
+  bookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginBottom: 28,
+  },
+  bookBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
   statsGrid: {
     flexDirection: 'row',

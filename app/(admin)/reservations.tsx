@@ -149,6 +149,14 @@ export default function ReservationsScreen() {
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
         ),
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => router.push('/(admin)/admin-booking')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="add-circle" size={28} color={colors.sage} />
+          </TouchableOpacity>
+        ),
       }} />
 
       {/* Tabs */}
