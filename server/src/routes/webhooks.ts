@@ -85,6 +85,33 @@ router.post(
           break;
         }
 
+        case 'payment_intent.amount_capturable_updated': {
+          // Pré-autorisation restaurant confirmée (capture_method: manual)
+          const pi = event.data.object;
+          const meta = pi.metadata;
+
+          if (meta.table && meta.reservationId) {
+            await supabase
+              .from(meta.table)
+              .update({
+                deposit_paid: true,
+                stripe_payment_intent_id: pi.id,
+              })
+              .eq('id', meta.reservationId);
+
+            console.log(`Pré-autorisation confirmée: ${meta.type} #${meta.reservationId}`);
+
+            if (meta.userId) {
+              await sendPushToUser(
+                meta.userId,
+                'Empreinte bancaire enregistrée',
+                'Votre empreinte CB a été enregistrée. Elle sera libérée à votre arrivée.',
+              );
+            }
+          }
+          break;
+        }
+
         case 'payment_intent.payment_failed': {
           const paymentIntent = event.data.object;
           console.error('Paiement échoué:', {

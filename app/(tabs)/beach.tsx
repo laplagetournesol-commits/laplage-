@@ -4,13 +4,17 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { useAddons } from '@/features/beach/hooks/useAddons';
 import { useBeachBooking } from '@/features/beach/hooks/useBeachBooking';
+import { usePayment } from '@/shared/hooks/usePayment';
 import { BeachMap } from '@/features/beach/components/BeachMap';
 import { DateSelector } from '@/features/beach/components/DateSelector';
 import { SunbedSheet } from '@/features/beach/components/SunbedSheet';
@@ -19,14 +23,32 @@ import { Badge } from '@/shared/ui/Badge';
 export default function BeachScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
+  const { fromMood } = useLocalSearchParams<{ fromMood?: string }>();
   const booking = useBeachBooking();
   const { sunbeds, zones, loading, availableCount, totalCount } = useSunbeds(booking.date);
   const { addons } = useAddons(booking.date);
+  const { pay } = usePayment();
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const handleSelectSunbed = (sunbed: any) => {
     booking.selectSunbed(sunbed);
     setSheetVisible(true);
+  };
+
+  const handleBookWithPayment = async () => {
+    const result = await booking.submitBooking();
+    if (!result.success || !result.reservationId) return { success: false };
+
+    if (booking.depositAmount > 0) {
+      const payResult = await pay({
+        type: 'beach',
+        reservationId: result.reservationId,
+        amount: booking.depositAmount,
+      });
+      if (!payResult.success) return { success: false };
+    }
+
+    return result;
   };
 
   const handleClose = () => {
@@ -42,6 +64,12 @@ export default function BeachScreen() {
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 4, backgroundColor: theme.background }]}>
+        {fromMood && (
+          <TouchableOpacity onPress={() => router.push('/mood')} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Text style={[styles.backText, { color: theme.text }]}>Retour aux suggestions</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.headerRow}>
           <View>
             <Text style={[styles.title, { color: theme.text }]}>La Plage</Text>
@@ -87,7 +115,7 @@ export default function BeachScreen() {
         selectedAddons={booking.selectedAddons}
         onToggleAddon={booking.toggleAddon}
         onUpdateQuantity={booking.updateAddonQuantity}
-        onBook={booking.submitBooking}
+        onBook={handleBookWithPayment}
         booking={booking.submitting}
         step={booking.step}
         onGoToAddons={booking.goToAddons}
@@ -113,6 +141,17 @@ const styles = StyleSheet.create({
   },
   header: {
     zIndex: 10,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+    paddingHorizontal: 20,
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   headerRow: {
     flexDirection: 'row',

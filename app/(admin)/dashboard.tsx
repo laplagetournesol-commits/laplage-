@@ -23,7 +23,6 @@ interface DashboardStats {
   restaurantCheckedIn: number;
   eventTicketsToday: number;
   eventCheckedIn: number;
-  totalTokensToday: number;
 }
 
 function StatCard({
@@ -62,7 +61,7 @@ export default function DashboardScreen() {
   const today = new Date().toISOString().split('T')[0];
 
   const fetchStats = async () => {
-    const [beachRes, restoRes, ticketsRes, tokensRes] = await Promise.all([
+    const [beachRes, restoRes, ticketsRes] = await Promise.all([
       supabase
         .from('beach_reservations')
         .select('status')
@@ -77,17 +76,11 @@ export default function DashboardScreen() {
         .from('event_tickets')
         .select('status, event:events!inner(date)')
         .eq('events.date', today),
-      supabase
-        .from('token_transactions')
-        .select('amount')
-        .gte('created_at', today + 'T00:00:00')
-        .eq('type', 'earn'),
     ]);
 
     const beachData = beachRes.data ?? [];
     const restoData = restoRes.data ?? [];
     const ticketData = ticketsRes.data ?? [];
-    const tokenData = tokensRes.data ?? [];
 
     setStats({
       beachToday: beachData.length,
@@ -97,7 +90,6 @@ export default function DashboardScreen() {
       restaurantCheckedIn: restoData.filter((r) => r.status === 'checked_in' || r.status === 'completed').length,
       eventTicketsToday: ticketData.length,
       eventCheckedIn: ticketData.filter((t) => t.status === 'used').length,
-      totalTokensToday: tokenData.reduce((sum, t) => sum + (t.amount ?? 0), 0),
     });
   };
 
@@ -188,23 +180,6 @@ export default function DashboardScreen() {
             color={colors.accentRed}
           />
         </View>
-
-        {/* Tokens */}
-        <Card style={{ marginTop: 16 }}>
-          <View style={styles.tokensRow}>
-            <View style={[styles.tokensIcon, { backgroundColor: colors.sunYellowLight }]}>
-              <Text style={{ fontSize: 20 }}>🏖️</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.tokensLabel, { color: theme.textSecondary }]}>
-                Beach Tokens distribués aujourd'hui
-              </Text>
-              <Text style={[styles.tokensValue, { color: colors.sunYellow }]}>
-                {stats?.totalTokensToday ?? 0} tokens
-              </Text>
-            </View>
-          </View>
-        </Card>
 
         {/* Gestion */}
         <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 28 }]}>Gestion</Text>

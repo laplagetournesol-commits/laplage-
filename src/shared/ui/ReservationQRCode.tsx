@@ -116,12 +116,6 @@ export function ReservationQRCode({
             )}
           </View>
 
-          <View style={[styles.tokenRow, { backgroundColor: colors.sunYellowLight }]}>
-            <Text style={styles.tokenEmoji}>🏖️</Text>
-            <Text style={[styles.tokenText, { color: colors.warmWood }]}>
-              +10 Beach Tokens gagnés avec cette réservation
-            </Text>
-          </View>
         </View>
       </ScrollView>
     </BottomSheet>

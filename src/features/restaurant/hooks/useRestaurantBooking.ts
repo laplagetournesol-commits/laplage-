@@ -75,6 +75,7 @@ export function useRestaurantBooking() {
           zone_id: state.zone.id,
           table_id: null,
           date: state.date,
+          time: state.time,
           time_slot: timeSlotForDB,
           guest_count: state.guestCount,
           status: 'confirmed',
@@ -86,16 +87,6 @@ export function useRestaurantBooking() {
         .single();
 
       if (resError) throw new Error(resError.message);
-
-      // +10 Beach Tokens
-      await supabase.from('token_transactions').insert({
-        user_id: user.id,
-        amount: 10,
-        type: 'earn',
-        reason: 'Réservation restaurant',
-        reference_type: 'restaurant_reservation',
-        reference_id: reservation.id,
-      });
 
       // Push de confirmation
       apiCall('/api/notifications/booking-confirmed', {

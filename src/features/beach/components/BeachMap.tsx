@@ -39,11 +39,11 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
       <View style={[styles.legend, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.sunYellow }]} />
+            <View style={[styles.legendDot, { backgroundColor: 'rgba(34, 180, 60, 0.5)', borderWidth: 2, borderColor: 'rgba(34, 180, 60, 0.8)' }]} />
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>Disponible</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accentRed + '60' }]} />
+            <View style={[styles.legendDot, { backgroundColor: 'rgba(220, 38, 38, 0.5)' }]} />
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>Réservé</Text>
           </View>
           <View style={styles.legendItem}>
@@ -93,7 +93,6 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
                   },
                 ]}
               >
-                {/* Zone transparente — visible uniquement si sélectionné ou réservé */}
                 <View
                   style={[
                     styles.markerInner,
@@ -101,10 +100,7 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
                     isReserved && styles.markerReserved,
                   ]}
                 >
-                  {/* Numéro discret seulement si sélectionné */}
-                  {isSelected && (
-                    <Text style={styles.selectedLabel}>{sunbed.label}</Text>
-                  )}
+                  <Text style={styles.markerLabel}>{sunbed.label}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -175,13 +171,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   markerInner: {
-    width: '50%',
-    height: '50%',
-    borderRadius: 100,
+    width: '100%',
+    height: '100%',
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 0,
+    backgroundColor: 'rgba(34, 180, 60, 0.35)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(34, 180, 60, 0.8)',
   },
   markerSelected: {
     backgroundColor: 'rgba(247, 217, 78, 0.5)',
@@ -189,17 +186,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   markerReserved: {
-    backgroundColor: 'rgba(201, 64, 64, 0.3)',
-    borderColor: 'rgba(201, 64, 64, 0.5)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(220, 38, 38, 0.4)',
+    borderColor: 'rgba(220, 38, 38, 0.8)',
+    borderWidth: 1.5,
   },
-  selectedLabel: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '800',
-    textShadowColor: 'rgba(0,0,0,0.8)',
+  markerLabel: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
   zoomHint: {
     position: 'absolute',

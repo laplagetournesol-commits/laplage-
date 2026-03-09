@@ -6,11 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  ImageBackground,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
@@ -18,7 +16,6 @@ import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { useMoodAI, MOOD_OPTIONS } from '@/features/mood/hooks/useMoodAI';
-import type { MoodType } from '@/features/mood/hooks/useMoodAI';
 import { i18n } from '@/shared/i18n';
 
 export default function MoodScreen() {
@@ -35,8 +32,9 @@ export default function MoodScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backRow} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Text style={[styles.backText, { color: theme.text }]}>Retour</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
@@ -110,10 +108,16 @@ export default function MoodScreen() {
               <Text style={[styles.resultDesc, { color: theme.textSecondary }]}>
                 {recommendation.spot.description}
               </Text>
+              {recommendation.addons.length > 0 && (
+                <View style={styles.addonsRow}>
+                  {recommendation.addons.map((addon, i) => (
+                    <Badge key={i} label={addon} variant="default" size="sm" />
+                  ))}
+                </View>
+              )}
               <Button
-                title={recommendation.spot.type === 'beach' ? 'Voir la plage' : 'Voir le restaurant'}
-                onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach' : '/(tabs)/restaurant')}
-                variant="outline"
+                title={recommendation.spot.type === 'beach' ? `Réserver — Zone ${recommendation.spot.zone}` : `Réserver — ${recommendation.spot.zone}`}
+                onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach?fromMood=true' : '/(tabs)/restaurant?fromMood=true')}
                 size="sm"
                 style={{ alignSelf: 'flex-start', marginTop: 8 }}
               />
@@ -147,17 +151,6 @@ export default function MoodScreen() {
               ))}
             </Card>
 
-            {/* Playlist */}
-            <Card style={styles.resultCard}>
-              <View style={styles.resultHeader}>
-                <Ionicons name="musical-notes" size={20} color={colors.sunYellow} />
-                <Text style={[styles.resultTitle, { color: theme.text }]}>{i18n.t('playlist')}</Text>
-              </View>
-              <Text style={[styles.playlistName, { color: theme.accent }]}>
-                {recommendation.playlist}
-              </Text>
-            </Card>
-
             {/* Pro tip */}
             <View style={[styles.tipCard, { backgroundColor: colors.sunYellowLight }]}>
               <Ionicons name="bulb-outline" size={18} color={colors.warmWood} />
@@ -168,8 +161,8 @@ export default function MoodScreen() {
 
             {/* CTA */}
             <Button
-              title={i18n.t('reserveNow')}
-              onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach' : '/(tabs)/restaurant')}
+              title={`${i18n.t('reserveNow')} — ${recommendation.spot.zone}`}
+              onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach?fromMood=true' : '/(tabs)/restaurant?fromMood=true')}
               size="lg"
               style={{ marginTop: 8 }}
             />
@@ -183,7 +176,8 @@ export default function MoodScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   container: { paddingHorizontal: 20 },
-  backRow: { marginBottom: 8 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  backText: { fontSize: 16, fontWeight: '500' },
   header: { alignItems: 'center', marginBottom: 32 },
   aiEmoji: { fontSize: 40, marginBottom: 8 },
   title: { fontSize: 28, fontWeight: '800', letterSpacing: 0.5 },
@@ -215,10 +209,10 @@ const styles = StyleSheet.create({
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   resultTitle: { fontSize: 16, fontWeight: '700' },
   resultDesc: { fontSize: 14, lineHeight: 21 },
+  addonsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   listItem: { flexDirection: 'row', gap: 8, marginLeft: 4 },
   listBullet: { fontSize: 14, color: colors.gray[400] },
   listText: { fontSize: 14, fontWeight: '500' },
-  playlistName: { fontSize: 15, fontWeight: '600', fontStyle: 'italic' },
   tipCard: {
     flexDirection: 'row',
     gap: 10,

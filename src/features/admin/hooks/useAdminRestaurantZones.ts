@@ -41,6 +41,13 @@ export function useAdminRestaurantZones() {
     );
   }, []);
 
+  const updateCapacity = useCallback(async (zoneId: string, capacity: number) => {
+    await supabase.from('restaurant_zones').update({ capacity }).eq('id', zoneId);
+    setZones((prev) =>
+      prev.map((z) => (z.id === zoneId ? { ...z, capacity } : z)),
+    );
+  }, []);
+
   const toggleZone = useCallback(async (zoneId: string, isActive: boolean) => {
     await supabase.from('restaurant_zones').update({ is_active: isActive }).eq('id', zoneId);
     setZones((prev) =>
@@ -88,5 +95,5 @@ export function useAdminRestaurantZones() {
     );
   }, []);
 
-  return { zones, loading, refresh: fetchData, updateMinSpend, toggleZone, toggleTable, toggleAllTablesInZone, renameTable };
+  return { zones, loading, refresh: fetchData, updateMinSpend, updateCapacity, toggleZone, toggleTable, toggleAllTablesInZone, renameTable };
 }

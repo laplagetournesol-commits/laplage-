@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
@@ -22,12 +22,15 @@ import { Button } from '@/shared/ui/Button';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePayment } from '@/shared/hooks/usePayment';
 
 export default function RestaurantScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
+  const { fromMood } = useLocalSearchParams<{ fromMood?: string }>();
   const { user } = useAuth();
   const booking = useRestaurantBooking();
+  const { pay } = usePayment();
   const { zones, loading } = useRestaurantZones(booking.date, booking.time);
   const [showConfirm, setShowConfirm] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -40,20 +43,33 @@ export default function RestaurantScreen() {
   const handleBook = async () => {
     if (!user) { router.push('/(auth)/login'); return; }
     const result = await booking.submitBooking();
-    if (result.success) {
-      setShowConfirm(false);
-      if (result.qrCode) {
-        setQrCode(result.qrCode);
-        setTimeout(() => setShowQR(true), 400);
-      } else {
-        Alert.alert(
-          'Réservation confirmée !',
-          `Votre table en ${booking.zone?.name} est réservée pour le ${formattedDate} à ${booking.time.replace(':', 'h')}. +10 Beach Tokens !`,
-          [{ text: 'Parfait !' }]
-        );
+    if (!result.success || !result.reservationId) return;
+
+    // Paiement par empreinte CB
+    if (booking.depositAmount > 0) {
+      const payResult = await pay({
+        type: 'restaurant',
+        reservationId: result.reservationId,
+        amount: booking.depositAmount,
+      });
+      if (!payResult.success) {
+        setShowConfirm(false);
+        return;
       }
-      booking.reset();
     }
+
+    setShowConfirm(false);
+    if (result.qrCode) {
+      setQrCode(result.qrCode);
+      setTimeout(() => setShowQR(true), 400);
+    } else {
+      Alert.alert(
+        'Réservation confirmée !',
+        `Votre table en ${booking.zone?.name} est réservée pour le ${formattedDate} à ${booking.time.replace(':', 'h')}.`,
+        [{ text: 'Parfait !' }]
+      );
+    }
+    booking.reset();
   };
 
   const canReserve = booking.zone && booking.guestCount > 0;
@@ -63,6 +79,12 @@ export default function RestaurantScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          {fromMood && (
+            <TouchableOpacity onPress={() => router.push('/mood')} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="arrow-back" size={22} color={theme.text} />
+              <Text style={[styles.backLabel, { color: theme.text }]}>Retour aux suggestions</Text>
+            </TouchableOpacity>
+          )}
           <Text style={[styles.title, { color: theme.text }]}>Restaurant</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Réservez votre table
@@ -265,6 +287,8 @@ export default function RestaurantScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: 20, marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  backLabel: { fontSize: 16, fontWeight: '500' },
   title: { fontSize: 28, fontWeight: '800', letterSpacing: 0.5 },
   subtitle: { fontSize: 13, marginTop: 2 },
   sectionLabel: { fontSize: 15, fontWeight: '700', paddingHorizontal: 20, marginTop: 16, marginBottom: 4 },

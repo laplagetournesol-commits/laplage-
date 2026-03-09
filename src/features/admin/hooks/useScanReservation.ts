@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 
 interface ScannedReservation {
   type: 'beach' | 'restaurant' | 'event';
@@ -11,7 +12,6 @@ interface ScannedReservation {
   clientName: string;
   clientEmail: string;
   clientVipLevel: string;
-  clientTokens: number;
   // Details
   locationLabel: string;
   zoneName: string;
@@ -42,7 +42,7 @@ export function useScanReservation() {
       // 1. Try beach reservation
       const { data: beach } = await supabase
         .from('beach_reservations')
-        .select('*, sunbed:sunbeds(label, zone:beach_zones(name, zone_type)), profile:profiles(full_name, email, vip_level, beach_tokens)')
+        .select('*, sunbed:sunbeds(label, zone:beach_zones(name, zone_type)), profile:profiles(full_name, email, vip_level)')
         .eq('qr_code', qrCode)
         .single();
 
@@ -62,7 +62,6 @@ export function useScanReservation() {
           clientName: (beach as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (beach as any).profile?.email ?? '',
           clientVipLevel: (beach as any).profile?.vip_level ?? 'standard',
-          clientTokens: (beach as any).profile?.beach_tokens ?? 0,
           locationLabel: (beach as any).sunbed?.label ?? '',
           zoneName: (beach as any).sunbed?.zone?.name ?? '',
           guestCount: beach.guest_count,
@@ -82,7 +81,7 @@ export function useScanReservation() {
       // 2. Try restaurant reservation
       const { data: resto } = await supabase
         .from('restaurant_reservations')
-        .select('*, table:restaurant_tables(label, seats, zone:restaurant_zones(name, zone_type)), profile:profiles(full_name, email, vip_level, beach_tokens)')
+        .select('*, table:restaurant_tables(label, seats, zone:restaurant_zones(name, zone_type)), profile:profiles(full_name, email, vip_level)')
         .eq('qr_code', qrCode)
         .single();
 
@@ -96,7 +95,6 @@ export function useScanReservation() {
           clientName: (resto as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (resto as any).profile?.email ?? '',
           clientVipLevel: (resto as any).profile?.vip_level ?? 'standard',
-          clientTokens: (resto as any).profile?.beach_tokens ?? 0,
           locationLabel: (resto as any).table?.label ?? '',
           zoneName: (resto as any).table?.zone?.name ?? '',
           guestCount: resto.guest_count,
@@ -112,7 +110,7 @@ export function useScanReservation() {
       // 3. Try event ticket
       const { data: ticket } = await supabase
         .from('event_tickets')
-        .select('*, event:events(title, date, start_time, end_time, category), profile:profiles(full_name, email, vip_level, beach_tokens)')
+        .select('*, event:events(title, date, start_time, end_time, category), profile:profiles(full_name, email, vip_level)')
         .eq('qr_code', qrCode)
         .single();
 
@@ -126,7 +124,6 @@ export function useScanReservation() {
           clientName: (ticket as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (ticket as any).profile?.email ?? '',
           clientVipLevel: (ticket as any).profile?.vip_level ?? 'standard',
-          clientTokens: (ticket as any).profile?.beach_tokens ?? 0,
           locationLabel: (ticket as any).event?.title ?? '',
           zoneName: (ticket as any).event?.category ?? '',
           guestCount: 1,
@@ -156,6 +153,15 @@ export function useScanReservation() {
           .update({ status: 'checked_in' })
           .eq('id', reservation.id);
       } else if (reservation.type === 'restaurant') {
+        // Libérer la pré-autorisation Stripe (empreinte CB)
+        if (reservation.depositPaid) {
+          try {
+            await apiCall('/api/payments/cancel-hold', { reservationId: reservation.id });
+          } catch {
+            // Si l'annulation échoue, on continue le check-in quand même
+            console.warn('Impossible d\'annuler la pré-autorisation Stripe');
+          }
+        }
         await supabase
           .from('restaurant_reservations')
           .update({ status: 'checked_in' })

@@ -93,7 +93,7 @@ export function SunbedSheet({
     } else if (result.success) {
       Alert.alert(
         'Réservation confirmée !',
-        `Votre transat ${sunbed.label} est réservé pour le ${formattedDate}. +10 Beach Tokens gagnés !`,
+        `Votre transat ${sunbed.label} est réservé pour le ${formattedDate}.`,
         [{ text: 'Super !', onPress: onClose }]
       );
     }
@@ -343,9 +343,6 @@ export function SunbedSheet({
               style={{ marginTop: 12 }}
             />
 
-            <Text style={[styles.tokenBonus, { color: colors.sage }]}>
-              +10 Beach Tokens offerts avec cette réservation
-            </Text>
           </View>
         )}
       </ScrollView>

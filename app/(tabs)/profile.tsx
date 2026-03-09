@@ -97,7 +97,7 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
         <ImageBackground
-          source={require('../../assets/poisson.jpeg')}
+          source={require('../../assets/profile-bg.jpg')}
           style={styles.noAuthBg}
           resizeMode="cover"
         >
@@ -158,7 +158,7 @@ export default function ProfileScreen() {
       >
         {/* Profile header with background photo */}
         <ImageBackground
-          source={require('../../assets/poisson.jpeg')}
+          source={require('../../assets/profile-bg.jpg')}
           style={styles.profileHeaderBg}
           resizeMode="cover"
         >
@@ -187,11 +187,6 @@ export default function ProfileScreen() {
                 variant="vip"
                 size="sm"
               />
-              <Badge
-                label={`${profile?.beach_tokens ?? 0} tokens`}
-                variant="default"
-                size="sm"
-              />
             </View>
           </View>
         </ImageBackground>
@@ -205,13 +200,6 @@ export default function ProfileScreen() {
                   {profile?.visit_count ?? 0}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{i18n.t('visits')}</Text>
-              </View>
-              <View style={[styles.statDivider, { backgroundColor: theme.cardBorder }]} />
-              <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.text }]}>
-                  {profile?.beach_tokens ?? 0}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{i18n.t('tokens')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.cardBorder }]} />
               <View style={styles.stat}>
@@ -252,8 +240,6 @@ export default function ProfileScreen() {
           <Card padded={false}>
             <MenuItem icon="receipt-outline" label={i18n.t('myReservations')} onPress={() => router.push('/profile/reservations')} />
             <MenuItem icon="ticket-outline" label={i18n.t('myTickets')} onPress={() => router.push('/profile/tickets')} />
-            <MenuItem icon="diamond-outline" label={i18n.t('beachTokens')} value={`${profile?.beach_tokens ?? 0}`} onPress={() => router.push('/profile/tokens')} />
-            <MenuItem icon="gift-outline" label={i18n.t('rewards')} onPress={() => router.push('/profile/rewards')} />
           </Card>
         </View>
 

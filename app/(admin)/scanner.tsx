@@ -198,12 +198,7 @@ export default function ScannerScreen() {
                   {reservation.clientEmail}
                 </Text>
               </View>
-              <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Badge label={reservation.clientVipLevel.toUpperCase()} variant="vip" size="sm" />
-                <Text style={[styles.tokenCount, { color: colors.sunYellow }]}>
-                  {reservation.clientTokens} tokens
-                </Text>
-              </View>
+              <Badge label={reservation.clientVipLevel.toUpperCase()} variant="vip" size="sm" />
             </View>
           </Card>
 

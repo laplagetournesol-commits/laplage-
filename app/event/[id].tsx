@@ -135,7 +135,7 @@ export default function EventDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero header with background photo */}
         <ImageBackground
-          source={require('../../assets/club-view.jpg')}
+          source={event.flyer_url ? { uri: event.flyer_url } : require('../../assets/club-view.jpg')}
           style={[styles.heroBg, { paddingTop: insets.top + 8 }]}
           resizeMode="cover"
         >

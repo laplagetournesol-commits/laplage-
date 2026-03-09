@@ -94,9 +94,13 @@ const RECOMMENDATIONS: Record<MoodType, MoodRecommendation> = {
   },
 };
 
+// Persiste le dernier mood entre navigations (survit au remount du composant)
+let lastMood: MoodType | null = null;
+let lastRecommendation: MoodRecommendation | null = null;
+
 export function useMoodAI() {
-  const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
-  const [recommendation, setRecommendation] = useState<MoodRecommendation | null>(null);
+  const [selectedMood, setSelectedMood] = useState<MoodType | null>(lastMood);
+  const [recommendation, setRecommendation] = useState<MoodRecommendation | null>(lastRecommendation);
   const [loading, setLoading] = useState(false);
 
   const selectMood = useCallback(async (mood: MoodType) => {
@@ -106,13 +110,19 @@ export function useMoodAI() {
     // Pour l'instant, on utilise les recommandations pré-configurées
     // Plus tard, on pourra appeler l'API Claude pour des recommandations personnalisées
     await new Promise((r) => setTimeout(r, 1200)); // Simule un appel API
-    setRecommendation(RECOMMENDATIONS[mood]);
+    const rec = RECOMMENDATIONS[mood];
+    setRecommendation(rec);
     setLoading(false);
+
+    lastMood = mood;
+    lastRecommendation = rec;
   }, []);
 
   const reset = useCallback(() => {
     setSelectedMood(null);
     setRecommendation(null);
+    lastMood = null;
+    lastRecommendation = null;
   }, []);
 
   return { selectedMood, recommendation, loading, selectMood, reset, moods: MOOD_OPTIONS };

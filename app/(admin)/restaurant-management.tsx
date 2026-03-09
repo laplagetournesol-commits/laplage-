@@ -30,10 +30,11 @@ const SHAPE_LABELS: Record<string, string> = {
 export default function RestaurantManagementScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
-  const { zones, loading, refresh, updateMinSpend, toggleZone, toggleTable, toggleAllTablesInZone, renameTable } = useAdminRestaurantZones();
+  const { zones, loading, refresh, updateMinSpend, updateCapacity, toggleZone, toggleTable, toggleAllTablesInZone, renameTable } = useAdminRestaurantZones();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
   const [editingMinSpend, setEditingMinSpend] = useState<{ zoneId: string; value: string } | null>(null);
+  const [editingCapacity, setEditingCapacity] = useState<{ zoneId: string; value: string } | null>(null);
   const [editingLabel, setEditingLabel] = useState<{ tableId: string; label: string } | null>(null);
 
   const handleRefresh = async () => {
@@ -51,6 +52,17 @@ export default function RestaurantManagementScreen() {
     }
     await updateMinSpend(editingMinSpend.zoneId, val);
     setEditingMinSpend(null);
+  };
+
+  const handleSaveCapacity = async () => {
+    if (!editingCapacity) return;
+    const val = parseInt(editingCapacity.value, 10);
+    if (isNaN(val) || val < 1) {
+      Alert.alert('Erreur', 'Veuillez entrer un nombre valide');
+      return;
+    }
+    await updateCapacity(editingCapacity.zoneId, val);
+    setEditingCapacity(null);
   };
 
   const handleToggleAllTables = (zoneId: string, zoneName: string, activate: boolean) => {
@@ -125,7 +137,7 @@ export default function RestaurantManagementScreen() {
                     {!zone.is_active && <Badge label="Inactive" variant="error" size="sm" />}
                   </View>
                   <Text style={[styles.zoneInfo, { color: theme.textSecondary }]}>
-                    {activeCount}/{totalCount} tables actives — Min. {zone.min_spend}€
+                    {activeCount}/{totalCount} tables — {zone.capacity} couverts — Min. {zone.min_spend}€
                   </Text>
                 </View>
                 <Ionicons
@@ -146,6 +158,17 @@ export default function RestaurantManagementScreen() {
                         trackColor={{ true: colors.sage }}
                       />
                     </View>
+
+                    <TouchableOpacity
+                      style={[styles.priceBtn, { borderColor: theme.cardBorder }]}
+                      onPress={() => setEditingCapacity({ zoneId: zone.id, value: zone.capacity.toString() })}
+                    >
+                      <Ionicons name="people" size={16} color={colors.deepSea} />
+                      <Text style={[styles.priceBtnText, { color: theme.text }]}>
+                        Couverts max : {zone.capacity}
+                      </Text>
+                      <Ionicons name="pencil" size={14} color={theme.textSecondary} />
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                       style={[styles.priceBtn, { borderColor: theme.cardBorder }]}
@@ -247,6 +270,40 @@ export default function RestaurantManagementScreen() {
         </View>
       </Modal>
 
+      <Modal visible={editingCapacity !== null} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Couverts max</Text>
+            <Text style={[styles.modalHint, { color: theme.textSecondary }]}>
+              Nombre total de couverts pour cette zone. Les réservations seront bloquées une fois atteint.
+            </Text>
+            <TextInput
+              style={[styles.modalInput, { color: theme.text, borderColor: theme.cardBorder }]}
+              value={editingCapacity?.value ?? ''}
+              onChangeText={(text) => editingCapacity && setEditingCapacity({ ...editingCapacity, value: text })}
+              keyboardType="number-pad"
+              placeholder="Ex: 40"
+              placeholderTextColor={theme.textSecondary}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: theme.cardBorder }]}
+                onPress={() => setEditingCapacity(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: theme.text }]}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.deepSea }]}
+                onPress={handleSaveCapacity}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.white }]}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={editingMinSpend !== null} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
@@ -328,6 +385,7 @@ const styles = StyleSheet.create({
   },
   modalContent: { width: '80%', borderRadius: 16, padding: 24, gap: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  modalHint: { fontSize: 12, textAlign: 'center', lineHeight: 16 },
   modalInput: {
     fontSize: 24,
     fontWeight: '700',

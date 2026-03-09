@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   Switch,
@@ -11,6 +12,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -24,6 +26,14 @@ import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
 import type { Event, EventCategory } from '@/shared/types';
+
+// Créneaux horaires toutes les 30 min
+const TIME_SLOTS: string[] = [];
+for (let h = 0; h < 24; h++) {
+  for (const m of ['00', '30']) {
+    TIME_SLOTS.push(`${h.toString().padStart(2, '0')}:${m}`);
+  }
+}
 
 const VIP_LEVELS: { value: string; label: string }[] = [
   { value: '', label: 'Aucun' },
@@ -91,6 +101,7 @@ export default function EventFormScreen() {
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
   const [ticketsSold, setTicketsSold] = useState(0);
+  const [timePickerField, setTimePickerField] = useState<'start_time' | 'end_time' | null>(null);
 
   useEffect(() => {
     if (!eventId) return;
@@ -346,23 +357,27 @@ export default function EventFormScreen() {
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Début</Text>
-            <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.cardBorder, backgroundColor: theme.card }]}
-              value={form.start_time}
-              onChangeText={(t) => setField('start_time', t)}
-              placeholder="HH:MM"
-              placeholderTextColor={theme.textSecondary}
-            />
+            <TouchableOpacity
+              style={[styles.input, styles.timeBtn, { borderColor: theme.cardBorder, backgroundColor: theme.card }]}
+              onPress={() => setTimePickerField('start_time')}
+            >
+              <Ionicons name="time-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.timeBtnText, { color: form.start_time ? theme.text : theme.textSecondary }]}>
+                {form.start_time || 'HH:MM'}
+              </Text>
+            </TouchableOpacity>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Fin</Text>
-            <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.cardBorder, backgroundColor: theme.card }]}
-              value={form.end_time}
-              onChangeText={(t) => setField('end_time', t)}
-              placeholder="HH:MM"
-              placeholderTextColor={theme.textSecondary}
-            />
+            <TouchableOpacity
+              style={[styles.input, styles.timeBtn, { borderColor: theme.cardBorder, backgroundColor: theme.card }]}
+              onPress={() => setTimePickerField('end_time')}
+            >
+              <Ionicons name="time-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.timeBtnText, { color: form.end_time ? theme.text : theme.textSecondary }]}>
+                {form.end_time || 'HH:MM'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -462,14 +477,6 @@ export default function EventFormScreen() {
             ))}
           </View>
 
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.cardBorder, backgroundColor: theme.background }]}
-            value={form.required_tokens}
-            onChangeText={(t) => setField('required_tokens', t)}
-            keyboardType="number-pad"
-            placeholder="Tokens requis (optionnel)"
-            placeholderTextColor={theme.textSecondary}
-          />
         </Card>
 
         {/* Published */}
@@ -519,6 +526,54 @@ export default function EventFormScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Modal sélection d'heure */}
+      <Modal visible={!!timePickerField} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                {timePickerField === 'start_time' ? 'Heure de début' : 'Heure de fin'}
+              </Text>
+              <TouchableOpacity onPress={() => setTimePickerField(null)}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={TIME_SLOTS}
+              keyExtractor={(item) => item}
+              style={{ maxHeight: 400 }}
+              renderItem={({ item }) => {
+                const isSelected = timePickerField && form[timePickerField] === item;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.timeSlotItem,
+                      { borderBottomColor: theme.cardBorder },
+                      isSelected && { backgroundColor: colors.accentRed + '15' },
+                    ]}
+                    onPress={() => {
+                      if (timePickerField) setField(timePickerField, item);
+                      setTimePickerField(null);
+                    }}
+                  >
+                    <Text style={[
+                      styles.timeSlotText,
+                      { color: isSelected ? colors.accentRed : theme.text },
+                      isSelected && { fontWeight: '700' },
+                    ]}>
+                      {item}
+                    </Text>
+                    {isSelected && <Ionicons name="checkmark" size={20} color={colors.accentRed} />}
+                  </TouchableOpacity>
+                );
+              }}
+              getItemLayout={(_, index) => ({ length: 48, offset: 48 * index, index })}
+              initialScrollIndex={TIME_SLOTS.indexOf(form[timePickerField ?? 'start_time'] || '14:00')}
+            />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -592,4 +647,34 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: { fontSize: 14, fontWeight: '600' },
   ticketsInfo: { alignItems: 'center', marginTop: 12 },
+  timeBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeBtnText: { fontSize: 15 },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 8,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '700' },
+  timeSlotItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    height: 48,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  timeSlotText: { fontSize: 16 },
 });

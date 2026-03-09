@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
   ImageBackground,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -173,25 +174,48 @@ export default function EventsScreen() {
                 onPress={() => handleOpenEvent(event)}
               >
                 <Card padded={false} style={styles.eventCard}>
-                  {/* Header coloré */}
-                  <LinearGradient
-                    colors={[cat.color, cat.color + '88']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.eventHeader}
-                  >
-                    <View style={styles.eventHeaderContent}>
-                      <View style={styles.eventCategoryRow}>
-                        <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
-                        <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
-                        {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+                  {/* Header coloré avec flyer si disponible */}
+                  {event.flyer_url ? (
+                    <View style={styles.flyerContainer}>
+                      <Image
+                        source={{ uri: event.flyer_url }}
+                        style={styles.flyerImage}
+                        resizeMode="cover"
+                      />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.6)']}
+                        style={styles.flyerGradient}
+                      />
+                      <View style={styles.flyerOverlay}>
+                        <View style={styles.eventCategoryRow}>
+                          <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
+                          <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
+                          {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
+                          {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+                        </View>
+                        <Text style={styles.eventTitle}>{event.title}</Text>
                       </View>
                     </View>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                  </LinearGradient>
+                  ) : (
+                    <LinearGradient
+                      colors={[cat.color, cat.color + '88']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.eventHeader}
+                    >
+                      <View style={styles.eventHeaderContent}>
+                        <View style={styles.eventCategoryRow}>
+                          <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
+                          <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
+                          {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+                        </View>
+                      </View>
+                      <Text style={styles.eventTitle}>{event.title}</Text>
+                    </LinearGradient>
+                  )}
 
                   {/* Body */}
                   <View style={styles.eventBody}>
@@ -292,6 +316,10 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 40 },
   emptyText: { fontSize: 14, textAlign: 'center' },
   eventCard: { marginBottom: 16 },
+  flyerContainer: { borderTopLeftRadius: 16, borderTopRightRadius: 16, overflow: 'hidden' },
+  flyerImage: { width: '100%', aspectRatio: 4 / 3 },
+  flyerGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%' },
+  flyerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16 },
   eventHeader: { padding: 16, paddingBottom: 14 },
   eventHeaderContent: {
     flexDirection: 'row',

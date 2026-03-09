@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePurchaseTicket } from '../hooks/useTickets';
+import { usePayment } from '@/shared/hooks/usePayment';
 import type { Event, TicketType } from '@/shared/types';
 
 interface TicketSheetProps {
@@ -22,14 +23,13 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
   const { theme } = useSunMode();
   const { user } = useAuth();
   const { purchase, submitting } = usePurchaseTicket();
+  const { pay } = usePayment();
   const [selectedType, setSelectedType] = useState<TicketType>('standard');
 
   const hasVip = event.vip_price != null && event.vip_price > 0;
   const price = selectedType === 'vip' && hasVip ? event.vip_price! : event.standard_price;
   const isFree = event.standard_price === 0;
   const isSoldOut = event.tickets_sold >= event.capacity;
-  const tokensEarned = selectedType === 'vip' ? 20 : 5;
-
   const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long',
     day: 'numeric',
@@ -43,13 +43,23 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
     }
 
     const result = await purchase(event, selectedType);
-    if (result.success) {
-      Alert.alert(
-        isFree ? 'Inscription confirmée !' : 'Ticket acheté !',
-        `Votre ticket ${selectedType.toUpperCase()} pour ${event.title} est confirmé. +${tokensEarned} Beach Tokens !`,
-        [{ text: 'Voir mon ticket', onPress: () => { onClose(); onPurchased(); } }],
-      );
+    if (!result.success || !result.ticket) return;
+
+    // Paiement si l'événement est payant
+    if (price > 0) {
+      const payResult = await pay({
+        type: 'event',
+        reservationId: result.ticket.id,
+        amount: price,
+      });
+      if (!payResult.success) return;
     }
+
+    Alert.alert(
+      isFree ? 'Inscription confirmée !' : 'Ticket acheté !',
+      `Votre ticket ${selectedType.toUpperCase()} pour ${event.title} est confirmé.`,
+      [{ text: 'Voir mon ticket', onPress: () => { onClose(); onPurchased(); } }],
+    );
   };
 
   return (
@@ -100,7 +110,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
                 <View>
                   <Text style={[styles.ticketTypeLabel, { color: theme.text }]}>Standard</Text>
                   <Text style={[styles.ticketTypeDesc, { color: theme.textSecondary }]}>
-                    Accès à l'événement + {5} Beach Tokens
+                    Accès à l'événement
                   </Text>
                 </View>
               </View>
@@ -131,7 +141,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
                       <Badge label="Premium" variant="vip" size="sm" />
                     </View>
                     <Text style={[styles.ticketTypeDesc, { color: theme.textSecondary }]}>
-                      Accès privilégié + cocktails + 20 Beach Tokens
+                      Accès privilégié + cocktails
                     </Text>
                   </View>
                 </View>
@@ -140,14 +150,6 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
                 </Text>
               </TouchableOpacity>
             )}
-
-            {/* Token bonus */}
-            <View style={[styles.tokenRow, { backgroundColor: colors.sunYellowLight }]}>
-              <Text style={styles.tokenEmoji}>🏖️</Text>
-              <Text style={[styles.tokenText, { color: colors.warmWood }]}>
-                +{tokensEarned} Beach Tokens offerts avec ce ticket
-              </Text>
-            </View>
 
             {/* CTA */}
             <Button

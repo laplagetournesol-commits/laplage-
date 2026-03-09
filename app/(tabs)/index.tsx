@@ -312,33 +312,6 @@ export default function HomeScreen() {
         <GalleryCarousel />
       </View>
 
-      {/* Loyalty tokens preview */}
-      {user && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('beachTokens')}</Text>
-          <Card>
-            <View style={styles.tokensRow}>
-              <View style={styles.tokensInfo}>
-                <Text style={[styles.tokensAmount, { color: colors.sunYellow }]}>
-                  {profile?.beach_tokens ?? 0}
-                </Text>
-                <Text style={[styles.tokensLabel, { color: theme.textSecondary }]}>
-                  {i18n.t('tokensAvailable')}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.tokensButton, { backgroundColor: colors.sunYellowLight }]}
-                onPress={() => router.push('/(tabs)/tokens')}
-              >
-                <Text style={[styles.tokensButtonText, { color: colors.warmWood }]}>
-                  {i18n.t('rewards')} →
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        </View>
-      )}
-
       {/* CTA if not logged in */}
       {!user && (
         <View style={styles.section}>

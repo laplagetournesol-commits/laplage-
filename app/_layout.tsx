@@ -5,10 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { SunModeProvider, useSunMode } from '@/shared/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/shared/i18n';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
+
+const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!;
 
 const ONBOARDING_KEY = 'tournesol_onboarding_done';
 
@@ -90,7 +93,9 @@ export default function RootLayout() {
         <SunModeProvider>
           <LanguageProvider>
             <AuthProvider>
-              <RootLayoutContent />
+              <StripeProvider publishableKey={STRIPE_KEY} merchantIdentifier="merchant.com.lestournesols.app">
+                <RootLayoutContent />
+              </StripeProvider>
             </AuthProvider>
           </LanguageProvider>
         </SunModeProvider>

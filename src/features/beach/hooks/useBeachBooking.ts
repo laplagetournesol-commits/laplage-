@@ -81,7 +81,7 @@ export function useBeachBooking() {
   }, []);
 
   const setGuestCount = useCallback((count: number) => {
-    setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 2)) }));
+    setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 10)) }));
   }, []);
 
   const toggleAddon = useCallback((addon: Addon) => {
@@ -168,22 +168,6 @@ export function useBeachBooking() {
           .insert(addonRows);
 
         if (addonError) throw new Error(addonError.message);
-      }
-
-      // Ajouter des Beach Tokens (10 tokens par réservation)
-      await supabase.from('token_transactions').insert({
-        user_id: user.id,
-        amount: 10,
-        type: 'earn',
-        reason: 'Réservation plage',
-        reference_type: 'beach_reservation',
-        reference_id: reservation.id,
-      });
-
-      // Mettre à jour les tokens du profil
-      const { data: currentProfile } = await supabase.from('profiles').select('beach_tokens').eq('id', user.id).single();
-      if (currentProfile) {
-        await supabase.from('profiles').update({ beach_tokens: (currentProfile.beach_tokens || 0) + 10 }).eq('id', user.id);
       }
 
       // Push de confirmation

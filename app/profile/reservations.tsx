@@ -7,6 +7,7 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
+import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/shared/lib/supabase';
 
@@ -17,6 +18,7 @@ interface Reservation {
   type: 'beach' | 'restaurant';
   label: string;
   zone: string;
+  qr_code?: string;
   total_price?: number;
   deposit_amount?: number;
   time_slot?: string;
@@ -54,6 +56,7 @@ export default function MyReservationsScreen() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [qrReservation, setQrReservation] = useState<Reservation | null>(null);
 
   const fetchReservations = async () => {
     if (!user) return;
@@ -61,13 +64,13 @@ export default function MyReservationsScreen() {
     const [beachRes, restoRes] = await Promise.all([
       supabase
         .from('beach_reservations')
-        .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, sunbed:sunbeds!inner(label, zone:beach_zones!inner(name))')
+        .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, qr_code, sunbed:sunbeds!inner(label, zone:beach_zones!inner(name))')
         .eq('user_id', user.id)
         .order('date', { ascending: false })
         .limit(30),
       supabase
         .from('restaurant_reservations')
-        .select('id, date, status, deposit_amount, time_slot, guest_count, table_id, table:restaurant_tables!inner(label, zone:restaurant_zones!inner(name))')
+        .select('id, date, status, deposit_amount, time_slot, guest_count, table_id, qr_code, table:restaurant_tables!inner(label, zone:restaurant_zones!inner(name))')
         .eq('user_id', user.id)
         .order('date', { ascending: false })
         .limit(30),
@@ -80,6 +83,7 @@ export default function MyReservationsScreen() {
       type: 'beach' as const,
       label: r.sunbed?.label ?? '?',
       zone: r.sunbed?.zone?.name ?? '',
+      qr_code: r.qr_code,
       total_price: r.total_price,
       deposit_amount: r.deposit_amount,
       sunbed_id: r.sunbed_id,
@@ -93,6 +97,7 @@ export default function MyReservationsScreen() {
       type: 'restaurant' as const,
       label: r.table?.label ?? '?',
       zone: r.table?.zone?.name ?? '',
+      qr_code: r.qr_code,
       deposit_amount: r.deposit_amount,
       time_slot: r.time_slot,
       table_id: r.table_id,
@@ -188,6 +193,19 @@ export default function MyReservationsScreen() {
                     </View>
                   </View>
 
+                  {/* Bouton QR code */}
+                  {r.qr_code && (r.status === 'confirmed' || r.status === 'pending' || r.status === 'checked_in') && (
+                    <TouchableOpacity
+                      style={[styles.qrBtn, { backgroundColor: (r.type === 'beach' ? colors.terracotta : colors.deepSea) + '12' }]}
+                      onPress={() => setQrReservation(r)}
+                    >
+                      <Ionicons name="qr-code" size={16} color={r.type === 'beach' ? colors.terracotta : colors.deepSea} />
+                      <Text style={[styles.qrBtnText, { color: r.type === 'beach' ? colors.terracotta : colors.deepSea }]}>
+                        Voir mon QR code
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
                   {/* Bouton modifier ou mention non modifiable */}
                   {canModify && (
                     <TouchableOpacity
@@ -211,6 +229,39 @@ export default function MyReservationsScreen() {
             })
           )}
         </ScrollView>
+      )}
+
+      {/* QR Code BottomSheet */}
+      {qrReservation && (
+        <ReservationQRCode
+          visible={!!qrReservation}
+          onClose={() => setQrReservation(null)}
+          qrCode={qrReservation.qr_code!}
+          type={qrReservation.type}
+          title={`${qrReservation.type === 'beach' ? 'Transat' : 'Table'} ${qrReservation.label}`}
+          subtitle={qrReservation.zone}
+          details={[
+            { label: 'Date', value: formatDate(qrReservation.date), icon: 'calendar-outline' },
+            ...(qrReservation.time_slot ? [{
+              label: 'Service',
+              value: qrReservation.time_slot === 'lunch' ? 'Déjeuner' : 'Dîner',
+              icon: 'time-outline' as keyof typeof Ionicons.glyphMap,
+            }] : []),
+            ...(qrReservation.type === 'beach' ? [{
+              label: 'Horaires',
+              value: '10h00 - 19h00',
+              icon: 'sunny-outline' as keyof typeof Ionicons.glyphMap,
+            }] : []),
+            { label: 'Zone', value: qrReservation.zone, icon: 'location-outline' },
+            ...(qrReservation.guest_count ? [{
+              label: 'Personnes',
+              value: `${qrReservation.guest_count}`,
+              icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+            }] : []),
+          ]}
+          price={qrReservation.total_price ? `${qrReservation.total_price}€` : undefined}
+          deposit={qrReservation.deposit_amount ? `${qrReservation.deposit_amount}€` : undefined}
+        />
       )}
     </View>
   );
@@ -246,4 +297,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   lockedText: { fontSize: 11 },
+  qrBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  qrBtnText: { fontSize: 13, fontWeight: '700' },
 });

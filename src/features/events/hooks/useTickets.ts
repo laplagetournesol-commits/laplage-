@@ -21,7 +21,13 @@ export function usePurchaseTicket() {
         throw new Error('Événement complet');
       }
 
-      // Créer le ticket
+      // Réserver la place d'abord (atomique : SQL incrémente uniquement si < capacity)
+      const { data: updated, error: updateError } = await supabase
+        .rpc('increment_tickets_sold', { p_event_id: event.id });
+
+      if (updateError || updated === false) throw new Error('Événement complet');
+
+      // Place réservée — créer le ticket
       const { data: ticket, error: ticketError } = await supabase
         .from('event_tickets')
         .insert({
@@ -29,33 +35,12 @@ export function usePurchaseTicket() {
           user_id: user.id,
           ticket_type: ticketType,
           price,
-          status: 'active',
+          status: event.standard_price > 0 ? 'pending' : 'active',
         })
         .select()
         .single();
 
       if (ticketError) throw new Error(ticketError.message);
-
-      // Mettre à jour le compteur (filtre atomique : rejeté si complet entre-temps)
-      const { data: updated, error: updateError } = await supabase
-        .from('events')
-        .update({ tickets_sold: event.tickets_sold + 1 })
-        .eq('id', event.id)
-        .lt('tickets_sold', event.capacity)
-        .select()
-        .single();
-
-      if (updateError || !updated) throw new Error('Événement complet');
-
-      // +5 Beach Tokens
-      await supabase.from('token_transactions').insert({
-        user_id: user.id,
-        amount: ticketType === 'vip' ? 20 : 5,
-        type: 'earn',
-        reason: `Ticket ${ticketType.toUpperCase()} — ${event.title}`,
-        reference_type: 'event_ticket',
-        reference_id: ticket.id,
-      });
 
       setSubmitting(false);
       return { success: true, ticket: ticket as EventTicket };

@@ -60,7 +60,7 @@ export interface BeachReservation {
   stripe_payment_intent_id: string | null;
   guest_count: number;
   special_requests: string | null;
-  qr_code?: string;
+  qr_code: string;
   created_at: string;
 }
 
@@ -126,7 +126,7 @@ export interface RestaurantReservation {
   deposit_paid: boolean;
   stripe_payment_intent_id: string | null;
   special_requests: string | null;
-  qr_code?: string;
+  qr_code: string;
   created_at: string;
 }
 

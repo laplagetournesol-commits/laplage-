@@ -69,7 +69,7 @@ export function TableSheet({
     } else if (result.success) {
       Alert.alert(
         'Réservation confirmée !',
-        `Votre table en ${zone.name} est réservée pour le ${formattedDate} (${timeSlot === 'lunch' ? 'déjeuner' : 'dîner'}). +10 Beach Tokens !`,
+        `Votre table en ${zone.name} est réservée pour le ${formattedDate} (${timeSlot === 'lunch' ? 'déjeuner' : 'dîner'}).`,
         [{ text: 'Parfait !', onPress: onClose }]
       );
     }
@@ -237,9 +237,6 @@ export function TableSheet({
               style={{ marginTop: 12 }}
             />
 
-            <Text style={[styles.tokenBonus, { color: colors.sage }]}>
-              +10 Beach Tokens offerts avec cette réservation
-            </Text>
           </View>
         )}
       </ScrollView>
