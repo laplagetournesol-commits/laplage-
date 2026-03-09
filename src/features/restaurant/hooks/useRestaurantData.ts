@@ -4,13 +4,15 @@ import type { RestaurantZone } from '@/shared/types';
 
 interface ZoneAvailability extends RestaurantZone {
   reservedCount: number;
-  availableCount: number;
   isFull: boolean;
 }
 
-export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
+export function useRestaurantZones(date: string, time: string) {
   const [zones, setZones] = useState<ZoneAvailability[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Déduire lunch/dinner pour la requête BDD
+  const timeSlot = parseInt(time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -23,7 +25,7 @@ export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
         .order('sort_order'),
       supabase
         .from('restaurant_reservations')
-        .select('zone_id, guest_count')
+        .select('zone_id')
         .eq('date', date)
         .eq('time_slot', timeSlot)
         .not('status', 'in', '("cancelled")'),
@@ -32,7 +34,6 @@ export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
     const zonesData = (zonesRes.data ?? []) as RestaurantZone[];
     const reservations = reservationsRes.data ?? [];
 
-    // Compter les réservations par zone
     const countByZone = new Map<string, number>();
     for (const r of reservations) {
       const current = countByZone.get(r.zone_id) ?? 0;
@@ -41,12 +42,10 @@ export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
 
     const enriched: ZoneAvailability[] = zonesData.map((z) => {
       const reservedCount = countByZone.get(z.id) ?? 0;
-      const availableCount = Math.max(0, z.capacity - reservedCount);
       return {
         ...z,
         reservedCount,
-        availableCount,
-        isFull: availableCount <= 0,
+        isFull: reservedCount >= z.capacity,
       };
     });
 
@@ -58,7 +57,6 @@ export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
     fetchData();
   }, [fetchData]);
 
-  // Realtime — rafraîchir quand une réservation change
   useEffect(() => {
     const channel = supabase
       .channel('restaurant-reservations-realtime')
@@ -69,8 +67,5 @@ export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
-  const totalAvailable = zones.reduce((sum, z) => sum + z.availableCount, 0);
-  const totalCapacity = zones.reduce((sum, z) => sum + z.capacity, 0);
-
-  return { zones, loading, totalAvailable, totalCapacity, refresh: fetchData };
+  return { zones, loading, refresh: fetchData };
 }

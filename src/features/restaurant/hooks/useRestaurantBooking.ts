@@ -8,7 +8,7 @@ export type RestaurantBookingStep = 'select' | 'confirm';
 interface BookingState {
   step: RestaurantBookingStep;
   date: string;
-  timeSlot: 'lunch' | 'dinner';
+  time: string;
   zone: RestaurantZone | null;
   guestCount: number;
   specialRequests: string;
@@ -18,7 +18,7 @@ export function useRestaurantBooking() {
   const [state, setState] = useState<BookingState>({
     step: 'select',
     date: getDefaultDate(),
-    timeSlot: 'lunch',
+    time: '12:00',
     zone: null,
     guestCount: 2,
     specialRequests: '',
@@ -27,11 +27,11 @@ export function useRestaurantBooking() {
   const [error, setError] = useState<string | null>(null);
 
   const setDate = useCallback((date: string) => {
-    setState((s) => ({ ...s, date, zone: null, step: 'select' }));
+    setState((s) => ({ ...s, date }));
   }, []);
 
-  const setTimeSlot = useCallback((timeSlot: 'lunch' | 'dinner') => {
-    setState((s) => ({ ...s, timeSlot, zone: null, step: 'select' }));
+  const setTime = useCallback((time: string) => {
+    setState((s) => ({ ...s, time }));
   }, []);
 
   const selectZone = useCallback((zone: RestaurantZone | null) => {
@@ -56,6 +56,9 @@ export function useRestaurantBooking() {
 
   const depositAmount = 30 * state.guestCount; // Pré-autorisation fixe 30€/personne
 
+  // Déduire le time_slot pour la BDD (lunch/dinner)
+  const timeSlotForDB = parseInt(state.time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
+
   const submitBooking = useCallback(async () => {
     if (!state.zone) return { success: false };
     setSubmitting(true);
@@ -70,9 +73,9 @@ export function useRestaurantBooking() {
         .insert({
           user_id: user.id,
           zone_id: state.zone.id,
-          table_id: null, // Assigné par le staff
+          table_id: null,
           date: state.date,
-          time_slot: state.timeSlot,
+          time_slot: timeSlotForDB,
           guest_count: state.guestCount,
           status: 'confirmed',
           deposit_amount: depositAmount,
@@ -107,13 +110,13 @@ export function useRestaurantBooking() {
       setSubmitting(false);
       return { success: false, reservationId: undefined, qrCode: undefined };
     }
-  }, [state, depositAmount]);
+  }, [state, depositAmount, timeSlotForDB]);
 
   const reset = useCallback(() => {
     setState({
       step: 'select',
       date: getDefaultDate(),
-      timeSlot: 'lunch',
+      time: '12:00',
       zone: null,
       guestCount: 2,
       specialRequests: '',
@@ -127,7 +130,7 @@ export function useRestaurantBooking() {
     error,
     depositAmount,
     setDate,
-    setTimeSlot,
+    setTime,
     selectZone,
     setGuestCount,
     setSpecialRequests,
