@@ -25,10 +25,10 @@ const RESERVATION_TABLES: Record<string, string> = {
  */
 router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const { type, reservationId, amount } = req.body;
+    const { type, reservationId } = req.body;
 
-    if (!type || !reservationId || !amount) {
-      res.status(400).json({ error: 'type, reservationId et amount sont requis' });
+    if (!type || !reservationId) {
+      res.status(400).json({ error: 'type et reservationId sont requis' });
       return;
     }
 
@@ -39,9 +39,11 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
     }
 
     // Vérifier que la réservation existe et appartient au user
+    // Récupérer le montant depuis la BDD (jamais faire confiance au client)
+    const amountField = type === 'beach' ? 'deposit_amount' : type === 'event' ? 'price' : 'deposit_amount';
     const { data: reservation, error } = await supabase
       .from(table)
-      .select('id, user_id, deposit_paid')
+      .select(`id, user_id, deposit_paid, ${amountField}`)
       .eq('id', reservationId)
       .single();
 
@@ -57,6 +59,13 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
 
     if (reservation.deposit_paid) {
       res.status(400).json({ error: 'L\'acompte a déjà été payé' });
+      return;
+    }
+
+    // Montant vérifié depuis la BDD
+    const amount = Number(reservation[amountField]);
+    if (!amount || amount <= 0) {
+      res.status(400).json({ error: 'Montant invalide' });
       return;
     }
 
@@ -104,12 +113,18 @@ router.post('/cancel-hold', requireAuth, async (req: AuthenticatedRequest, res) 
     // Récupérer le PaymentIntent ID depuis la réservation restaurant
     const { data: reservation, error } = await supabase
       .from('restaurant_reservations')
-      .select('id, stripe_payment_intent_id')
+      .select('id, user_id, stripe_payment_intent_id')
       .eq('id', reservationId)
       .single();
 
     if (error || !reservation) {
       res.status(404).json({ error: 'Réservation introuvable' });
+      return;
+    }
+
+    // Seul le propriétaire ou un admin peut annuler la pré-autorisation
+    if (reservation.user_id !== req.user!.id && req.user!.role !== 'admin') {
+      res.status(403).json({ error: 'Non autorisé' });
       return;
     }
 

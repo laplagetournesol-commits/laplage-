@@ -1,11 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { createClient } from '@supabase/supabase-js';
-
-// Client admin pour le storage (bypass RLS) — admin screens uniquement
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const serviceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ?? '';
-const storageClient = createClient(supabaseUrl, serviceRoleKey);
+import { supabase } from '@/shared/lib/supabase';
 
 let ImagePicker: typeof import('expo-image-picker') | null = null;
 try {
@@ -42,7 +37,7 @@ export function useImagePicker(bucket: string = 'flyers') {
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
 
-      const { error } = await storageClient.storage
+      const { error } = await supabase.storage
         .from(bucket)
         .upload(fileName, arrayBuffer, {
           contentType: asset.mimeType ?? 'image/jpeg',
@@ -54,7 +49,7 @@ export function useImagePicker(bucket: string = 'flyers') {
         return null;
       }
 
-      const { data: urlData } = storageClient.storage.from(bucket).getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       return urlData.publicUrl;
     } catch (err: any) {
       Alert.alert('Erreur', err.message ?? 'Impossible d\'uploader l\'image');

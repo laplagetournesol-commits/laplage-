@@ -41,6 +41,14 @@ yarn-error.*
 /ios
 /android
 
+# Sensitive files
+credentials.json
+*.cer
+*.certSigningRequest
+*.zip
+
 # Assets locaux (photos de référence, logo source)
 photos/
+photos plage/
 logo/
+DOC/
