@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
+import { getSeasonalPrice, getSeasonalInclusions, zoneToPricingCategory, pricingCategoryLabel } from '@/shared/lib/seasonalPricing';
 import type { Sunbed, BeachZone, Addon } from '@/shared/types';
 
 export type BookingStep = 'select' | 'addons' | 'confirm';
@@ -17,6 +18,10 @@ interface BookingState {
   guestCount: number;
   selectedAddons: SelectedAddon[];
   specialRequests: string;
+  seasonalPrice: number | null;
+  seasonLabel: string | null;
+  seasonInclusions: string[];
+  categoryLabel: string | null;
 }
 
 export function useBeachBooking() {
@@ -27,12 +32,33 @@ export function useBeachBooking() {
     guestCount: 1,
     selectedAddons: [],
     specialRequests: '',
+    seasonalPrice: null,
+    seasonLabel: null,
+    seasonInclusions: [],
+    categoryLabel: null,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Charger le prix saisonnier quand date ou sunbed change
+  useEffect(() => {
+    if (!state.sunbed) return;
+    const zoneType = state.sunbed.zone.zone_type;
+    getSeasonalPrice(zoneType, state.date).then(({ price, seasonLabel }) => {
+      const inclusions = getSeasonalInclusions(zoneType, seasonLabel);
+      const catLabel = pricingCategoryLabel(zoneToPricingCategory(zoneType));
+      setState((s) => ({
+        ...s,
+        seasonalPrice: price,
+        seasonLabel,
+        seasonInclusions: inclusions,
+        categoryLabel: catLabel,
+      }));
+    });
+  }, [state.date, state.sunbed?.id]);
+
   const setDate = useCallback((date: string) => {
-    setState((s) => ({ ...s, date, sunbed: null, step: 'select' }));
+    setState((s) => ({ ...s, date, sunbed: null, step: 'select', seasonalPrice: null, seasonLabel: null, seasonInclusions: [], categoryLabel: null }));
   }, []);
 
   const selectSunbed = useCallback((sunbed: (Sunbed & { zone: BeachZone }) | null) => {
@@ -89,8 +115,8 @@ export function useBeachBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  // Calculs de prix — 1 transat par personne
-  const unitPrice = state.sunbed?.zone?.base_price ?? 0;
+  // Calculs de prix — prix saisonnier prioritaire, sinon base_price
+  const unitPrice = state.seasonalPrice ?? state.sunbed?.zone?.base_price ?? 0;
   const basePrice = unitPrice * state.guestCount;
   const addonsTotal = state.selectedAddons.reduce(
     (sum, a) => sum + a.addon.price * a.quantity,
@@ -183,6 +209,10 @@ export function useBeachBooking() {
       guestCount: 1,
       selectedAddons: [],
       specialRequests: '',
+      seasonalPrice: null,
+      seasonLabel: null,
+      seasonInclusions: [],
+      categoryLabel: null,
     });
     setError(null);
   }, []);
@@ -191,6 +221,7 @@ export function useBeachBooking() {
     ...state,
     submitting,
     error,
+    unitPrice,
     basePrice,
     addonsTotal,
     totalPrice,

@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
-import { useRestaurantTables } from '@/features/restaurant/hooks/useRestaurantData';
+import { useRestaurantZones } from '@/features/restaurant/hooks/useRestaurantData';
 import { useRestaurantBooking } from '@/features/restaurant/hooks/useRestaurantBooking';
 import { RestaurantMap } from '@/features/restaurant/components/RestaurantMap';
 import { TableSheet } from '@/features/restaurant/components/TableSheet';
@@ -21,11 +21,11 @@ export default function RestaurantScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
   const booking = useRestaurantBooking();
-  const { tables, zones, loading, availableCount, totalCount } = useRestaurantTables(booking.date, booking.timeSlot);
+  const { zones, loading, totalAvailable, totalCapacity } = useRestaurantZones(booking.date, booking.timeSlot);
   const [sheetVisible, setSheetVisible] = useState(false);
 
-  const handleSelectTable = (table: any) => {
-    booking.selectTable(table);
+  const handleSelectZone = (zone: any) => {
+    booking.selectZone(zone);
     setSheetVisible(true);
   };
 
@@ -33,9 +33,6 @@ export default function RestaurantScreen() {
     setSheetVisible(false);
     setTimeout(() => booking.goBack(), 300);
   };
-
-  const totalAvailable = zones.reduce((sum, z) => sum + availableCount(z.id), 0);
-  const totalTables = zones.reduce((sum, z) => sum + totalCount(z.id), 0);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -45,12 +42,12 @@ export default function RestaurantScreen() {
           <View>
             <Text style={[styles.title, { color: theme.text }]}>Restaurant</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              Choisissez votre table
+              Réservez votre table
             </Text>
           </View>
-          {!loading && totalTables > 0 && (
+          {!loading && totalCapacity > 0 && (
             <Badge
-              label={`${totalAvailable}/${totalTables} dispo`}
+              label={`${totalAvailable}/${totalCapacity} dispo`}
               variant={totalAvailable > 10 ? 'success' : totalAvailable > 3 ? 'warning' : 'error'}
             />
           )}
@@ -112,19 +109,19 @@ export default function RestaurantScreen() {
         <DateSelector selectedDate={booking.date} onSelect={booking.setDate} />
       </View>
 
-      {/* Carte interactive */}
+      {/* Photo + Cartes de zone */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Chargement du plan...
+            Chargement...
           </Text>
         </View>
       ) : (
         <RestaurantMap
-          tables={tables}
-          selectedId={booking.table?.id ?? null}
-          onSelect={handleSelectTable}
+          zones={zones}
+          selectedZoneId={booking.zone?.id ?? null}
+          onSelectZone={handleSelectZone}
         />
       )}
 
@@ -132,7 +129,7 @@ export default function RestaurantScreen() {
       <TableSheet
         visible={sheetVisible}
         onClose={handleClose}
-        table={booking.table}
+        zone={booking.zone}
         date={booking.date}
         timeSlot={booking.timeSlot}
         step={booking.step}
@@ -140,7 +137,6 @@ export default function RestaurantScreen() {
         onGoBack={booking.goBack}
         onBook={booking.submitBooking}
         booking={booking.submitting}
-        minSpend={booking.minSpend}
         depositAmount={booking.depositAmount}
         guestCount={booking.guestCount}
         onSetGuestCount={booking.setGuestCount}

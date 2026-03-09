@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Image,
-  ScrollView,
   TouchableOpacity,
   Text,
   StyleSheet,
@@ -11,182 +10,210 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
-import type { RestaurantTable, RestaurantZone } from '@/shared/types';
+import type { RestaurantZone } from '@/shared/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// Photo restaurant.png est en portrait — on affiche toute la photo
-const MAP_WIDTH = SCREEN_WIDTH;
-const MAP_HEIGHT = MAP_WIDTH * 1.5;
 
-interface TableWithZone extends RestaurantTable {
-  zone: RestaurantZone;
-  isReserved: boolean;
+interface ZoneWithAvailability extends RestaurantZone {
+  availableCount: number;
+  isFull: boolean;
 }
 
 interface RestaurantMapProps {
-  tables: TableWithZone[];
-  selectedId: string | null;
-  onSelect: (table: TableWithZone) => void;
+  zones: ZoneWithAvailability[];
+  selectedZoneId: string | null;
+  onSelectZone: (zone: ZoneWithAvailability) => void;
 }
 
-export function RestaurantMap({ tables, selectedId, onSelect }: RestaurantMapProps) {
+export function RestaurantMap({ zones, selectedZoneId, onSelectZone }: RestaurantMapProps) {
   const { theme } = useSunMode();
+
+  const getZoneIcon = (zoneType: string): string => {
+    return zoneType === 'terrasse' ? 'sunny-outline' : 'home-outline';
+  };
+
+  const getZoneSubtitle = (zoneType: string): string => {
+    return zoneType === 'terrasse' ? 'En plein air, face à la mer' : 'Salle climatisée, ambiance cosy';
+  };
 
   return (
     <View style={styles.container}>
-      {/* Légende discrète */}
-      <View style={[styles.legend, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.sunYellow }]} />
-            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Disponible</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accentRed + '60' }]} />
-            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Réservée</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.sunYellow }]} />
-            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Sélectionnée</Text>
-          </View>
-        </View>
-      </View>
+      {/* Photo du restaurant en fond */}
+      <Image
+        source={require('../../../../assets/restaurant-photo.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        maximumZoomScale={4}
-        minimumZoomScale={1}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        bouncesZoom
-        centerContent
-      >
-        <View style={styles.mapContainer}>
-          {/* Photo pleine — PAS d'overlay */}
-          <Image
-            source={require('../../../../assets/restaurant-photo.png')}
-            style={styles.mapImage}
-            resizeMode="cover"
-          />
+      {/* Overlay gradient en bas pour lisibilité des cartes */}
+      <View style={styles.gradient} />
 
-          {/* Tables cliquables sur la photo */}
-          {tables.map((table) => {
-            const isSelected = table.id === selectedId;
-            const isReserved = table.isReserved;
-            const isRound = table.shape === 'round';
+      {/* Cartes de zone */}
+      <View style={styles.cardsContainer}>
+        {zones.map((zone) => {
+          const isSelected = zone.id === selectedZoneId;
+          const isFull = zone.isFull;
 
-            return (
-              <TouchableOpacity
-                key={table.id}
-                activeOpacity={isReserved ? 1 : 0.6}
-                onPress={() => !isReserved && onSelect(table)}
-                style={[
-                  styles.marker,
-                  {
-                    left: `${table.svg_x}%`,
-                    top: `${table.svg_y}%`,
-                    width: `${table.svg_width}%`,
-                    height: `${table.svg_height}%`,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.markerInner,
-                    { borderRadius: isRound ? 100 : 8 },
-                    isSelected && [styles.markerSelected, { borderRadius: isRound ? 100 : 8 }],
-                    isReserved && styles.markerReserved,
-                  ]}
-                >
-                  {/* Info seulement si sélectionné */}
-                  {isSelected && (
-                    <View style={styles.selectedInfo}>
-                      <Text style={styles.selectedLabel}>{table.label}</Text>
-                      <View style={styles.seatsRow}>
-                        <Ionicons name="people" size={9} color={colors.white} />
-                        <Text style={styles.seatsText}>{table.seats}</Text>
-                      </View>
-                    </View>
-                  )}
+          return (
+            <TouchableOpacity
+              key={zone.id}
+              activeOpacity={isFull ? 1 : 0.7}
+              onPress={() => !isFull && onSelectZone(zone)}
+              style={[
+                styles.zoneCard,
+                {
+                  backgroundColor: isFull
+                    ? 'rgba(0,0,0,0.5)'
+                    : isSelected
+                      ? 'rgba(247, 217, 78, 0.25)'
+                      : 'rgba(255,255,255,0.15)',
+                  borderColor: isFull
+                    ? 'rgba(255,255,255,0.1)'
+                    : isSelected
+                      ? colors.sunYellow
+                      : 'rgba(255,255,255,0.3)',
+                },
+              ]}
+            >
+              <View style={styles.zoneCardHeader}>
+                <Ionicons
+                  name={getZoneIcon(zone.zone_type) as any}
+                  size={22}
+                  color={isFull ? 'rgba(255,255,255,0.4)' : colors.white}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.zoneName, isFull && styles.zoneNameFull]}>
+                    {zone.name}
+                  </Text>
+                  <Text style={[styles.zoneSubtitle, isFull && styles.zoneSubtitleFull]}>
+                    {getZoneSubtitle(zone.zone_type)}
+                  </Text>
                 </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+              </View>
 
-      <View style={[styles.zoomHint, { backgroundColor: theme.card + 'DD' }]}>
-        <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
-        <Text style={[styles.zoomHintText, { color: theme.textSecondary }]}>
-          Pincez pour zoomer • Touchez une table
-        </Text>
+              <View style={styles.zoneCardFooter}>
+                {isFull ? (
+                  <View style={styles.fullBadge}>
+                    <Text style={styles.fullBadgeText}>Complet</Text>
+                  </View>
+                ) : (
+                  <View style={styles.availableBadge}>
+                    <View style={styles.availableDot} />
+                    <Text style={styles.availableText}>
+                      {zone.availableCount} table{zone.availableCount > 1 ? 's' : ''} dispo
+                    </Text>
+                  </View>
+                )}
+                {!isFull && (
+                  <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  legend: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1 },
-  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center' },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 11, fontWeight: '500' },
-  scrollView: { flex: 1 },
-  scrollContent: { alignItems: 'center', justifyContent: 'center' },
-  mapContainer: { width: MAP_WIDTH, height: MAP_HEIGHT, position: 'relative' },
-  mapImage: { width: '100%', height: '100%', position: 'absolute' },
-  marker: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  markerInner: {
+  container: {
+    flex: 1,
+    position: 'relative',
+  },
+  backgroundImage: {
     width: '100%',
     height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Transparent par défaut — on voit la photo
+    position: 'absolute',
+  },
+  gradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
     backgroundColor: 'transparent',
+    // Simulate gradient with multiple layers
+    borderTopWidth: 0,
+    // Use a semi-transparent overlay
+    backgroundGradient: undefined, // RN doesn't support gradients natively
+  },
+  cardsContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    gap: 12,
+  },
+  zoneCard: {
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    padding: 16,
+    // Glassmorphism effect
+    backdropFilter: 'blur(10px)',
   },
-  markerSelected: {
-    backgroundColor: 'rgba(247, 217, 78, 0.3)',
-    borderColor: colors.sunYellow,
-    borderWidth: 2.5,
-    shadowColor: colors.sunYellow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  markerReserved: {
-    backgroundColor: 'rgba(201, 64, 64, 0.25)',
-    borderColor: 'rgba(201, 64, 64, 0.4)',
-    borderWidth: 1,
-  },
-  selectedInfo: {
+  zoneCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 12,
+    marginBottom: 10,
   },
-  selectedLabel: {
-    color: colors.white,
-    fontSize: 11,
+  zoneName: {
+    fontSize: 18,
     fontWeight: '800',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  seatsRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  seatsText: {
     color: colors.white,
-    fontSize: 9,
-    fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  zoneNameFull: {
+    color: 'rgba(255,255,255,0.4)',
+  },
+  zoneSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  zoomHint: {
-    position: 'absolute', bottom: 12, right: 12, flexDirection: 'row', alignItems: 'center',
-    gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
+  zoneSubtitleFull: {
+    color: 'rgba(255,255,255,0.3)',
   },
-  zoomHintText: { fontSize: 10, fontWeight: '500' },
+  zoneCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  availableBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(76, 175, 80, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  availableDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50',
+  },
+  availableText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  fullBadge: {
+    backgroundColor: 'rgba(201, 64, 64, 0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  fullBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.6)',
+  },
 });

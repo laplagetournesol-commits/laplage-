@@ -9,12 +9,12 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
-import type { RestaurantTable, RestaurantZone } from '@/shared/types';
+import type { RestaurantZone } from '@/shared/types';
 
 interface TableSheetProps {
   visible: boolean;
   onClose: () => void;
-  table: (RestaurantTable & { zone: RestaurantZone }) | null;
+  zone: RestaurantZone | null;
   date: string;
   timeSlot: 'lunch' | 'dinner';
   step: 'select' | 'confirm';
@@ -22,7 +22,6 @@ interface TableSheetProps {
   onGoBack: () => void;
   onBook: () => Promise<{ success: boolean; qrCode?: string }>;
   booking: boolean;
-  minSpend: number;
   depositAmount: number;
   guestCount: number;
   onSetGuestCount: (n: number) => void;
@@ -33,7 +32,7 @@ interface TableSheetProps {
 export function TableSheet({
   visible,
   onClose,
-  table,
+  zone,
   date,
   timeSlot,
   step,
@@ -41,7 +40,6 @@ export function TableSheet({
   onGoBack,
   onBook,
   booking,
-  minSpend,
   depositAmount,
   guestCount,
   onSetGuestCount,
@@ -53,13 +51,13 @@ export function TableSheet({
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
 
-  if (!table) return null;
+  if (!zone) return null;
 
   const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long',
   });
   const timeLabel = timeSlot === 'lunch' ? '12h00 — 16h00' : '19h30 — 23h30';
-  const shapeIcon = table.shape === 'round' ? 'ellipse-outline' : 'square-outline';
+  const zoneIcon = zone.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline';
 
   const handleBook = async () => {
     if (!user) { router.push('/(auth)/login'); return; }
@@ -70,8 +68,8 @@ export function TableSheet({
       setTimeout(() => setShowQR(true), 400);
     } else if (result.success) {
       Alert.alert(
-        'Table réservée !',
-        `Votre table ${table.label} est réservée pour le ${formattedDate} (${timeSlot === 'lunch' ? 'déjeuner' : 'dîner'}). +10 Beach Tokens !`,
+        'Réservation confirmée !',
+        `Votre table en ${zone.name} est réservée pour le ${formattedDate} (${timeSlot === 'lunch' ? 'déjeuner' : 'dîner'}). +10 Beach Tokens !`,
         [{ text: 'Parfait !', onPress: onClose }]
       );
     }
@@ -82,25 +80,26 @@ export function TableSheet({
     setQrCode(null);
   };
 
-  const title = step === 'select' ? `Table ${table.label}` : 'Confirmation';
+  const title = step === 'select' ? zone.name : 'Confirmation';
 
   return (
     <>
     <BottomSheet visible={visible} onClose={onClose} title={title}>
-      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 480 }}>
         {step === 'select' && (
           <View style={styles.content}>
             <View style={styles.row}>
               <Badge
-                label={table.zone.name}
-                variant={table.zone.zone_type === 'lounge' ? 'vip' : 'default'}
+                label={zone.name}
+                variant={zone.zone_type === 'terrasse' ? 'default' : 'vip'}
               />
-              <Badge label={`${table.seats} places`} variant="success" size="sm" />
             </View>
 
-            <Text style={[styles.description, { color: theme.textSecondary }]}>
-              {table.zone.description}
-            </Text>
+            {zone.description && (
+              <Text style={[styles.description, { color: theme.textSecondary }]}>
+                {zone.description}
+              </Text>
+            )}
 
             <View style={[styles.infoCard, { backgroundColor: theme.backgroundSecondary }]}>
               <View style={styles.infoRow}>
@@ -112,10 +111,8 @@ export function TableSheet({
                 <Text style={[styles.infoText, { color: theme.text }]}>{timeLabel}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Ionicons name={shapeIcon} size={16} color={theme.accent} />
-                <Text style={[styles.infoText, { color: theme.text }]}>
-                  Table {table.shape === 'round' ? 'ronde' : 'rectangulaire'} — {table.label}
-                </Text>
+                <Ionicons name={zoneIcon as any} size={16} color={theme.accent} />
+                <Text style={[styles.infoText, { color: theme.text }]}>{zone.name}</Text>
               </View>
             </View>
 
@@ -131,7 +128,7 @@ export function TableSheet({
                 </TouchableOpacity>
                 <Text style={[styles.guestNum, { color: theme.text }]}>{guestCount}</Text>
                 <TouchableOpacity
-                  onPress={() => onSetGuestCount(Math.min(guestCount + 1, table.seats))}
+                  onPress={() => onSetGuestCount(guestCount + 1)}
                   style={[styles.guestBtn, { borderColor: theme.cardBorder }]}
                 >
                   <Ionicons name="add" size={18} color={theme.text} />
@@ -139,12 +136,17 @@ export function TableSheet({
               </View>
             </View>
 
-            {/* Minimum de consommation */}
-            <View style={[styles.minSpendCard, { backgroundColor: colors.sunYellowLight }]}>
-              <Ionicons name="information-circle" size={16} color={colors.warmWood} />
-              <Text style={[styles.minSpendText, { color: colors.warmWood }]}>
-                Minimum de consommation : {minSpend}€/pers.
-              </Text>
+            {/* Pré-autorisation */}
+            <View style={[styles.preAuthCard, { backgroundColor: colors.sunYellowLight }]}>
+              <Ionicons name="card-outline" size={16} color={colors.warmWood} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.preAuthText, { color: colors.warmWood }]}>
+                  Pré-autorisation : 30€/personne ({depositAmount}€)
+                </Text>
+                <Text style={[styles.preAuthSubtext, { color: colors.warmWood }]}>
+                  No-show : pré-autorisation débitée
+                </Text>
+              </View>
             </View>
 
             {/* Demandes spéciales */}
@@ -165,7 +167,7 @@ export function TableSheet({
               />
             </View>
 
-            <Button title="Réserver cette table" onPress={onGoToConfirm} style={{ marginTop: 16 }} />
+            <Button title="Réserver" onPress={onGoToConfirm} style={{ marginTop: 16 }} />
           </View>
         )}
 
@@ -179,10 +181,8 @@ export function TableSheet({
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
               <Text style={[styles.summaryTitle, { color: theme.text }]}>Récapitulatif</Text>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Table</Text>
-                <Text style={[styles.summaryValue, { color: theme.text }]}>
-                  {table.label} ({table.zone.name})
-                </Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Zone</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>{zone.name}</Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Date</Text>
@@ -199,21 +199,19 @@ export function TableSheet({
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{guestCount}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Min. conso.</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Pré-autorisation</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
-                  {minSpend}€/pers. ({minSpend * guestCount}€ total)
+                  30€/pers. ({depositAmount}€ total)
                 </Text>
               </View>
             </View>
 
-            {depositAmount > 0 && (
-              <View style={[styles.depositRow, { borderTopColor: theme.cardBorder }]}>
-                <Text style={[styles.depositLabel, { color: theme.textSecondary }]}>
-                  Acompte (30% du minimum)
-                </Text>
-                <Text style={[styles.depositValue, { color: colors.brand }]}>{depositAmount}€</Text>
-              </View>
-            )}
+            <View style={[styles.depositRow, { borderTopColor: theme.cardBorder }]}>
+              <Text style={[styles.depositLabel, { color: theme.textSecondary }]}>
+                Pré-autorisation
+              </Text>
+              <Text style={[styles.depositValue, { color: colors.brand }]}>{depositAmount}€</Text>
+            </View>
 
             <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
               <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>Conditions de réservation</Text>
@@ -223,16 +221,16 @@ export function TableSheet({
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="close-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Non annulable, non remboursable</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Annulation gratuite jusqu'à 24h avant</Text>
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : acompte perdu</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : pré-autorisation débitée ({depositAmount}€)</Text>
               </View>
             </View>
 
             <Button
-              title={user ? `Confirmer — ${depositAmount}€ d'acompte` : 'Se connecter pour réserver'}
+              title={user ? `Confirmer — ${depositAmount}€ de pré-autorisation` : 'Se connecter pour réserver'}
               onPress={handleBook}
               loading={booking}
               size="lg"
@@ -253,16 +251,15 @@ export function TableSheet({
         onClose={handleCloseQR}
         qrCode={qrCode}
         type="restaurant"
-        title={`Table ${table.label}`}
-        subtitle={`Zone ${table.zone.name}`}
+        title={`Restaurant — ${zone.name}`}
+        subtitle={zone.name}
         details={[
           { label: 'Date', value: formattedDate, icon: 'calendar-outline' },
           { label: 'Service', value: timeSlot === 'lunch' ? 'Déjeuner (12h-16h)' : 'Dîner (19h30-23h30)', icon: 'time-outline' },
-          { label: 'Table', value: `${table.label} — ${table.zone.name}`, icon: 'location-outline' },
+          { label: 'Zone', value: zone.name, icon: zoneIcon },
           { label: 'Convives', value: `${guestCount}`, icon: 'people-outline' },
-          { label: 'Acompte payé', value: `${depositAmount}€ (à déduire)`, icon: 'card-outline' },
         ]}
-        deposit={depositAmount > 0 ? `${depositAmount}€` : undefined}
+        deposit={`${depositAmount}€`}
       />
     )}
     </>
@@ -281,8 +278,9 @@ const styles = StyleSheet.create({
   guestCounter: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   guestBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   guestNum: { fontSize: 18, fontWeight: '700', minWidth: 20, textAlign: 'center' },
-  minSpendCard: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10 },
-  minSpendText: { fontSize: 13, fontWeight: '600', flex: 1 },
+  preAuthCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 10 },
+  preAuthText: { fontSize: 13, fontWeight: '600' },
+  preAuthSubtext: { fontSize: 11, fontWeight: '500', marginTop: 2, fontStyle: 'italic' },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
   backText: { fontSize: 14, fontWeight: '600' },
   summaryCard: { padding: 16, borderRadius: 14, gap: 10, marginBottom: 16 },

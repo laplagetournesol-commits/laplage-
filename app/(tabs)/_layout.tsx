@@ -56,12 +56,18 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="shop"
+        options={{
+          title: i18n.t('tabShop'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bag-handle-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="events"
         options={{
-          title: i18n.t('tabEvents'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen

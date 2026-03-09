@@ -37,6 +37,9 @@ interface SunbedSheetProps {
   depositAmount: number;
   guestCount: number;
   onSetGuestCount: (n: number) => void;
+  seasonLabel?: string | null;
+  seasonInclusions?: string[];
+  categoryLabel?: string | null;
 }
 
 export function SunbedSheet({
@@ -60,6 +63,9 @@ export function SunbedSheet({
   depositAmount,
   guestCount,
   onSetGuestCount,
+  seasonLabel,
+  seasonInclusions,
+  categoryLabel,
 }: SunbedSheetProps) {
   const { theme } = useSunMode();
   const { user } = useAuth();
@@ -111,14 +117,19 @@ export function SunbedSheet({
         <View style={styles.content}>
           <View style={styles.row}>
             <Badge
-              label={sunbed.zone.zone_type === 'vip_cabana' ? 'VIP Cabana' : sunbed.zone.name}
+              label={categoryLabel || (sunbed.zone.zone_type === 'vip_cabana' ? 'Lit balinais' : sunbed.zone.name)}
               variant={sunbed.zone.zone_type === 'vip_cabana' ? 'vip' : 'default'}
             />
             {sunbed.is_double && <Badge label="Double" variant="success" size="sm" />}
-            <View style={[styles.includedBadge, { backgroundColor: colors.sage + '15' }]}>
-              <Ionicons name="checkmark-circle" size={12} color={colors.sage} />
-              <Text style={[styles.includedBadgeText, { color: colors.sage }]}>Serviettes incluses</Text>
-            </View>
+            {seasonLabel && <Badge label={seasonLabel} variant="success" size="sm" />}
+          </View>
+          <View style={styles.row}>
+            {(seasonInclusions && seasonInclusions.length > 0 ? seasonInclusions : ['Parasol + table inclus']).map((inc, i) => (
+              <View key={i} style={[styles.includedBadge, { backgroundColor: colors.sage + '15' }]}>
+                <Ionicons name="checkmark-circle" size={12} color={colors.sage} />
+                <Text style={[styles.includedBadgeText, { color: colors.sage }]}>{inc}</Text>
+              </View>
+            ))}
           </View>
 
           <View style={[styles.infoCardCompact, { backgroundColor: theme.backgroundSecondary }]}>
@@ -303,7 +314,7 @@ export function SunbedSheet({
             </View>
             <View style={styles.priceSubRow}>
               <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
-                Acompte (30%)
+                Montant à régler
               </Text>
               <Text style={[styles.priceValue, { color: theme.text }]}>{depositAmount}€</Text>
             </View>

@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lestournesols.app"
+      "bundleIdentifier": "com.lestournesols.app",
+      "buildNumber": "4"
     },
     "android": {
       "adaptiveIcon": {
@@ -50,7 +51,8 @@
             "buildReactNativeFromSource": true
           }
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": false

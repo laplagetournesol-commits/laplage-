@@ -42,8 +42,15 @@ export const translations = {
     tabHome: 'Accueil',
     tabBeach: 'Plage',
     tabRestaurant: 'Restaurant',
+    tabShop: 'Shop',
     tabEvents: 'Events',
     tabProfile: 'Profil',
+
+    // Shop
+    discoverBeach: 'Découvrir',
+    shopSubtitle: 'Articles de plage',
+    shopComingSoon: 'Bientôt disponible',
+    shopComingSoonDesc: 'Notre boutique ouvrira très prochainement avec des articles exclusifs Les Tournesols.',
 
     // Home
     greeting: {

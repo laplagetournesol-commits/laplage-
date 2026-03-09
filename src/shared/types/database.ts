@@ -73,6 +73,8 @@ export interface Addon {
   icon: string | null;
   is_available: boolean;
   sort_order: number;
+  available_from: string | null;
+  available_until: string | null;
 }
 
 export interface ReservationAddon {
@@ -83,7 +85,7 @@ export interface ReservationAddon {
   unit_price: number;
 }
 
-export type RestaurantZoneType = 'terrasse' | 'vue_mer' | 'lounge';
+export type RestaurantZoneType = 'terrasse' | 'interieur';
 
 export interface RestaurantZone {
   id: string;
@@ -114,7 +116,8 @@ export interface RestaurantTable {
 export interface RestaurantReservation {
   id: string;
   user_id: string;
-  table_id: string;
+  zone_id: string;
+  table_id: string | null;
   date: string;
   time_slot: string;
   guest_count: number;
@@ -189,12 +192,14 @@ export interface Reward {
   stock: number | null;
 }
 
+export type PricingCategory = 'transat' | 'transat_front_row' | 'bed';
+
 export interface SeasonalPricing {
   id: string;
-  zone_type: string;
+  pricing_category: PricingCategory;
   start_date: string;
   end_date: string;
-  multiplier: number;
+  fixed_price: number;
   label: string | null;
 }
 

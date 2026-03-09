@@ -21,7 +21,7 @@ export default function BeachScreen() {
   const insets = useSafeAreaInsets();
   const booking = useBeachBooking();
   const { sunbeds, zones, loading, availableCount, totalCount } = useSunbeds(booking.date);
-  const { addons } = useAddons();
+  const { addons } = useAddons(booking.date);
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const handleSelectSunbed = (sunbed: any) => {
@@ -99,6 +99,9 @@ export default function BeachScreen() {
         depositAmount={booking.depositAmount}
         guestCount={booking.guestCount}
         onSetGuestCount={booking.setGuestCount}
+        seasonLabel={booking.seasonLabel}
+        seasonInclusions={booking.seasonInclusions}
+        categoryLabel={booking.categoryLabel}
       />
     </View>
   );

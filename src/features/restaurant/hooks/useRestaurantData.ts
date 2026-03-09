@@ -1,44 +1,56 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
-import type { RestaurantZone, RestaurantTable } from '@/shared/types';
+import type { RestaurantZone } from '@/shared/types';
 
-interface TableWithAvailability extends RestaurantTable {
-  zone: RestaurantZone;
-  isReserved: boolean;
+interface ZoneAvailability extends RestaurantZone {
+  reservedCount: number;
+  availableCount: number;
+  isFull: boolean;
 }
 
-export function useRestaurantTables(date: string, timeSlot: 'lunch' | 'dinner') {
-  const [tables, setTables] = useState<TableWithAvailability[]>([]);
-  const [zones, setZones] = useState<RestaurantZone[]>([]);
+export function useRestaurantZones(date: string, timeSlot: 'lunch' | 'dinner') {
+  const [zones, setZones] = useState<ZoneAvailability[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
 
-    const [zonesRes, tablesRes, reservationsRes] = await Promise.all([
-      supabase.from('restaurant_zones').select('*').eq('is_active', true).order('sort_order'),
-      supabase.from('restaurant_tables').select('*').eq('is_active', true),
-      supabase.from('restaurant_reservations')
-        .select('table_id')
+    const [zonesRes, reservationsRes] = await Promise.all([
+      supabase
+        .from('restaurant_zones')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order'),
+      supabase
+        .from('restaurant_reservations')
+        .select('zone_id, guest_count')
         .eq('date', date)
         .eq('time_slot', timeSlot)
         .not('status', 'in', '("cancelled")'),
     ]);
 
     const zonesData = (zonesRes.data ?? []) as RestaurantZone[];
-    const tablesData = (tablesRes.data ?? []) as RestaurantTable[];
-    const reservedIds = new Set((reservationsRes.data ?? []).map((r: { table_id: string }) => r.table_id));
+    const reservations = reservationsRes.data ?? [];
 
-    const zoneMap = new Map(zonesData.map((z) => [z.id, z]));
+    // Compter les réservations par zone
+    const countByZone = new Map<string, number>();
+    for (const r of reservations) {
+      const current = countByZone.get(r.zone_id) ?? 0;
+      countByZone.set(r.zone_id, current + 1);
+    }
 
-    const enriched: TableWithAvailability[] = tablesData.map((t) => ({
-      ...t,
-      zone: zoneMap.get(t.zone_id)!,
-      isReserved: reservedIds.has(t.id),
-    }));
+    const enriched: ZoneAvailability[] = zonesData.map((z) => {
+      const reservedCount = countByZone.get(z.id) ?? 0;
+      const availableCount = Math.max(0, z.capacity - reservedCount);
+      return {
+        ...z,
+        reservedCount,
+        availableCount,
+        isFull: availableCount <= 0,
+      };
+    });
 
-    setZones(zonesData);
-    setTables(enriched);
+    setZones(enriched);
     setLoading(false);
   }, [date, timeSlot]);
 
@@ -46,7 +58,7 @@ export function useRestaurantTables(date: string, timeSlot: 'lunch' | 'dinner') 
     fetchData();
   }, [fetchData]);
 
-  // Realtime
+  // Realtime — rafraîchir quand une réservation change
   useEffect(() => {
     const channel = supabase
       .channel('restaurant-reservations-realtime')
@@ -57,11 +69,8 @@ export function useRestaurantTables(date: string, timeSlot: 'lunch' | 'dinner') 
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
-  const availableCount = (zoneId: string) =>
-    tables.filter((t) => t.zone_id === zoneId && !t.isReserved).length;
+  const totalAvailable = zones.reduce((sum, z) => sum + z.availableCount, 0);
+  const totalCapacity = zones.reduce((sum, z) => sum + z.capacity, 0);
 
-  const totalCount = (zoneId: string) =>
-    tables.filter((t) => t.zone_id === zoneId).length;
-
-  return { tables, zones, loading, availableCount, totalCount, refresh: fetchData };
+  return { zones, loading, totalAvailable, totalCapacity, refresh: fetchData };
 }

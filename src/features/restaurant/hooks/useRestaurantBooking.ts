@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
-import type { RestaurantTable, RestaurantZone } from '@/shared/types';
+import type { RestaurantZone } from '@/shared/types';
 
 export type RestaurantBookingStep = 'select' | 'confirm';
 
@@ -9,7 +9,7 @@ interface BookingState {
   step: RestaurantBookingStep;
   date: string;
   timeSlot: 'lunch' | 'dinner';
-  table: (RestaurantTable & { zone: RestaurantZone }) | null;
+  zone: RestaurantZone | null;
   guestCount: number;
   specialRequests: string;
 }
@@ -19,7 +19,7 @@ export function useRestaurantBooking() {
     step: 'select',
     date: getDefaultDate(),
     timeSlot: 'lunch',
-    table: null,
+    zone: null,
     guestCount: 2,
     specialRequests: '',
   });
@@ -27,15 +27,15 @@ export function useRestaurantBooking() {
   const [error, setError] = useState<string | null>(null);
 
   const setDate = useCallback((date: string) => {
-    setState((s) => ({ ...s, date, table: null, step: 'select' }));
+    setState((s) => ({ ...s, date, zone: null, step: 'select' }));
   }, []);
 
   const setTimeSlot = useCallback((timeSlot: 'lunch' | 'dinner') => {
-    setState((s) => ({ ...s, timeSlot, table: null, step: 'select' }));
+    setState((s) => ({ ...s, timeSlot, zone: null, step: 'select' }));
   }, []);
 
-  const selectTable = useCallback((table: (RestaurantTable & { zone: RestaurantZone }) | null) => {
-    setState((s) => ({ ...s, table }));
+  const selectZone = useCallback((zone: RestaurantZone | null) => {
+    setState((s) => ({ ...s, zone }));
   }, []);
 
   const goToConfirm = useCallback(() => {
@@ -54,11 +54,10 @@ export function useRestaurantBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  const minSpend = state.table?.zone?.min_spend ?? 0;
-  const depositAmount = Math.ceil(minSpend * 0.3);
+  const depositAmount = 30 * state.guestCount; // Pré-autorisation fixe 30€/personne
 
   const submitBooking = useCallback(async () => {
-    if (!state.table) return { success: false };
+    if (!state.zone) return { success: false };
     setSubmitting(true);
     setError(null);
 
@@ -70,7 +69,8 @@ export function useRestaurantBooking() {
         .from('restaurant_reservations')
         .insert({
           user_id: user.id,
-          table_id: state.table.id,
+          zone_id: state.zone.id,
+          table_id: null, // Assigné par le staff
           date: state.date,
           time_slot: state.timeSlot,
           guest_count: state.guestCount,
@@ -114,7 +114,7 @@ export function useRestaurantBooking() {
       step: 'select',
       date: getDefaultDate(),
       timeSlot: 'lunch',
-      table: null,
+      zone: null,
       guestCount: 2,
       specialRequests: '',
     });
@@ -125,11 +125,10 @@ export function useRestaurantBooking() {
     ...state,
     submitting,
     error,
-    minSpend,
     depositAmount,
     setDate,
     setTimeSlot,
-    selectTable,
+    selectZone,
     setGuestCount,
     setSpecialRequests,
     goToConfirm,

@@ -19,6 +19,7 @@ export type {
   EventTicket,
   TokenTransaction,
   Reward,
+  PricingCategory,
   SeasonalPricing,
   LiveCamera,
   PreOrderStatus,

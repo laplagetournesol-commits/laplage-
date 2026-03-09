@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,8 +24,32 @@ import { AnimatedEntry, AnimatedScale } from '@/shared/ui/AnimatedEntry';
 import { i18n } from '@/shared/i18n';
 import { useWeather, windDescription } from '@/shared/hooks/useWeather';
 import { supabase } from '@/shared/lib/supabase';
+import { GalleryCarousel } from '@/features/gallery/components/GalleryCarousel';
 
 const { width, height } = Dimensions.get('window');
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const droneVideoSource = require('../../assets/gallery/drone-video-1.mp4');
+
+function HeroVideo() {
+  const player = useVideoPlayer(droneVideoSource, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.playbackRate = 1.5;
+    p.play();
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.bgImage}
+      contentFit="cover"
+      nativeControls={false}
+      allowsFullscreen={false}
+      allowsPictureInPicture={false}
+    />
+  );
+}
 
 function QuickAction({
   icon,
@@ -67,17 +92,13 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      {/* Background image — pleine page, en transparence */}
-      <Image
-        source={require('../../assets/beach-hero.jpg')}
-        style={styles.bgImage}
-        resizeMode="cover"
-      />
+      {/* Background video drone en autoplay */}
+      <HeroVideo />
       <LinearGradient
         colors={[
           'transparent',
-          theme.period === 'night' ? 'rgba(15,27,45,0.6)' : 'rgba(253,248,240,0.55)',
-          theme.period === 'night' ? 'rgba(15,27,45,0.92)' : 'rgba(253,248,240,0.88)',
+          'rgba(253,248,240,0.35)',
+          'rgba(253,248,240,0.7)',
         ]}
         locations={[0, 0.3, 0.6]}
         style={styles.bgOverlay}
@@ -264,7 +285,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Live Beach View */}
+      {/* Live Beach View — masqué pour l'instant
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('beachViewLive')}</Text>
@@ -283,6 +304,12 @@ export default function HomeScreen() {
             </View>
           </Card>
         </TouchableOpacity>
+      </View>
+      */}
+
+      {/* Gallery carousel */}
+      <View style={styles.section}>
+        <GalleryCarousel />
       </View>
 
       {/* Loyalty tokens preview */}
@@ -350,7 +377,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: width,
     height: height,
-    opacity: 0.5,
+    opacity: 0.75,
   },
   bgOverlay: {
     position: 'absolute',
