@@ -1,19 +1,100 @@
+import * as http2 from 'http2';
+import * as crypto from 'crypto';
 import { supabase } from './supabase';
 
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-const BATCH_SIZE = 100;
+// Configuration APNs via variables d'environnement
+const APNS_KEY_ID = process.env.APNS_KEY_ID ?? '';
+const APNS_TEAM_ID = process.env.APNS_TEAM_ID ?? '';
+const APNS_KEY = (process.env.APNS_KEY ?? '').replace(/\\n/g, '\n');
+const APNS_BUNDLE_ID = process.env.APNS_BUNDLE_ID ?? 'com.lestournesols.app';
+const APNS_HOST = process.env.APNS_PRODUCTION === 'true'
+  ? 'https://api.push.apple.com'
+  : 'https://api.sandbox.push.apple.com';
 
-interface PushMessage {
-  to: string;
-  title: string;
-  body: string;
-  sound: 'default';
-  data?: Record<string, any>;
+let cachedJwt: { token: string; timestamp: number } | null = null;
+
+/**
+ * Génère un JWT pour l'authentification APNs (valide ~50 min, renouvelé toutes les 45 min).
+ */
+function getApnsJwt(): string {
+  const now = Math.floor(Date.now() / 1000);
+
+  if (cachedJwt && now - cachedJwt.timestamp < 45 * 60) {
+    return cachedJwt.token;
+  }
+
+  const header = Buffer.from(JSON.stringify({ alg: 'ES256', kid: APNS_KEY_ID })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ iss: APNS_TEAM_ID, iat: now })).toString('base64url');
+
+  const signer = crypto.createSign('SHA256');
+  signer.update(`${header}.${payload}`);
+  const signature = signer.sign(APNS_KEY, 'base64url');
+
+  const token = `${header}.${payload}.${signature}`;
+  cachedJwt = { token, timestamp: now };
+  return token;
 }
 
 /**
- * Envoie des push notifications à une liste de tokens Expo.
- * Traite par batch de 100 (limite Expo Push API).
+ * Envoie une notification push via APNs HTTP/2.
+ */
+function sendToApns(deviceToken: string, title: string, body: string, data?: Record<string, any>): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!APNS_KEY || !APNS_KEY_ID || !APNS_TEAM_ID) {
+      console.error('APNs non configuré : APNS_KEY, APNS_KEY_ID ou APNS_TEAM_ID manquant');
+      resolve(false);
+      return;
+    }
+
+    const client = http2.connect(APNS_HOST);
+
+    client.on('error', (err) => {
+      console.error('Erreur connexion APNs:', err);
+      resolve(false);
+    });
+
+    const payload = JSON.stringify({
+      aps: {
+        alert: { title, body },
+        sound: 'default',
+      },
+      ...(data ?? {}),
+    });
+
+    const headers = {
+      ':method': 'POST',
+      ':path': `/3/device/${deviceToken}`,
+      'authorization': `bearer ${getApnsJwt()}`,
+      'apns-topic': APNS_BUNDLE_ID,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'content-type': 'application/json',
+    };
+
+    const req = client.request(headers);
+
+    let responseData = '';
+    req.on('data', (chunk: Buffer) => { responseData += chunk; });
+
+    req.on('response', (headers) => {
+      const status = headers[':status'];
+      if (status === 200) {
+        resolve(true);
+      } else {
+        console.error(`APNs erreur ${status} pour token ${deviceToken.slice(0, 8)}...:`, responseData);
+        resolve(false);
+      }
+    });
+
+    req.on('end', () => { client.close(); });
+    req.on('error', () => { resolve(false); });
+
+    req.end(payload);
+  });
+}
+
+/**
+ * Envoie des push notifications à une liste de device tokens.
  */
 export async function sendPushToTokens(
   tokens: string[],
@@ -23,39 +104,11 @@ export async function sendPushToTokens(
 ): Promise<number> {
   if (tokens.length === 0) return 0;
 
-  let totalSent = 0;
+  const results = await Promise.allSettled(
+    tokens.map((token) => sendToApns(token, title, body, data)),
+  );
 
-  for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
-    const batch = tokens.slice(i, i + BATCH_SIZE);
-    const messages: PushMessage[] = batch.map((token) => ({
-      to: token,
-      title,
-      body,
-      sound: 'default' as const,
-      ...(data ? { data } : {}),
-    }));
-
-    try {
-      const response = await fetch(EXPO_PUSH_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(messages),
-      });
-
-      if (response.ok) {
-        totalSent += batch.length;
-      } else {
-        console.error(
-          `Erreur Expo Push batch [${i}-${i + batch.length}]:`,
-          await response.text(),
-        );
-      }
-    } catch (err) {
-      console.error(`Erreur réseau Expo Push batch [${i}]:`, err);
-    }
-  }
-
-  return totalSent;
+  return results.filter((r) => r.status === 'fulfilled' && r.value).length;
 }
 
 /**

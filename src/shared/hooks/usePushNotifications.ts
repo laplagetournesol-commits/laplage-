@@ -13,7 +13,6 @@ export function usePushNotifications() {
     if (!user || registered.current) return;
 
     (async () => {
-      // Import dynamique pour éviter le crash si le module natif n'est pas lié
       let Notifications: typeof import('expo-notifications');
       let Device: typeof import('expo-device');
       try {
@@ -46,12 +45,11 @@ export function usePushNotifications() {
       }
       if (finalStatus !== 'granted') return;
 
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: '2fe3c6e2-e73f-4115-820b-a60280e443ef',
-      });
+      // Récupérer le device token natif (APNs pour iOS, FCM pour Android)
+      const deviceToken = await Notifications.getDevicePushTokenAsync();
 
       await apiCall('/api/notifications/register-token', {
-        token: tokenData.data,
+        token: deviceToken.data,
         platform: Platform.OS,
       });
 
