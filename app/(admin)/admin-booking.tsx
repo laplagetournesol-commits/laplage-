@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,15 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { DateSelector } from '@/features/beach/components/DateSelector';
+import { BeachMap } from '@/features/beach/components/BeachMap';
+import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { supabase } from '@/shared/lib/supabase';
+import type { Sunbed, BeachZone } from '@/shared/types';
 
 type BookingType = 'beach' | 'restaurant';
-
-interface SunbedOption {
-  id: string;
-  label: string;
-  zoneName: string;
-}
 
 interface TableOption {
   id: string;
@@ -37,60 +36,35 @@ export default function AdminBookingScreen() {
   const insets = useSafeAreaInsets();
 
   const [type, setType] = useState<BookingType>('beach');
-  const [date, setDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [guestName, setGuestName] = useState('');
   const [guestCount, setGuestCount] = useState(1);
   const [timeSlot, setTimeSlot] = useState<'lunch' | 'dinner'>('lunch');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedSunbed, setSelectedSunbed] = useState<(Sunbed & { zone: BeachZone }) | null>(null);
 
-  const [sunbeds, setSunbeds] = useState<SunbedOption[]>([]);
+  // Beach: réutilise le même hook + carte que les clients
+  const { sunbeds, loading: beachLoading } = useSunbeds(date);
+
+  // Restaurant
   const [tables, setTables] = useState<TableOption[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [loadingTables, setLoadingTables] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Reset sélection quand on change de type ou date
   useEffect(() => {
     setSelectedId(null);
-    if (type === 'beach') {
-      loadAvailableSunbeds();
-    } else {
-      loadAvailableTables();
-    }
+    setSelectedSunbed(null);
   }, [date, type, timeSlot]);
 
-  const loadAvailableSunbeds = async () => {
-    setLoadingSlots(true);
-
-    const { data: allSunbeds } = await supabase
-      .from('sunbeds')
-      .select('id, label, zone:beach_zones(name)')
-      .eq('is_active', true)
-      .order('label');
-
-    const { data: booked } = await supabase
-      .from('beach_reservations')
-      .select('sunbed_id')
-      .eq('date', date)
-      .in('status', ['confirmed', 'checked_in', 'pending']);
-
-    const bookedIds = new Set((booked ?? []).map((r: any) => r.sunbed_id));
-
-    setSunbeds(
-      (allSunbeds ?? [])
-        .filter((s: any) => !bookedIds.has(s.id))
-        .map((s: any) => ({
-          id: s.id,
-          label: s.label,
-          zoneName: s.zone?.name ?? '',
-        })),
-    );
-    setLoadingSlots(false);
-  };
+  // Charger tables restaurant
+  useEffect(() => {
+    if (type !== 'restaurant') return;
+    loadAvailableTables();
+  }, [date, type, timeSlot]);
 
   const loadAvailableTables = async () => {
-    setLoadingSlots(true);
+    setLoadingTables(true);
 
     const { data: allTables } = await supabase
       .from('restaurant_tables')
@@ -117,7 +91,13 @@ export default function AdminBookingScreen() {
           zoneName: t.zone?.name ?? '',
         })),
     );
-    setLoadingSlots(false);
+    setLoadingTables(false);
+  };
+
+  const handleSelectSunbed = (sunbed: Sunbed & { zone: BeachZone } & { isReserved: boolean }) => {
+    if (sunbed.isReserved) return;
+    setSelectedId(sunbed.id);
+    setSelectedSunbed(sunbed);
   };
 
   const handleSubmit = async () => {
@@ -176,8 +156,6 @@ export default function AdminBookingScreen() {
     }
   };
 
-  const items = type === 'beach' ? sunbeds : tables;
-
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen
@@ -192,13 +170,9 @@ export default function AdminBookingScreen() {
         }}
       />
 
-      <ScrollView
-        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 40 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      {/* Top section: type, name, date, guests */}
+      <View style={styles.topSection}>
         {/* Type */}
-        <Text style={[styles.label, { color: theme.text }]}>Type</Text>
         <View style={styles.row}>
           <TouchableOpacity
             onPress={() => setType('beach')}
@@ -232,165 +206,164 @@ export default function AdminBookingScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Nom de l'invité */}
-        <Text style={[styles.label, { color: theme.text }]}>Nom de l'invité</Text>
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder }]}
-          placeholder="Ex: Jean-Pierre"
-          placeholderTextColor={theme.textSecondary}
-          value={guestName}
-          onChangeText={setGuestName}
-        />
+        {/* Nom + personnes sur la même ligne */}
+        <View style={styles.nameRow}>
+          <TextInput
+            style={[styles.input, { flex: 1, color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+            placeholder="Nom de l'invité"
+            placeholderTextColor={theme.textSecondary}
+            value={guestName}
+            onChangeText={setGuestName}
+          />
+          <View style={styles.counterRow}>
+            <TouchableOpacity
+              onPress={() => setGuestCount(Math.max(1, guestCount - 1))}
+              style={[styles.counterBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+            >
+              <Ionicons name="remove" size={18} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={[styles.counterValue, { color: theme.text }]}>{guestCount}</Text>
+            <TouchableOpacity
+              onPress={() => setGuestCount(Math.min(10, guestCount + 1))}
+              style={[styles.counterBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+            >
+              <Ionicons name="add" size={18} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Date */}
-        <Text style={[styles.label, { color: theme.text }]}>Date</Text>
         <DateSelector selectedDate={date} onSelect={setDate} />
 
         {/* Créneau restaurant */}
         {type === 'restaurant' && (
-          <>
-            <Text style={[styles.label, { color: theme.text }]}>Créneau</Text>
-            <View style={styles.row}>
-              <TouchableOpacity
-                onPress={() => setTimeSlot('lunch')}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: timeSlot === 'lunch' ? colors.sage : theme.card,
-                    borderColor: timeSlot === 'lunch' ? colors.sage : theme.cardBorder,
-                  },
-                ]}
-              >
-                <Ionicons name="sunny" size={16} color={timeSlot === 'lunch' ? colors.white : theme.textSecondary} />
-                <Text style={[styles.chipText, { color: timeSlot === 'lunch' ? colors.white : theme.textSecondary }]}>
-                  Déjeuner
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setTimeSlot('dinner')}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: timeSlot === 'dinner' ? colors.deepSea : theme.card,
-                    borderColor: timeSlot === 'dinner' ? colors.deepSea : theme.cardBorder,
-                  },
-                ]}
-              >
-                <Ionicons name="moon" size={16} color={timeSlot === 'dinner' ? colors.white : theme.textSecondary} />
-                <Text style={[styles.chipText, { color: timeSlot === 'dinner' ? colors.white : theme.textSecondary }]}>
-                  Dîner
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {/* Personnes */}
-        <Text style={[styles.label, { color: theme.text }]}>Personnes</Text>
-        <View style={styles.counterRow}>
-          <TouchableOpacity
-            onPress={() => setGuestCount(Math.max(1, guestCount - 1))}
-            style={[styles.counterBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
-          >
-            <Ionicons name="remove" size={20} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={[styles.counterValue, { color: theme.text }]}>{guestCount}</Text>
-          <TouchableOpacity
-            onPress={() => setGuestCount(Math.min(10, guestCount + 1))}
-            style={[styles.counterBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
-          >
-            <Ionicons name="add" size={20} color={theme.text} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Sélection transat / table */}
-        <Text style={[styles.label, { color: theme.text }]}>
-          {type === 'beach' ? 'Transat' : 'Table'}
-        </Text>
-
-        {loadingSlots ? (
-          <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 12 }} />
-        ) : items.length === 0 ? (
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            Aucun {type === 'beach' ? 'transat' : 'table'} disponible
-          </Text>
-        ) : (
-          <View style={styles.grid}>
-            {type === 'beach'
-              ? sunbeds.map((s) => (
-                  <TouchableOpacity
-                    key={s.id}
-                    onPress={() => setSelectedId(s.id)}
-                    style={[
-                      styles.slotBtn,
-                      {
-                        backgroundColor: selectedId === s.id ? colors.terracotta : theme.card,
-                        borderColor: selectedId === s.id ? colors.terracotta : theme.cardBorder,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.slotLabel, { color: selectedId === s.id ? colors.white : theme.text }]}>
-                      {s.label}
-                    </Text>
-                    <Text style={[styles.slotSub, { color: selectedId === s.id ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
-                      {s.zoneName}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              : tables.map((t) => (
-                  <TouchableOpacity
-                    key={t.id}
-                    onPress={() => setSelectedId(t.id)}
-                    style={[
-                      styles.slotBtn,
-                      {
-                        backgroundColor: selectedId === t.id ? colors.deepSea : theme.card,
-                        borderColor: selectedId === t.id ? colors.deepSea : theme.cardBorder,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.slotLabel, { color: selectedId === t.id ? colors.white : theme.text }]}>
-                      {t.label}
-                    </Text>
-                    <Text style={[styles.slotSub, { color: selectedId === t.id ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
-                      {t.zoneName} — {t.seats} pl.
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+          <View style={[styles.row, { marginTop: 8 }]}>
+            <TouchableOpacity
+              onPress={() => setTimeSlot('lunch')}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: timeSlot === 'lunch' ? colors.sage : theme.card,
+                  borderColor: timeSlot === 'lunch' ? colors.sage : theme.cardBorder,
+                },
+              ]}
+            >
+              <Ionicons name="sunny" size={16} color={timeSlot === 'lunch' ? colors.white : theme.textSecondary} />
+              <Text style={[styles.chipText, { color: timeSlot === 'lunch' ? colors.white : theme.textSecondary }]}>
+                Déjeuner
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeSlot('dinner')}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: timeSlot === 'dinner' ? colors.deepSea : theme.card,
+                  borderColor: timeSlot === 'dinner' ? colors.deepSea : theme.cardBorder,
+                },
+              ]}
+            >
+              <Ionicons name="moon" size={16} color={timeSlot === 'dinner' ? colors.white : theme.textSecondary} />
+              <Text style={[styles.chipText, { color: timeSlot === 'dinner' ? colors.white : theme.textSecondary }]}>
+                Dîner
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
+      </View>
 
-        {/* Confirmer */}
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            {
-              backgroundColor: selectedId
-                ? (type === 'beach' ? colors.terracotta : colors.deepSea)
-                : theme.cardBorder,
-            },
-          ]}
-          onPress={handleSubmit}
-          disabled={!selectedId || submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color={colors.white} />
+      {/* Beach: carte identique aux clients */}
+      {type === 'beach' && (
+        <View style={styles.mapSection}>
+          {beachLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={theme.accent} />
+            </View>
           ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color={colors.white} />
-              <Text style={styles.submitText}>Bloquer gratuitement</Text>
-            </>
+            <BeachMap
+              sunbeds={sunbeds}
+              selectedId={selectedId}
+              onSelect={handleSelectSunbed}
+            />
           )}
-        </TouchableOpacity>
-      </ScrollView>
+        </View>
+      )}
+
+      {/* Restaurant: grille de tables */}
+      {type === 'restaurant' && (
+        <ScrollView
+          contentContainerStyle={[styles.tableList, { paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {loadingTables ? (
+            <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 20 }} />
+          ) : tables.length === 0 ? (
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+              Aucune table disponible
+            </Text>
+          ) : (
+            <View style={styles.grid}>
+              {tables.map((t) => (
+                <TouchableOpacity
+                  key={t.id}
+                  onPress={() => setSelectedId(t.id)}
+                  style={[
+                    styles.slotBtn,
+                    {
+                      backgroundColor: selectedId === t.id ? colors.deepSea : theme.card,
+                      borderColor: selectedId === t.id ? colors.deepSea : theme.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.slotLabel, { color: selectedId === t.id ? colors.white : theme.text }]}>
+                    {t.label}
+                  </Text>
+                  <Text style={[styles.slotSub, { color: selectedId === t.id ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
+                    {t.zoneName} — {t.seats} pl.
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* Bouton confirmer — fixé en bas */}
+      {selectedId && (
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, backgroundColor: theme.background }]}>
+          {selectedSunbed && type === 'beach' && (
+            <Text style={[styles.selectedLabel, { color: theme.text }]}>
+              Transat {selectedSunbed.label} — {selectedSunbed.zone.name}
+            </Text>
+          )}
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              { backgroundColor: type === 'beach' ? colors.terracotta : colors.deepSea },
+            ]}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color={colors.white} />
+                <Text style={styles.submitText}>
+                  Bloquer gratuitement
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  container: { paddingVertical: 10 },
-  label: { fontSize: 15, fontWeight: '700', marginTop: 20, marginBottom: 8, paddingHorizontal: 20 },
+  topSection: { gap: 10, paddingTop: 8, paddingBottom: 4 },
   row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
   chip: {
     flex: 1,
@@ -403,26 +376,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: { fontSize: 14, fontWeight: '600' },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+  },
   input: {
-    marginHorizontal: 20,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     fontSize: 15,
   },
-  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 20 },
+  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   counterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  counterValue: { fontSize: 20, fontWeight: '700', minWidth: 30, textAlign: 'center' },
-  emptyText: { fontSize: 13, paddingHorizontal: 20 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 },
+  counterValue: { fontSize: 18, fontWeight: '700', minWidth: 24, textAlign: 'center' },
+  mapSection: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tableList: { paddingHorizontal: 20, paddingTop: 12 },
+  emptyText: { fontSize: 13, textAlign: 'center', marginTop: 20 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   slotBtn: {
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -432,13 +413,23 @@ const styles = StyleSheet.create({
   },
   slotLabel: { fontSize: 14, fontWeight: '700' },
   slotSub: { fontSize: 11, marginTop: 2 },
+  bottomBar: {
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  selectedLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 32,
-    marginHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 14,
   },
