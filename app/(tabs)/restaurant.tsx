@@ -113,12 +113,6 @@ export default function RestaurantScreen() {
                   ]}>
                     {zone.name}
                   </Text>
-                  <Text style={[
-                    styles.zoneDesc,
-                    { color: isSelected ? 'rgba(255,255,255,0.7)' : theme.textSecondary },
-                  ]}>
-                    {zone.zone_type === 'terrasse' ? 'En plein air' : 'Salle climatisée'}
-                  </Text>
                   {isFull && (
                     <View style={styles.fullBadge}>
                       <Text style={styles.fullText}>Complet</Text>
@@ -283,8 +277,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     gap: 6,
   },
-  zoneName: { fontSize: 16, fontWeight: '700' },
-  zoneDesc: { fontSize: 11 },
+  zoneName: { fontSize: 15, fontWeight: '700' },
   fullBadge: {
     backgroundColor: 'rgba(201, 64, 64, 0.15)',
     paddingHorizontal: 10,
