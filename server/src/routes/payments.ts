@@ -63,7 +63,7 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
     }
 
     // Montant vérifié depuis la BDD
-    const amount = Number(reservation[amountField]);
+    const amount = Number((reservation as any)[amountField]);
     if (!amount || amount <= 0) {
       res.status(400).json({ error: 'Montant invalide' });
       return;
