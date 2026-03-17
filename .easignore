@@ -1,5 +1,5 @@
 dist/
-node_modules/
+ios/
 captures/
 photos/
 photos plage/
@@ -9,3 +9,5 @@ DOC/
 *.zip
 *.cer
 *.certSigningRequest
+assets/transat_backup.png
+assets/transat_old.png
