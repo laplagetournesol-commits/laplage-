@@ -131,6 +131,13 @@ export default function HomeScreen() {
             <AnimatedEntry delay={100} direction="up">
             <View style={styles.heroTop}>
               <View>
+                {Platform.OS === 'web' && (
+                  <Image
+                    source={require('../../assets/splash-icon.png')}
+                    style={{ width: 160, height: 50, marginBottom: 8 }}
+                    resizeMode="contain"
+                  />
+                )}
                 <Text style={[styles.greeting, { color: theme.textSecondary }]}>
                   {greeting()} ☀️
                 </Text>
