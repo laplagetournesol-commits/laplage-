@@ -1,6 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+let QRCode: any = null;
+if (Platform.OS !== 'web') {
+  QRCode = require('react-native-qrcode-svg').default;
+}
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
@@ -54,12 +57,19 @@ export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodePr
 
             {/* QR Code */}
             <View style={[styles.qrContainer, { backgroundColor: colors.white }]}>
-              <QRCode
-                value={ticket.qr_code || ticket.id}
-                size={200}
-                backgroundColor={colors.white}
-                color={colors.black}
-              />
+              {Platform.OS !== 'web' && QRCode ? (
+                <QRCode
+                  value={ticket.qr_code || ticket.id}
+                  size={200}
+                  backgroundColor={colors.white}
+                  color={colors.black}
+                />
+              ) : (
+                <View style={styles.webQrFallback}>
+                  <Ionicons name="qr-code" size={64} color={colors.brand} />
+                  <Text style={styles.webQrCode}>{ticket.qr_code || ticket.id}</Text>
+                </View>
+              )}
             </View>
 
             <Text style={[styles.qrHint, { color: theme.textSecondary }]}>
@@ -125,6 +135,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginHorizontal: 16,
   },
+  webQrFallback: { alignItems: 'center' as const, gap: 10, padding: 16 },
+  webQrCode: { fontSize: 11, color: '#666', textAlign: 'center' as const, fontFamily: 'monospace' },
   qrHint: { fontSize: 12, textAlign: 'center', marginTop: 12 },
   separator: {
     borderBottomWidth: 1.5,
