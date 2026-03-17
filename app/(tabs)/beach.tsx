@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { i18n } from '@/shared/i18n';
+import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { useAddons } from '@/features/beach/hooks/useAddons';
 import { useBeachBooking } from '@/features/beach/hooks/useBeachBooking';
@@ -46,8 +48,16 @@ export default function BeachScreen() {
         reservationId: result.reservationId,
         amount: booking.depositAmount,
       });
-      if (!payResult.success) return { success: false };
+      if (!payResult.success) {
+        // Paiement échoué — annuler la réservation pending
+        await supabase.from('beach_reservations').delete().eq('id', result.reservationId);
+        return { success: false };
+      }
     }
+
+    // Paiement réussi (ou gratuit) → confirmer la réservation + envoyer push
+    await supabase.from('beach_reservations').update({ status: 'confirmed', deposit_paid: true }).eq('id', result.reservationId);
+    apiCall('/api/notifications/booking-confirmed', { type: 'beach', reservationId: result.reservationId }).catch(() => {});
 
     return result;
   };

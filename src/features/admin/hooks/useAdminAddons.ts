@@ -41,12 +41,21 @@ export function useAdminAddons() {
 
   const deleteAddon = useCallback(async (id: string) => {
     const { error } = await supabase.from('addons').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('[deleteAddon] error:', error.message);
+      throw error;
+    }
     setAddons((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   const toggleAvailability = useCallback(async (id: string, isAvailable: boolean) => {
-    await supabase.from('addons').update({ is_available: isAvailable }).eq('id', id);
+    const { error } = await supabase.from('addons').update({ is_available: isAvailable }).eq('id', id);
+    if (error) {
+      console.error('[toggleAvailability] error:', error.message);
+      // Revert state
+      setAddons((prev) => prev.map((a) => (a.id === id ? { ...a, is_available: !isAvailable } : a)));
+      return;
+    }
     setAddons((prev) => prev.map((a) => (a.id === id ? { ...a, is_available: isAvailable } : a)));
   }, []);
 

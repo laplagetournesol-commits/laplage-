@@ -173,7 +173,11 @@ export function SunbedSheet({
             </View>
           </View>
 
-          <Button title={i18n.t('chooseOptions')} onPress={onGoToAddons} style={{ marginTop: 8 }} />
+          <Button
+            title={addons.length > 0 ? i18n.t('chooseOptions') : (user ? `${i18n.t('reserve')} — ${totalPrice}€` : i18n.t('connectToBook'))}
+            onPress={addons.length > 0 ? onGoToAddons : (user ? onGoToConfirm : () => router.push('/(auth)/login'))}
+            style={{ marginTop: 8 }}
+          />
         </View>
       )}
 

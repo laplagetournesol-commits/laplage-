@@ -21,10 +21,13 @@ export function useAdminBeachZones() {
     const zonesData = (zonesRes.data ?? []) as BeachZone[];
     const sunbedsData = (sunbedsRes.data ?? []) as Sunbed[];
 
-    const enriched: ZoneWithSunbeds[] = zonesData.map((z) => ({
-      ...z,
-      sunbeds: sunbedsData.filter((s) => s.zone_id === z.id),
-    }));
+    // Ne montrer que les zones qui ont des sunbeds actifs
+    const enriched: ZoneWithSunbeds[] = zonesData
+      .map((z) => ({
+        ...z,
+        sunbeds: sunbedsData.filter((s) => s.zone_id === z.id),
+      }))
+      .filter((z) => z.sunbeds.length > 0);
 
     setZones(enriched);
     setLoading(false);

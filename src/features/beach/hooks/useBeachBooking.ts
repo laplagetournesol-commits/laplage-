@@ -135,17 +135,17 @@ export function useBeachBooking() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Vous devez être connecté pour réserver');
 
-      // Créer la réservation
+      // Créer la réservation en attente de paiement
       const { data: reservation, error: resError } = await supabase
         .from('beach_reservations')
         .insert({
           user_id: user.id,
           sunbed_id: state.sunbed.id,
           date: state.date,
-          status: 'confirmed',
+          status: depositAmount > 0 ? 'pending_payment' : 'confirmed',
           total_price: totalPrice,
           deposit_amount: depositAmount,
-          deposit_paid: false, // Sera vrai après paiement Stripe
+          deposit_paid: false,
           guest_count: state.guestCount,
           special_requests: state.specialRequests || null,
         })
@@ -170,11 +170,7 @@ export function useBeachBooking() {
         if (addonError) throw new Error(addonError.message);
       }
 
-      // Push de confirmation
-      apiCall('/api/notifications/booking-confirmed', {
-        type: 'beach',
-        reservationId: reservation.id,
-      }).catch(() => {});
+      // La notification sera envoyée APRÈS le paiement réussi (pas ici)
 
       setSubmitting(false);
       return { success: true, reservationId: reservation.id, qrCode: reservation.qr_code };

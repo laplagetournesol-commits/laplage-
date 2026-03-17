@@ -146,7 +146,7 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.socialButtons}>
-          {Platform.OS === 'ios' && (
+          {(Platform.OS === 'ios' || Platform.OS === 'web') && (
             <TouchableOpacity
               style={[styles.socialBtn, { backgroundColor: '#000' }]}
               onPress={async () => {

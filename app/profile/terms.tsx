@@ -60,7 +60,7 @@ export default function TermsScreen() {
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>7. Suppression de compte</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          L'utilisateur peut demander la suppression de son compte et de l'ensemble de ses données personnelles à tout moment en contactant privacy@laplage-tournesol.com. La suppression sera effective dans un délai de 30 jours suivant la demande.{'\n\n'}La suppression du compte entraîne l'annulation de toute réservation future non encore consommée, sans droit à remboursement pour les réservations déjà payées.
+          L'utilisateur peut demander la suppression de son compte et de l'ensemble de ses données personnelles à tout moment en contactant contact@laplagetournesols.com. La suppression sera effective dans un délai de 30 jours suivant la demande.{'\n\n'}La suppression du compte entraîne l'annulation de toute réservation future non encore consommée, sans droit à remboursement pour les réservations déjà payées.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>8. Propriété intellectuelle</Text>

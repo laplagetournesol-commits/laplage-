@@ -77,6 +77,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
+      if (Platform.OS === 'web') {
+        // Web: redirect OAuth via Supabase
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo: window.location.origin,
+          },
+        });
+        return { error: error ? new Error(error.message) : null };
+      }
+
+      // Native iOS
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -96,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error ? new Error(error.message) : null };
     } catch (err: any) {
       if (err.code === 'ERR_REQUEST_CANCELED') {
-        return { error: null }; // User cancelled
+        return { error: null };
       }
       return { error: new Error(err.message ?? 'Apple sign-in failed') };
     }
@@ -104,6 +116,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
+      if (Platform.OS === 'web') {
+        // Web: redirect OAuth via Supabase
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+            queryParams: { prompt: 'select_account' },
+          },
+        });
+        return { error: error ? new Error(error.message) : null };
+      }
+
+      // Native iOS/Android
       const redirectTo = 'tournesol://';
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -130,7 +155,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('Google sign-in failed') };
       }
 
-      // Extract tokens from the redirect URL
       const url = result.url;
       const params = new URLSearchParams(url.split('#')[1] || url.split('?')[1] || '');
       const accessToken = params.get('access_token');
