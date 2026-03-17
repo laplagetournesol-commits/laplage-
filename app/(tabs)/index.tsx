@@ -8,8 +8,8 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,7 +34,14 @@ const { width, height } = Dimensions.get('window');
 const droneVideoSource = require('../../assets/gallery/drone-video-1.mp4');
 
 function HeroVideo() {
-  const player = useVideoPlayer(droneVideoSource, (p) => {
+  if (Platform.OS === 'web') {
+    // expo-video crashes on some browsers (Firefox) — use static image on web
+    return <Image source={require('../../assets/splash-icon.png')} style={styles.bgImage} resizeMode="cover" />;
+  }
+
+  // Native: dynamic import to avoid loading expo-video on web
+  const { useVideoPlayer, VideoView } = require('expo-video');
+  const player = useVideoPlayer(droneVideoSource, (p: any) => {
     p.loop = true;
     p.muted = true;
     p.playbackRate = 1.5;

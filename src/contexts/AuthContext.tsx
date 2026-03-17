@@ -43,6 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(s);
       if (s?.user) fetchProfile(s.user.id);
       setIsLoading(false);
+    }).catch((err) => {
+      console.error('[AuthContext] getSession error:', err);
+      setIsLoading(false);
     });
 
     // Écouter les changements d'auth

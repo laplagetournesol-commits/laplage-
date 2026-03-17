@@ -7,6 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "build:web": "expo export --platform web && node -e \"const f=require('fs');const h=f.readFileSync('dist/index.html','utf8');f.writeFileSync('dist/index.html',h.replace('overflow: hidden;','overflow: hidden;\\n        display: flex;\\n        flex-direction: column;'))\"",
     "reset-project": "node ./scripts/reset-project.js"
   },
   "dependencies": {
