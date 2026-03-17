@@ -31,7 +31,7 @@ export function useRestaurantCapacity(date: string, time: string): CapacityInfo 
           .select('guest_count')
           .eq('date', date)
           .eq('time_slot', timeSlot)
-          .not('status', 'eq', 'cancelled'),
+          .eq('status', 'confirmed'),
       ]);
 
       const max = (settingRes.data?.value as number) ?? 0;

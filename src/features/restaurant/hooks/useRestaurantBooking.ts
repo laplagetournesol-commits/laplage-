@@ -95,7 +95,7 @@ export function useRestaurantBooking() {
           .select('guest_count')
           .eq('date', state.date)
           .eq('time_slot', timeSlotForDB)
-          .not('status', 'eq', 'cancelled');
+          .eq('status', 'confirmed');
 
         const totalCovers = (existing ?? []).reduce((sum: number, r: { guest_count: number }) => sum + r.guest_count, 0);
         if (totalCovers + state.guestCount > maxCovers) {

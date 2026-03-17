@@ -28,7 +28,7 @@ export function useRestaurantZones(date: string, time: string) {
         .select('zone_id, guest_count')
         .eq('date', date)
         .eq('time_slot', timeSlot)
-        .not('status', 'in', '("cancelled")'),
+        .eq('status', 'confirmed'),
     ]);
 
     const zonesData = (zonesRes.data ?? []) as RestaurantZone[];
