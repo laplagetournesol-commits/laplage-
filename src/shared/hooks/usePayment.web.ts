@@ -10,6 +10,8 @@ export function usePayment() {
     amount: number;
   }): Promise<{ success: boolean }> => {
     try {
+      showDebug('⏳ Création du paiement...');
+
       // 1. Créer le PaymentIntent côté serveur
       const { clientSecret } = await apiCall<{ clientSecret: string }>(
         '/api/payments/create-intent',
@@ -17,22 +19,26 @@ export function usePayment() {
       );
 
       if (!clientSecret) {
-        alert('Erreur: impossible de créer le paiement');
+        showDebug('❌ Pas de clientSecret reçu du serveur');
         return { success: false };
       }
+      showDebug('✅ clientSecret reçu');
 
       // 2. Charger Stripe.js
       const stripe = await stripePromise;
       if (!stripe) {
-        alert('Erreur de chargement Stripe');
+        showDebug('❌ Stripe.js non chargé');
         return { success: false };
       }
+      showDebug('✅ Stripe.js chargé, ouverture du modal...');
 
       // 3. Afficher le modal de paiement et attendre la carte
       const cardElement = await showPaymentModal(stripe);
       if (!cardElement) {
+        showDebug('ℹ️ Paiement annulé par l\'utilisateur');
         return { success: false }; // Annulé par l'utilisateur
       }
+      showDebug('⏳ Confirmation du paiement...');
 
       // 4. Confirmer le paiement
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
@@ -43,9 +49,11 @@ export function usePayment() {
       cardElement.destroy();
 
       if (error) {
-        alert(error.message ?? 'Erreur de paiement');
+        showDebug(`❌ Stripe: ${error.message}`);
         return { success: false };
       }
+
+      showDebug(`✅ Paiement: ${paymentIntent?.status}`);
 
       if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'requires_capture') {
         return { success: true };
@@ -53,12 +61,21 @@ export function usePayment() {
 
       return { success: false };
     } catch (err: any) {
-      alert(err.message ?? 'Impossible de procéder au paiement');
+      showDebug(`❌ Erreur: ${err.message}`);
       return { success: false };
     }
   };
 
   return { pay };
+}
+
+function showDebug(msg: string) {
+  console.log('[PAY]', msg);
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:12px 24px;border-radius:10px;z-index:999999;font-size:14px;font-family:-apple-system,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
 }
 
 function showPaymentModal(stripe: any): Promise<any | null> {
