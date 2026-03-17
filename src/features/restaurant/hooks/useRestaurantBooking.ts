@@ -123,11 +123,7 @@ export function useRestaurantBooking() {
 
       if (resError) throw new Error(resError.message);
 
-      // Push de confirmation
-      apiCall('/api/notifications/booking-confirmed', {
-        type: 'restaurant',
-        reservationId: reservation.id,
-      }).catch(() => {});
+      // Le push sera envoyé après le paiement (dans restaurant.tsx)
 
       setSubmitting(false);
       return { success: true, reservationId: reservation.id, qrCode: reservation.qr_code };

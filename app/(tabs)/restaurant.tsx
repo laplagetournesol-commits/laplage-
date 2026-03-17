@@ -24,6 +24,7 @@ import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePayment } from '@/shared/hooks/usePayment';
 import { useRestaurantCapacity } from '@/features/restaurant/hooks/useRestaurantCapacity';
+import { apiCall } from '@/shared/lib/api';
 import { i18n } from '@/shared/i18n';
 
 export default function RestaurantScreen() {
@@ -60,6 +61,9 @@ export default function RestaurantScreen() {
         return;
       }
     }
+
+    // Push de confirmation après paiement réussi
+    apiCall('/api/notifications/booking-confirmed', { type: 'restaurant', reservationId: result.reservationId }).catch(() => {});
 
     setShowConfirm(false);
     if (result.qrCode) {
