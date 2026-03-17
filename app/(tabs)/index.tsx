@@ -130,20 +130,22 @@ export default function HomeScreen() {
           <View style={styles.heroContent}>
             <AnimatedEntry delay={100} direction="up">
             <View style={styles.heroTop}>
-              <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                <View>
+                  <Text style={[styles.greeting, { color: theme.textSecondary }]}>
+                    {greeting()} ☀️
+                  </Text>
+                  <Text style={[styles.heroTitle, { color: theme.text }]}>
+                    {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
+                  </Text>
+                </View>
                 {Platform.OS === 'web' && (
                   <Image
                     source={require('../../assets/splash-icon.png')}
-                    style={{ width: 160, height: 50, marginBottom: 8 }}
+                    style={{ width: 140, height: 44 }}
                     resizeMode="contain"
                   />
                 )}
-                <Text style={[styles.greeting, { color: theme.textSecondary }]}>
-                  {greeting()} ☀️
-                </Text>
-                <Text style={[styles.heroTitle, { color: theme.text }]}>
-                  {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
-                </Text>
               </View>
               <View style={styles.heroRight}>
                 <View style={styles.langFlags}>
