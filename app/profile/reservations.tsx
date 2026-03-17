@@ -238,7 +238,7 @@ export default function MyReservationsScreen() {
                   </View>
 
                   {/* Bouton QR code — uniquement pour les réservations à venir */}
-                  {r.qr_code && future && (r.status === 'confirmed' || r.status === 'pending' || r.status === 'checked_in') && (
+                  {r.qr_code && future && (r.status === 'confirmed' || r.status === 'checked_in') && (
                     <TouchableOpacity
                       style={[styles.qrBtn, { backgroundColor: (r.type === 'beach' ? colors.terracotta : colors.deepSea) + '12' }]}
                       onPress={() => setQrReservation(r)}
