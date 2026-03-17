@@ -4,6 +4,7 @@ let QRCode: any = null;
 if (Platform.OS !== 'web') {
   QRCode = require('react-native-qrcode-svg').default;
 }
+import { WebQRCode } from '@/shared/ui/WebQRCode';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
@@ -81,10 +82,12 @@ export function ReservationQRCode({
                   color={colors.black}
                 />
               ) : (
-                <View style={styles.webQrFallback}>
-                  <Ionicons name="qr-code" size={64} color={colors.brand} />
-                  <Text style={styles.webQrCode}>{qrCode}</Text>
-                </View>
+                <WebQRCode
+                  value={qrCode}
+                  size={180}
+                  backgroundColor={colors.white}
+                  color={colors.black}
+                />
               )}
             </View>
 
