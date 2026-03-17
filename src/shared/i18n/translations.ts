@@ -67,6 +67,8 @@ export const translations = {
     shopComingSoonDesc: 'Notre boutique ouvrira très prochainement avec des articles exclusifs Les Tournesols.',
 
     // Booking common
+    pay: 'Payer',
+    paymentSuccess: 'Votre paiement a été effectué avec succès.',
     bookingConfirmed: 'Réservation confirmée !',
     bookYourTable: 'Réservez votre table',
     fullForService: 'Complet pour ce service',
@@ -863,6 +865,8 @@ export const translations = {
     shopComingSoonDesc: 'Nuestra tienda abrirá muy pronto con artículos exclusivos Les Tournesols.',
 
     // Booking
+    pay: 'Pagar',
+    paymentSuccess: 'Su pago se ha realizado con éxito.',
     bookingConfirmed: '¡Reserva confirmada!',
     bookYourTable: 'Reserva tu mesa',
     fullForService: 'Completo para este servicio',
@@ -1368,6 +1372,8 @@ export const translations = {
     shopComingSoonDesc: 'Our shop will open very soon with exclusive Les Tournesols items.',
 
     // Booking
+    pay: 'Pay',
+    paymentSuccess: 'Your payment was successful.',
     bookingConfirmed: 'Booking confirmed!',
     bookYourTable: 'Book your table',
     fullForService: 'Full for this service',

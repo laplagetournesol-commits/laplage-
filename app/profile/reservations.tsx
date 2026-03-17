@@ -9,6 +9,7 @@ import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePayment } from '@/shared/hooks/usePayment';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { i18n } from '@/shared/i18n';
@@ -61,6 +62,26 @@ export default function MyReservationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [qrReservation, setQrReservation] = useState<Reservation | null>(null);
+  const { pay } = usePayment();
+
+  const handlePay = async (reservation: Reservation) => {
+    const amount = reservation.total_price ?? reservation.deposit_amount ?? 0;
+    if (amount <= 0) return;
+
+    const payResult = await pay({
+      type: reservation.type,
+      reservationId: reservation.id,
+      amount,
+    });
+
+    if (payResult.success) {
+      const table = reservation.type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+      await supabase.from(table).update({ status: 'confirmed' }).eq('id', reservation.id);
+      apiCall('/api/notifications/booking-confirmed', { type: reservation.type, reservationId: reservation.id }).catch(() => {});
+      Alert.alert(i18n.t('bookingConfirmed'), i18n.t('paymentSuccess'));
+      fetchReservations();
+    }
+  };
 
   const fetchReservations = async () => {
     if (!user) return;
@@ -250,6 +271,17 @@ export default function MyReservationsScreen() {
                     </TouchableOpacity>
                   )}
 
+                  {/* Bouton Payer — pour les réservations en attente */}
+                  {r.status === 'pending' && future && (
+                    <TouchableOpacity
+                      style={[styles.payBtn, { backgroundColor: colors.brand }]}
+                      onPress={() => handlePay(r)}
+                    >
+                      <Ionicons name="card-outline" size={16} color="#fff" />
+                      <Text style={styles.payBtnText}>{i18n.t('pay')} {r.total_price ?? r.deposit_amount}€</Text>
+                    </TouchableOpacity>
+                  )}
+
                   {/* Boutons modifier / annuler ou mention non modifiable */}
                   {canModify && (
                     <View style={styles.actionRow}>
@@ -331,6 +363,16 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '600' },
   cardSub: { fontSize: 12, marginTop: 2 },
   price: { fontSize: 13, fontWeight: '700' },
+  payBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  payBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   modifyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
