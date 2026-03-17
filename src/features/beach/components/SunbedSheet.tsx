@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
+import { i18n } from '@/shared/i18n';
 import type { Sunbed, BeachZone, Addon } from '@/shared/types';
 
 interface SelectedAddon {
@@ -92,9 +93,9 @@ export function SunbedSheet({
       setTimeout(() => setShowQR(true), 400);
     } else if (result.success) {
       Alert.alert(
-        'Réservation confirmée !',
-        `Votre transat ${sunbed.label} est réservé pour le ${formattedDate}.`,
-        [{ text: 'Super !', onPress: onClose }]
+        i18n.t('bookingConfirmed'),
+        i18n.t('sunbedReservedAlert').replace('{{label}}', sunbed.label).replace('{{date}}', formattedDate),
+        [{ text: i18n.t('great'), onPress: onClose }]
       );
     }
   };
@@ -105,9 +106,9 @@ export function SunbedSheet({
   };
 
   const title =
-    step === 'select' ? `Transat ${sunbed.label}` :
-    step === 'addons' ? 'Options & Extras' :
-    'Confirmation';
+    step === 'select' ? `${i18n.t('sunbed')} ${sunbed.label}` :
+    step === 'addons' ? i18n.t('optionsExtras') :
+    i18n.t('confirmation');
 
   return (
     <>
@@ -124,7 +125,7 @@ export function SunbedSheet({
             {seasonLabel && <Badge label={seasonLabel} variant="success" size="sm" />}
           </View>
           <View style={styles.row}>
-            {(seasonInclusions && seasonInclusions.length > 0 ? seasonInclusions : ['Parasol + table inclus']).map((inc, i) => (
+            {(seasonInclusions && seasonInclusions.length > 0 ? seasonInclusions : [i18n.t('parasolIncluded')]).map((inc, i) => (
               <View key={i} style={[styles.includedBadge, { backgroundColor: colors.sage + '15' }]}>
                 <Ionicons name="checkmark-circle" size={12} color={colors.sage} />
                 <Text style={[styles.includedBadgeText, { color: colors.sage }]}>{inc}</Text>
@@ -145,7 +146,7 @@ export function SunbedSheet({
 
           <View style={styles.compactRow}>
             <View style={styles.guestRowCompact}>
-              <Text style={[styles.guestLabelCompact, { color: theme.text }]}>Personnes</Text>
+              <Text style={[styles.guestLabelCompact, { color: theme.text }]}>{i18n.t('persons')}</Text>
               <View style={styles.guestCounter}>
                 <TouchableOpacity
                   onPress={() => onSetGuestCount(guestCount - 1)}
@@ -172,7 +173,7 @@ export function SunbedSheet({
             </View>
           </View>
 
-          <Button title="Choisir les options →" onPress={onGoToAddons} style={{ marginTop: 8 }} />
+          <Button title={i18n.t('chooseOptions')} onPress={onGoToAddons} style={{ marginTop: 8 }} />
         </View>
       )}
 
@@ -185,7 +186,7 @@ export function SunbedSheet({
           <View style={styles.content}>
             <TouchableOpacity onPress={onGoBack} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={18} color={theme.accent} />
-              <Text style={[styles.backText, { color: theme.accent }]}>Retour</Text>
+              <Text style={[styles.backText, { color: theme.accent }]}>{i18n.t('back')}</Text>
             </TouchableOpacity>
 
             {addons.map((addon) => {
@@ -249,21 +250,21 @@ export function SunbedSheet({
             })}
 
             <View style={[styles.priceRow, { borderTopColor: theme.cardBorder, marginTop: 12 }]}>
-              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Transat</Text>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{i18n.t('sunbed')}</Text>
               <Text style={[styles.priceValue, { color: theme.text }]}>{basePrice}€</Text>
             </View>
             {addonsTotal > 0 && (
               <View style={styles.priceSubRow}>
-                <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Options</Text>
+                <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{i18n.t('options')}</Text>
                 <Text style={[styles.priceValue, { color: theme.text }]}>+{addonsTotal}€</Text>
               </View>
             )}
             <View style={styles.priceSubRow}>
-              <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+              <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total')}</Text>
               <Text style={[styles.totalValue, { color: colors.brand }]}>{totalPrice}€</Text>
             </View>
 
-            <Button title="Confirmer la réservation" onPress={onGoToConfirm} style={{ marginTop: 16 }} />
+            <Button title={i18n.t('confirmBooking')} onPress={onGoToConfirm} style={{ marginTop: 16 }} />
           </View>
         )}
 
@@ -272,33 +273,33 @@ export function SunbedSheet({
           <View style={styles.content}>
             <TouchableOpacity onPress={onGoBack} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={18} color={theme.accent} />
-              <Text style={[styles.backText, { color: theme.accent }]}>Retour</Text>
+              <Text style={[styles.backText, { color: theme.accent }]}>{i18n.t('back')}</Text>
             </TouchableOpacity>
 
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
-              <Text style={[styles.summaryTitle, { color: theme.text }]}>Récapitulatif</Text>
+              <Text style={[styles.summaryTitle, { color: theme.text }]}>{i18n.t('summary')}</Text>
 
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Transat</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('sunbed')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
                   {sunbed.label} ({sunbed.zone.name})
                 </Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Date</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('date')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{formattedDate}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Horaires</Text>
-                <Text style={[styles.summaryValue, { color: theme.text }]}>10h00 — 19h00</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('schedule')}</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>{i18n.t('beachSchedule')}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Personnes</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('persons')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{guestCount}</Text>
               </View>
               {selectedAddons.length > 0 && (
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Options</Text>
+                  <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('options')}</Text>
                   <Text style={[styles.summaryValue, { color: theme.text }]}>
                     {selectedAddons.map((a) =>
                       a.quantity > 1 ? `${a.addon.name} x${a.quantity}` : a.addon.name
@@ -309,34 +310,34 @@ export function SunbedSheet({
             </View>
 
             <View style={[styles.priceRow, { borderTopColor: theme.cardBorder }]}>
-              <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+              <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total')}</Text>
               <Text style={[styles.totalValue, { color: colors.brand }]}>{totalPrice}€</Text>
             </View>
             <View style={styles.priceSubRow}>
               <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
-                Montant à régler
+                {i18n.t('amountToPay')}
               </Text>
               <Text style={[styles.priceValue, { color: theme.text }]}>{depositAmount}€</Text>
             </View>
 
             <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
-              <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>Conditions de réservation</Text>
+              <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>{i18n.t('bookingConditions')}</Text>
               <View style={styles.policyItem}>
                 <Ionicons name="pencil-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Modifiable jusqu'à 24h avant</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>{i18n.t('modifiableUpTo24h')}</Text>
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="close-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Non annulable, non remboursable</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>{i18n.t('nonCancellable')}</Text>
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : montant total perdu</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>{i18n.t('noShowLost')}</Text>
               </View>
             </View>
 
             <Button
-              title={user ? `Réserver — ${totalPrice}€` : 'Se connecter pour réserver'}
+              title={user ? `${i18n.t('reserve')} — ${totalPrice}€` : i18n.t('connectToBook')}
               onPress={handleBook}
               loading={booking}
               size="lg"
@@ -355,13 +356,13 @@ export function SunbedSheet({
         onClose={handleCloseQR}
         qrCode={qrCode}
         type="beach"
-        title={`Transat ${sunbed.label}`}
+        title={`${i18n.t('sunbed')} ${sunbed.label}`}
         subtitle={`Zone ${sunbed.zone.name}`}
         details={[
-          { label: 'Date', value: formattedDate, icon: 'calendar-outline' },
-          { label: 'Horaires', value: '10h00 — 19h00', icon: 'time-outline' },
-          { label: 'Emplacement', value: `${sunbed.zone.name} — ${sunbed.label}`, icon: 'location-outline' },
-          { label: 'Personnes', value: `${guestCount}`, icon: 'people-outline' },
+          { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
+          { label: i18n.t('schedule'), value: i18n.t('beachSchedule'), icon: 'time-outline' },
+          { label: i18n.t('location'), value: `${sunbed.zone.name} — ${sunbed.label}`, icon: 'location-outline' },
+          { label: i18n.t('persons'), value: `${guestCount}`, icon: 'people-outline' },
         ]}
         price={`${totalPrice}€`}
         deposit={`${depositAmount}€`}

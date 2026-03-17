@@ -9,13 +9,14 @@ import {
   Modal,
   StatusBar,
 } from 'react-native';
-import { Image } from 'expo-image';
+import { Image } from 'react-native';
 // import { Video, ResizeMode } from 'expo-av'; // Nécessite rebuild natif
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
-import { galleryItems, GalleryItem } from '@/features/gallery/galleryData';
+import { i18n } from '@/shared/i18n';
+import { useGalleryPhotos, GalleryItem } from '@/features/gallery/galleryData';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COLUMN_GAP = 3;
@@ -24,17 +25,18 @@ const TILE_SIZE = (SCREEN_WIDTH - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 type Category = 'all' | 'plage' | 'restaurant' | 'details';
 
-const categories: { key: Category; label: string }[] = [
-  { key: 'all', label: 'Tout' },
-  { key: 'plage', label: 'Plage' },
-  { key: 'restaurant', label: 'Restaurant' },
-  { key: 'details', label: 'Détails' },
+const getCategoryLabels = (): { key: Category; label: string }[] => [
+  { key: 'all', label: i18n.t('all') },
+  { key: 'plage', label: i18n.t('beach') },
+  { key: 'restaurant', label: i18n.t('restaurant') },
+  { key: 'details', label: i18n.t('details') },
 ];
 
 export default function GalleryScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { photos: galleryItems, loading } = useGalleryPhotos();
   const [activeCategory, setActiveCategory] = useState<Category>('all');
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
@@ -46,12 +48,12 @@ export default function GalleryScreen() {
     <TouchableOpacity activeOpacity={0.85} onPress={() => setFullscreenIndex(index)}>
       <View>
         <Image
-          source={item.source}
+          source={{ uri: item.image_url }}
           style={[styles.tile, {
             marginRight: (index + 1) % NUM_COLUMNS === 0 ? 0 : COLUMN_GAP,
             marginBottom: COLUMN_GAP,
           }]}
-          contentFit="cover"
+          resizeMode="cover"
           transition={200}
         />
         {item.type === 'video' && (
@@ -69,9 +71,9 @@ export default function GalleryScreen() {
     <View style={styles.fullscreenSlide}>
       {/* TODO: ajouter Video quand expo-av sera rebuild */}
       <Image
-        source={item.source}
+        source={{ uri: item.image_url }}
         style={styles.fullscreenImage}
-        contentFit="contain"
+        resizeMode="contain"
         transition={200}
       />
       <View style={styles.fullscreenLabel}>
@@ -93,7 +95,7 @@ export default function GalleryScreen() {
 
       {/* Category filter */}
       <View style={styles.filters}>
-        {categories.map((cat) => (
+        {getCategoryLabels().map((cat) => (
           <TouchableOpacity
             key={cat.key}
             onPress={() => setActiveCategory(cat.key)}

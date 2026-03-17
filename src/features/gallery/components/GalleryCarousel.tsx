@@ -6,23 +6,30 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { Image } from 'expo-image';
+import { Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSunMode } from '@/shared/theme';
 import { i18n } from '@/shared/i18n';
-import { galleryPhotos } from '../galleryData';
+import { useGalleryCarousel } from '../galleryData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const CARD_HEIGHT = 200;
 
-// Show first 5 photos in carousel (the best ones)
-const carouselPhotos = galleryPhotos.slice(0, 5);
-
 export function GalleryCarousel() {
   const { theme } = useSunMode();
   const router = useRouter();
+  const { photos, loading } = useGalleryCarousel();
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', paddingVertical: 40 }]}>
+        <ActivityIndicator color={theme.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -39,7 +46,7 @@ export function GalleryCarousel() {
         decelerationRate="fast"
         snapToInterval={CARD_WIDTH + 12}
       >
-        {carouselPhotos.map((photo) => (
+        {photos.map((photo) => (
           <TouchableOpacity
             key={photo.id}
             activeOpacity={0.9}
@@ -47,10 +54,9 @@ export function GalleryCarousel() {
           >
             <View style={[styles.card, { backgroundColor: theme.card }]}>
               <Image
-                source={photo.source}
+                source={{ uri: photo.image_url }}
                 style={styles.image}
-                contentFit="cover"
-                transition={300}
+                resizeMode="cover"
               />
               <View style={styles.labelContainer}>
                 <Text style={styles.label}>{photo.label}</Text>

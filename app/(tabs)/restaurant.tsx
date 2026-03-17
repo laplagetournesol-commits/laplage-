@@ -23,6 +23,8 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePayment } from '@/shared/hooks/usePayment';
+import { useRestaurantCapacity } from '@/features/restaurant/hooks/useRestaurantCapacity';
+import { i18n } from '@/shared/i18n';
 
 export default function RestaurantScreen() {
   const { theme } = useSunMode();
@@ -32,6 +34,7 @@ export default function RestaurantScreen() {
   const booking = useRestaurantBooking();
   const { pay } = usePayment();
   const { zones, loading } = useRestaurantZones(booking.date, booking.time);
+  const capacity = useRestaurantCapacity(booking.date, booking.time);
   const [showConfirm, setShowConfirm] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
@@ -64,9 +67,9 @@ export default function RestaurantScreen() {
       setTimeout(() => setShowQR(true), 400);
     } else {
       Alert.alert(
-        'Réservation confirmée !',
-        `Votre table en ${booking.zone?.name} est réservée pour le ${formattedDate} à ${booking.time.replace(':', 'h')}.`,
-        [{ text: 'Parfait !' }]
+        i18n.t('bookingConfirmed'),
+        `${i18n.t('tableReservedAlert').replace('{{zone}}', booking.zone?.name ?? '').replace('{{date}}', formattedDate).replace('{{time}}', booking.time.replace(':', 'h'))}`,
+        [{ text: i18n.t('tablePerfect') }]
       );
     }
     booking.reset();
@@ -82,25 +85,49 @@ export default function RestaurantScreen() {
           {fromMood && (
             <TouchableOpacity onPress={() => router.push('/mood')} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="arrow-back" size={22} color={theme.text} />
-              <Text style={[styles.backLabel, { color: theme.text }]}>Retour aux suggestions</Text>
+              <Text style={[styles.backLabel, { color: theme.text }]}>{i18n.t('backToSuggestions')}</Text>
             </TouchableOpacity>
           )}
           <Text style={[styles.title, { color: theme.text }]}>Restaurant</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Réservez votre table
+            {i18n.t('bookYourTable')}
           </Text>
         </View>
 
         {/* Date */}
-        <Text style={[styles.sectionLabel, { color: theme.text }]}>Date</Text>
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>{i18n.t('date')}</Text>
         <DateSelector selectedDate={booking.date} onSelect={booking.setDate} />
 
         {/* Heure */}
-        <Text style={[styles.sectionLabel, { color: theme.text }]}>Heure</Text>
-        <TimeSelector selectedTime={booking.time} onSelect={booking.setTime} />
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>{i18n.t('time')}</Text>
+        <TimeSelector selectedTime={booking.time} selectedDate={booking.date} onSelect={booking.setTime} />
+
+        {/* Capacité */}
+        {!capacity.loading && capacity.maxCovers > 0 && (
+          <View style={[styles.capacityBanner, {
+            backgroundColor: capacity.isFull ? 'rgba(220,38,38,0.12)' : 'rgba(34,180,60,0.10)',
+            borderColor: capacity.isFull ? 'rgba(220,38,38,0.3)' : 'rgba(34,180,60,0.25)',
+          }]}>
+            <Ionicons
+              name={capacity.isFull ? 'close-circle' : 'people'}
+              size={16}
+              color={capacity.isFull ? '#dc2626' : '#22b43c'}
+            />
+            <Text style={{
+              color: capacity.isFull ? '#dc2626' : '#22b43c',
+              fontWeight: '700',
+              fontSize: 13,
+              marginLeft: 6,
+            }}>
+              {capacity.isFull
+                ? i18n.t('fullForService')
+                : `${capacity.remaining} ${i18n.t('spotsRemaining')}`}
+            </Text>
+          </View>
+        )}
 
         {/* Zone */}
-        <Text style={[styles.sectionLabel, { color: theme.text }]}>Emplacement</Text>
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>{i18n.t('location')}</Text>
         {loading ? (
           <ActivityIndicator style={{ marginVertical: 20 }} color={theme.accent} />
         ) : (
@@ -137,7 +164,7 @@ export default function RestaurantScreen() {
                   </Text>
                   {isFull && (
                     <View style={styles.fullBadge}>
-                      <Text style={styles.fullText}>Complet</Text>
+                      <Text style={styles.fullText}>{i18n.t('full')}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -147,7 +174,7 @@ export default function RestaurantScreen() {
         )}
 
         {/* Convives */}
-        <Text style={[styles.sectionLabel, { color: theme.text }]}>Nombre de convives</Text>
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>{i18n.t('guestCount')}</Text>
         <View style={[styles.guestRow, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
           <TouchableOpacity
             onPress={() => booking.setGuestCount(booking.guestCount - 1)}
@@ -165,20 +192,22 @@ export default function RestaurantScreen() {
         </View>
 
         {/* Pré-autorisation */}
-        <View style={[styles.preAuthCard, { backgroundColor: colors.sunYellowLight }]}>
-          <Ionicons name="card-outline" size={18} color={colors.warmWood} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.preAuthText, { color: colors.warmWood }]}>
-              Empreinte carte bleue : 30€ × {booking.guestCount} = {booking.depositAmount}€
-            </Text>
-            <Text style={[styles.preAuthSubtext, { color: colors.warmWood }]}>
-              Débitée uniquement en cas de no-show
-            </Text>
+        {booking.requireDeposit && (
+          <View style={[styles.preAuthCard, { backgroundColor: colors.sunYellowLight }]}>
+            <Ionicons name="card-outline" size={18} color={colors.warmWood} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.preAuthText, { color: colors.warmWood }]}>
+                {i18n.t('cardDeposit')} : 30€ × {booking.guestCount} = {booking.depositAmount}€
+              </Text>
+              <Text style={[styles.preAuthSubtext, { color: colors.warmWood }]}>
+                {i18n.t('cardDepositDesc')}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Demandes spéciales */}
-        <Text style={[styles.sectionLabel, { color: theme.text }]}>Demandes spéciales</Text>
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>{i18n.t('specialRequests')}</Text>
         <TextInput
           style={[
             styles.specialInput,
@@ -186,7 +215,7 @@ export default function RestaurantScreen() {
           ]}
           value={booking.specialRequests}
           onChangeText={booking.setSpecialRequests}
-          placeholder="Allergies, anniversaire, chaise bébé..."
+          placeholder={i18n.t('specialRequestsRestaurant')}
           placeholderTextColor={theme.textSecondary}
           multiline
         />
@@ -194,7 +223,7 @@ export default function RestaurantScreen() {
         {/* Bouton réserver */}
         <View style={styles.buttonContainer}>
           <Button
-            title={canReserve ? `Réserver — ${booking.depositAmount}€ d'empreinte` : 'Choisissez un emplacement'}
+            title={canReserve ? (booking.requireDeposit ? `${i18n.t('reserve')} — ${booking.depositAmount}€` : i18n.t('reserve')) : i18n.t('chooseLocation')}
             onPress={() => setShowConfirm(true)}
             disabled={!canReserve}
             size="lg"
@@ -208,52 +237,56 @@ export default function RestaurantScreen() {
       <BottomSheet
         visible={showConfirm}
         onClose={() => setShowConfirm(false)}
-        title="Confirmation"
+        title={i18n.t('confirmation')}
       >
         <View style={styles.confirmContent}>
           <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Zone</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('zone')}</Text>
               <Text style={[styles.summaryValue, { color: theme.text }]}>{booking.zone?.name}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Date</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('date')}</Text>
               <Text style={[styles.summaryValue, { color: theme.text }]}>{formattedDate}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Heure</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('time')}</Text>
               <Text style={[styles.summaryValue, { color: theme.text }]}>{booking.time.replace(':', 'h')}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Convives</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('guests')}</Text>
               <Text style={[styles.summaryValue, { color: theme.text }]}>{booking.guestCount}</Text>
             </View>
             {booking.specialRequests ? (
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Demandes</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('requests')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{booking.specialRequests}</Text>
               </View>
             ) : null}
           </View>
 
-          <View style={[styles.depositRow, { borderTopColor: theme.cardBorder }]}>
-            <Text style={[styles.depositLabel, { color: theme.textSecondary }]}>Empreinte CB</Text>
-            <Text style={[styles.depositValue, { color: colors.brand }]}>{booking.depositAmount}€</Text>
-          </View>
+          {booking.requireDeposit && (
+            <View style={[styles.depositRow, { borderTopColor: theme.cardBorder }]}>
+              <Text style={[styles.depositLabel, { color: theme.textSecondary }]}>{i18n.t('depositCB')}</Text>
+              <Text style={[styles.depositValue, { color: colors.brand }]}>{booking.depositAmount}€</Text>
+            </View>
+          )}
 
-          <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
-            <View style={styles.policyItem}>
-              <Ionicons name="checkmark-circle-outline" size={13} color={colors.warmWood} />
-              <Text style={[styles.policyText, { color: colors.warmWood }]}>Annulation gratuite jusqu'à 24h avant</Text>
+          {booking.requireDeposit && (
+            <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
+              <View style={styles.policyItem}>
+                <Ionicons name="checkmark-circle-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyText, { color: colors.warmWood }]}>{i18n.t('freeCancellation')}</Text>
+              </View>
+              <View style={styles.policyItem}>
+                <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
+                <Text style={[styles.policyText, { color: colors.warmWood }]}>No-show : {i18n.t('depositCB')} ({booking.depositAmount}€)</Text>
+              </View>
             </View>
-            <View style={styles.policyItem}>
-              <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
-              <Text style={[styles.policyText, { color: colors.warmWood }]}>No-show : empreinte débitée ({booking.depositAmount}€)</Text>
-            </View>
-          </View>
+          )}
 
           <Button
-            title={user ? `Confirmer — ${booking.depositAmount}€` : 'Se connecter pour réserver'}
+            title={user ? (booking.requireDeposit ? `${i18n.t('confirm')} — ${booking.depositAmount}€` : i18n.t('confirmReservation')) : i18n.t('connectToBook')}
             onPress={handleBook}
             loading={booking.submitting}
             size="lg"
@@ -272,12 +305,12 @@ export default function RestaurantScreen() {
           title={`Restaurant — ${booking.zone?.name}`}
           subtitle={booking.zone?.name ?? ''}
           details={[
-            { label: 'Date', value: formattedDate, icon: 'calendar-outline' },
-            { label: 'Heure', value: booking.time.replace(':', 'h'), icon: 'time-outline' },
-            { label: 'Zone', value: booking.zone?.name ?? '', icon: booking.zone?.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline' },
-            { label: 'Convives', value: `${booking.guestCount}`, icon: 'people-outline' },
+            { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
+            { label: i18n.t('time'), value: booking.time.replace(':', 'h'), icon: 'time-outline' },
+            { label: i18n.t('zone'), value: booking.zone?.name ?? '', icon: booking.zone?.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline' },
+            { label: i18n.t('guests'), value: `${booking.guestCount}`, icon: 'people-outline' },
           ]}
-          deposit={`${booking.depositAmount}€`}
+          deposit={booking.requireDeposit ? `${booking.depositAmount}€` : undefined}
         />
       )}
     </View>
@@ -292,6 +325,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '800', letterSpacing: 0.5 },
   subtitle: { fontSize: 13, marginTop: 2 },
   sectionLabel: { fontSize: 15, fontWeight: '700', paddingHorizontal: 20, marginTop: 16, marginBottom: 4 },
+  capacityBanner: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 12, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1 },
   zonesRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 8 },
   zoneCard: {
     flex: 1,

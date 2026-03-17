@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { i18n } from '@/shared/i18n';
 import type { LiveCamera } from '@/shared/types';
 
 export function useLiveCameras() {
@@ -25,13 +26,12 @@ export function useLiveCameras() {
   return { cameras, loading, refresh: fetch };
 }
 
-const CROWD_CONFIG = {
-  low: { label: 'Calme', color: '#4CAF50', icon: '🟢' as const, percent: 30 },
-  medium: { label: 'Modéré', color: '#FF9800', icon: '🟡' as const, percent: 60 },
-  high: { label: 'Animé', color: '#F44336', icon: '🔴' as const, percent: 90 },
-} as const;
-
 export function getCrowdInfo(level: LiveCamera['crowd_level']) {
-  if (!level) return CROWD_CONFIG.low;
-  return CROWD_CONFIG[level];
+  const config = {
+    low: { label: i18n.t('crowdLow'), color: '#4CAF50', icon: '🟢' as const, percent: 30 },
+    medium: { label: i18n.t('crowdMedium'), color: '#FF9800', icon: '🟡' as const, percent: 60 },
+    high: { label: i18n.t('crowdHigh'), color: '#F44336', icon: '🔴' as const, percent: 90 },
+  };
+  if (!level) return config.low;
+  return config[level];
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import type { RestaurantZone } from '@/shared/types';
@@ -25,6 +25,18 @@ export function useRestaurantBooking() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requireDeposit, setRequireDeposit] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('restaurant_settings')
+      .select('value')
+      .eq('key', 'require_deposit')
+      .single()
+      .then(({ data }) => {
+        if (data) setRequireDeposit(data.value as boolean);
+      });
+  }, []);
 
   const setDate = useCallback((date: string) => {
     setState((s) => ({ ...s, date }));
@@ -54,7 +66,7 @@ export function useRestaurantBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  const depositAmount = 30 * state.guestCount; // Pré-autorisation fixe 30€/personne
+  const depositAmount = requireDeposit ? 30 * state.guestCount : 0;
 
   // Déduire le time_slot pour la BDD (lunch/dinner)
   const timeSlotForDB = parseInt(state.time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
@@ -67,6 +79,29 @@ export function useRestaurantBooking() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Vous devez être connecté pour réserver');
+
+      // Vérifier la capacité max
+      const maxKey = timeSlotForDB === 'lunch' ? 'max_covers_lunch' : 'max_covers_dinner';
+      const { data: maxSetting } = await supabase
+        .from('restaurant_settings')
+        .select('value')
+        .eq('key', maxKey)
+        .single();
+
+      if (maxSetting) {
+        const maxCovers = maxSetting.value as number;
+        const { data: existing } = await supabase
+          .from('restaurant_reservations')
+          .select('guest_count')
+          .eq('date', state.date)
+          .eq('time_slot', timeSlotForDB)
+          .not('status', 'eq', 'cancelled');
+
+        const totalCovers = (existing ?? []).reduce((sum: number, r: { guest_count: number }) => sum + r.guest_count, 0);
+        if (totalCovers + state.guestCount > maxCovers) {
+          throw new Error(`Complet pour ce service ! (${totalCovers}/${maxCovers} couverts)`);
+        }
+      }
 
       const { data: reservation, error: resError } = await supabase
         .from('restaurant_reservations')
@@ -120,6 +155,7 @@ export function useRestaurantBooking() {
     submitting,
     error,
     depositAmount,
+    requireDeposit,
     setDate,
     setTime,
     selectZone,

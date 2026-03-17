@@ -23,14 +23,15 @@ import { TicketQRCode } from '@/features/events/components/TicketQRCode';
 import { SecretCodeModal } from '@/features/events/components/SecretCodeModal';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EventCategory, EventTicket } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 const CATEGORY_CONFIG: Record<EventCategory, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   pool_party: { label: 'Pool Party', icon: 'water', color: '#7EC8E3' },
   dj_set: { label: 'DJ Set', icon: 'musical-notes', color: '#9B59B6' },
   dinner_show: { label: 'Dinner Show', icon: 'restaurant', color: colors.terracotta },
   brunch: { label: 'Brunch', icon: 'cafe', color: colors.sage },
-  private: { label: 'Privé', icon: 'lock-closed', color: colors.gray[500] },
-  special: { label: 'Spécial', icon: 'diamond', color: colors.sunYellow },
+  private: { label: i18n.t('categoryPrivate'), icon: 'lock-closed', color: colors.gray[500] },
+  special: { label: i18n.t('categorySpecial'), icon: 'diamond', color: colors.sunYellow },
 };
 
 function useCountdown(targetDate: string, startTime: string) {
@@ -43,7 +44,7 @@ function useCountdown(targetDate: string, startTime: string) {
       const diff = target.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setTimeLeft('En cours');
+        setTimeLeft(i18n.t('inProgress'));
         return;
       }
 
@@ -189,7 +190,7 @@ export default function EventDetailScreen() {
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={18} color={theme.accent} />
               <View>
-                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Horaire</Text>
+                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{i18n.t('timeSlot')}</Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {event.start_time?.slice(0, 5)}{event.end_time ? ` — ${event.end_time.slice(0, 5)}` : ''}
                 </Text>
@@ -198,9 +199,9 @@ export default function EventDetailScreen() {
             <View style={styles.infoRow}>
               <Ionicons name="people-outline" size={18} color={theme.accent} />
               <View>
-                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Capacité</Text>
+                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{i18n.t('capacity')}</Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
-                  {event.tickets_sold}/{event.capacity} places
+                  {event.tickets_sold}/{event.capacity} {i18n.t('places')}
                 </Text>
               </View>
             </View>
@@ -220,7 +221,7 @@ export default function EventDetailScreen() {
               />
             </View>
             <Text style={[styles.fillText, { color: theme.textSecondary }]}>
-              {isSoldOut ? 'Complet' : `${Math.round(fillRate * 100)}% rempli`}
+              {isSoldOut ? i18n.t('full') : i18n.t('filledPercent').replace('{{percent}}', String(Math.round(fillRate * 100)))}
             </Text>
           </View>
 
@@ -242,12 +243,12 @@ export default function EventDetailScreen() {
 
           {/* Pricing */}
           <View style={styles.pricingSection}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Tarifs</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('pricing')}</Text>
             <View style={[styles.priceCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
               <View style={styles.priceRow}>
                 <Text style={[styles.priceLabel, { color: theme.text }]}>Standard</Text>
                 <Text style={[styles.priceValue, { color: theme.text }]}>
-                  {isFree ? 'Gratuit' : `${event.standard_price}€`}
+                  {isFree ? i18n.t('free') : `${event.standard_price}€`}
                 </Text>
               </View>
               {hasVip && (
@@ -275,10 +276,10 @@ export default function EventDetailScreen() {
                 <Ionicons name="ticket-outline" size={24} color={colors.warmWood} />
                 <View>
                   <Text style={[styles.myTicketTitle, { color: colors.warmWood }]}>
-                    Mon ticket {myTicket.ticket_type.toUpperCase()}
+                    {i18n.t('myTicketType').replace('{{type}}', myTicket.ticket_type.toUpperCase())}
                   </Text>
                   <Text style={[styles.myTicketSub, { color: colors.warmWood }]}>
-                    Touchez pour voir le QR code
+                    {i18n.t('tapForQR')}
                   </Text>
                 </View>
               </View>
@@ -297,16 +298,16 @@ export default function EventDetailScreen() {
           <View style={styles.ctaRow}>
             <View>
               {isFree ? (
-                <Text style={[styles.ctaPrice, { color: colors.sage }]}>Gratuit</Text>
+                <Text style={[styles.ctaPrice, { color: colors.sage }]}>{i18n.t('free')}</Text>
               ) : (
                 <>
-                  <Text style={[styles.ctaPriceLabel, { color: theme.textSecondary }]}>À partir de</Text>
+                  <Text style={[styles.ctaPriceLabel, { color: theme.textSecondary }]}>{i18n.t('from')}</Text>
                   <Text style={[styles.ctaPrice, { color: theme.text }]}>{event.standard_price}€</Text>
                 </>
               )}
             </View>
             <Button
-              title={isSoldOut ? 'Complet' : (event.is_secret && !secretUnlocked ? 'Code requis' : 'Réserver')}
+              title={isSoldOut ? i18n.t('full') : (event.is_secret && !secretUnlocked ? i18n.t('codeRequired') : i18n.t('reserve'))}
               onPress={handleReserve}
               disabled={isSoldOut}
               size="lg"

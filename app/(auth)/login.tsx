@@ -8,7 +8,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +26,7 @@ import type { Language } from '@/shared/i18n/translations';
 
 export default function LoginScreen() {
   const { theme } = useSunMode();
-  const { signIn } = useAuth();
+  const { signIn, signInWithApple, signInWithGoogle } = useAuth();
   const insets = useSafeAreaInsets();
   const { locale, setLanguage } = useLanguage();
 
@@ -38,6 +40,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const handleForgotPassword = () => {
     Alert.prompt(
@@ -91,7 +94,7 @@ export default function LoginScreen() {
           <Ionicons name="sunny" size={48} color={colors.brand} />
           <Text style={[styles.brand, { color: colors.brand }]}>les tournesols</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Beach Club — Marbella
+            Beach Club — Estepona
           </Text>
         </View>
 
@@ -133,6 +136,47 @@ export default function LoginScreen() {
             size="lg"
             style={{ marginTop: 8 }}
           />
+        </View>
+
+        {/* Social login */}
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: theme.cardBorder }]} />
+          <Text style={[styles.dividerText, { color: theme.textSecondary }]}>or</Text>
+          <View style={[styles.dividerLine, { backgroundColor: theme.cardBorder }]} />
+        </View>
+
+        <View style={styles.socialButtons}>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.socialBtn, { backgroundColor: '#000' }]}
+              onPress={async () => {
+                setSocialLoading(true);
+                const { error: err } = await signInWithApple();
+                setSocialLoading(false);
+                if (err) setError(err.message);
+                else router.replace('/(tabs)');
+              }}
+              disabled={socialLoading}
+            >
+              <Ionicons name="logo-apple" size={20} color="#fff" />
+              <Text style={[styles.socialBtnText, { color: '#fff' }]}>Continue with Apple</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[styles.socialBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.cardBorder }]}
+            onPress={async () => {
+              setSocialLoading(true);
+              const { error: err } = await signInWithGoogle();
+              setSocialLoading(false);
+              if (err) setError(err.message);
+              else router.replace('/(tabs)');
+            }}
+            disabled={socialLoading}
+          >
+            <Ionicons name="logo-google" size={20} color="#4285F4" />
+            <Text style={[styles.socialBtnText, { color: theme.text }]}>Continue with Google</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Footer */}
@@ -251,6 +295,36 @@ const styles = StyleSheet.create({
   },
   langLabel: {
     fontSize: 13,
+    fontWeight: '600',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  socialButtons: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  socialBtnText: {
+    fontSize: 15,
     fontWeight: '600',
   },
   closeBtn: {

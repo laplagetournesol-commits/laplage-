@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
+import { i18n } from '@/shared/i18n';
 
 export default function TermsScreen() {
   const { theme } = useSunMode();
@@ -12,7 +13,7 @@ export default function TermsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
-        title: 'Conditions Générales',
+        title: i18n.t('terms'),
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
@@ -29,7 +30,7 @@ export default function TermsScreen() {
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>1. Objet</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de l'application mobile La Plage Royale (ci-après "l'Application"), éditée par La Plage Royale S.L., établie à Marbella, Espagne.{'\n\n'}En créant un compte ou en utilisant l'Application, vous acceptez sans réserve les présentes CGU.
+          Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de l'application mobile Les Tournesols (ci-après "l'Application"), éditée par Pitch Beach S.L., Sociedad Limitada, immatriculée sous le numéro B16446411, dont le siège social est situé à Playa de la Rada, Lote CH18, 29680 Estepona, Málaga, Espagne.{'\n\n'}En créant un compte ou en utilisant l'Application, vous acceptez sans réserve les présentes CGU.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>2. Inscription et compte</Text>
@@ -39,7 +40,7 @@ export default function TermsScreen() {
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>3. Réservations</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          L'Application permet de réserver des transats (plage) et des tables (restaurant).{'\n\n'}Transats : le paiement intégral est effectué au moment de la réservation. Les réservations sont non remboursables en cas de non-présentation (no-show).{'\n\n'}Restaurant : une empreinte de carte bancaire de 30 € par convive est requise lors de la réservation. Cette empreinte est débitée uniquement en cas de non-présentation. En cas de présence, aucun montant n'est prélevé au titre de l'empreinte.
+          L'Application permet de réserver des transats et chaises longues (plage) ainsi que des tables (restaurant).{'\n\n'}Transats et chaises longues : le paiement intégral est exigé au moment de la réservation (prépaiement). La réservation est confirmée dès réception du paiement. Les tarifs varient selon la saison et le type d'emplacement choisi. Les réservations sont non remboursables en cas de non-présentation (no-show).{'\n\n'}Restaurant : une empreinte de carte bancaire (pré-autorisation) de 30 € par convive est requise lors de la réservation. Aucun montant n'est prélevé si vous vous présentez au restaurant. L'empreinte est débitée uniquement en cas de non-présentation sans annulation préalable.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>4. Modification et annulation des réservations</Text>
@@ -49,32 +50,32 @@ export default function TermsScreen() {
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>5. Événements</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Les tickets d'événements sont nominatifs et non transférables. Le paiement intégral est requis au moment de l'achat.{'\n\n'}La Plage Royale se réserve le droit d'annuler ou de modifier un événement. En cas d'annulation par l'organisateur, un remboursement intégral sera effectué dans un délai de 14 jours sur le moyen de paiement utilisé lors de l'achat.
+          Les tickets d'événements sont nominatifs et non transférables. Le paiement intégral est requis au moment de l'achat.{'\n\n'}Les Tournesols se réserve le droit d'annuler ou de modifier un événement. En cas d'annulation par l'organisateur, un remboursement intégral sera effectué dans un délai de 14 jours sur le moyen de paiement utilisé lors de l'achat.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>6. Paiements et prépaiements</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Tous les paiements sont traités de manière sécurisée par Stripe, prestataire certifié PCI DSS. La Plage Royale ne stocke aucune donnée bancaire.{'\n\n'}Les prix sont affichés en euros (€) et incluent les taxes applicables. Le paiement est exigé au moment de la réservation ou de l'achat (prépaiement). En validant un paiement, l'utilisateur autorise le prélèvement du montant indiqué.{'\n\n'}Les empreintes de carte bancaire (restaurant) constituent une pré-autorisation. Le montant n'est débité qu'en cas de non-présentation, conformément aux conditions indiquées lors de la réservation.{'\n\n'}Aucune transaction n'est traitée via Apple In-App Purchase. L'ensemble des paiements concerne des biens et services physiques fournis par La Plage Royale.
+          Tous les paiements sont traités de manière sécurisée par Stripe, prestataire certifié PCI DSS. Les Tournesols ne stocke aucune donnée bancaire sur ses serveurs.{'\n\n'}Les prix sont affichés en euros (€) et incluent les taxes applicables. Les prix peuvent varier selon la saison et sont indiqués au moment de la réservation.{'\n\n'}Transats et chaises longues : le montant total est prélevé immédiatement lors de la validation de la réservation (prépaiement obligatoire).{'\n\n'}Restaurant : une pré-autorisation bancaire de 30 € par convive est effectuée lors de la réservation. Ce montant n'est débité qu'en cas de non-présentation (no-show). En cas de présence au restaurant, la pré-autorisation est annulée automatiquement.{'\n\n'}En validant un paiement ou une pré-autorisation, l'utilisateur accepte les conditions tarifaires affichées.{'\n\n'}Important : aucune transaction n'est traitée via Apple In-App Purchase. L'ensemble des paiements concerne exclusivement des biens et services physiques (locations de transats, réservations de tables, tickets d'événements) fournis par Les Tournesols dans son établissement.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>7. Suppression de compte</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          L'utilisateur peut demander la suppression de son compte et de l'ensemble de ses données personnelles à tout moment en contactant privacy@laplageroyale.com. La suppression sera effective dans un délai de 30 jours suivant la demande.{'\n\n'}La suppression du compte entraîne l'annulation de toute réservation future non encore consommée, sans droit à remboursement pour les réservations déjà payées.
+          L'utilisateur peut demander la suppression de son compte et de l'ensemble de ses données personnelles à tout moment en contactant privacy@laplage-tournesol.com. La suppression sera effective dans un délai de 30 jours suivant la demande.{'\n\n'}La suppression du compte entraîne l'annulation de toute réservation future non encore consommée, sans droit à remboursement pour les réservations déjà payées.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>8. Propriété intellectuelle</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          L'ensemble des contenus de l'Application (textes, images, logos, design) sont protégés par le droit de la propriété intellectuelle et appartiennent à La Plage Royale S.L. Toute reproduction est interdite sans autorisation préalable.
+          L'ensemble des contenus de l'Application (textes, images, logos, design) sont protégés par le droit de la propriété intellectuelle et appartiennent à Les Tournesols S.L. Toute reproduction est interdite sans autorisation préalable.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>9. Responsabilité</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          La Plage Royale ne saurait être tenue responsable des dommages indirects liés à l'utilisation de l'Application. Le service est fourni "en l'état" sans garantie d'accessibilité permanente.{'\n\n'}La Plage Royale ne pourra être tenue responsable en cas d'indisponibilité temporaire de l'Application due à des opérations de maintenance, des mises à jour ou des circonstances de force majeure.
+          Les Tournesols ne saurait être tenue responsable des dommages indirects liés à l'utilisation de l'Application. Le service est fourni "en l'état" sans garantie d'accessibilité permanente.{'\n\n'}Les Tournesols ne pourra être tenue responsable en cas d'indisponibilité temporaire de l'Application due à des opérations de maintenance, des mises à jour ou des circonstances de force majeure.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>10. Modification des CGU</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          La Plage Royale se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés des modifications par notification dans l'Application. La poursuite de l'utilisation de l'Application après notification vaut acceptation des nouvelles CGU.
+          Les Tournesols se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés des modifications par notification dans l'Application. La poursuite de l'utilisation de l'Application après notification vaut acceptation des nouvelles CGU.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>11. Droit applicable</Text>
@@ -84,7 +85,7 @@ export default function TermsScreen() {
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>12. Contact</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Pour toute question relative aux présentes CGU :{'\n'}Email : contact@laplageroyale.com{'\n'}La Plage Royale S.L., Paseo Marítimo, 29602 Marbella, Espagne
+          Pour toute question relative aux présentes CGU :{'\n'}Email : contact@laplagetournesols.com{'\n'}Pitch Beach S.L., Playa de la Rada, Lote CH18, 29680 Estepona, Málaga, Espagne
         </Text>
       </ScrollView>
     </View>

@@ -144,7 +144,7 @@ export default function HomeScreen() {
             <View style={styles.locationRow}>
               <Ionicons name="location" size={14} color={theme.accentSecondary} />
               <Text style={[styles.locationText, { color: theme.textSecondary }]}>
-                Marbella, Costa del Sol
+                Estepona, Costa del Sol
               </Text>
               <Badge label={i18n.t('open')} variant="success" size="sm" />
             </View>
@@ -227,7 +227,7 @@ export default function HomeScreen() {
               <View style={styles.vibeStat}>
                 <Ionicons name="location" size={16} color={colors.deepSea} />
                 <Text style={[styles.vibeStatText, { color: theme.textSecondary }]}>
-                  Marbella
+                  Estepona
                 </Text>
               </View>
             </View>
@@ -268,7 +268,7 @@ export default function HomeScreen() {
                   <View style={styles.eventPrice}>
                     <Text style={styles.eventPriceLabel}>{i18n.t('from')}</Text>
                     <Text style={styles.eventPriceValue}>
-                      {featuredEvent.standard_price > 0 ? `${featuredEvent.standard_price}€` : 'Gratuit'}
+                      {featuredEvent.standard_price > 0 ? `${featuredEvent.standard_price}€` : i18n.t('free')}
                     </Text>
                   </View>
                   <Button

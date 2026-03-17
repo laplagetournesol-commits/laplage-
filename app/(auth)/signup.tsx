@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +22,7 @@ import { i18n } from '@/shared/i18n';
 
 export default function SignupScreen() {
   const { theme } = useSunMode();
-  const { signUp } = useAuth();
+  const { signUp, signInWithApple, signInWithGoogle } = useAuth();
   const insets = useSafeAreaInsets();
 
   const [fullName, setFullName] = useState('');
@@ -30,18 +31,24 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const handleSignup = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
-      setError('Veuillez remplir tous les champs');
+      setError(i18n.t('fillAllFields'));
+      return;
+    }
+    if (!acceptedTerms) {
+      setError(i18n.t('acceptTermsRequired'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError(i18n.t('passwordsDontMatch'));
       return;
     }
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setError(i18n.t('passwordTooShort'));
       return;
     }
 
@@ -78,9 +85,9 @@ export default function SignupScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Ionicons name="sunny" size={48} color={colors.brand} />
-          <Text style={[styles.brand, { color: colors.brand }]}>Rejoignez le club</Text>
+          <Text style={[styles.brand, { color: colors.brand }]}>{i18n.t('joinClub')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Créez votre compte Les Tournesols
+            {i18n.t('createYourAccount')}
           </Text>
         </View>
 
@@ -125,21 +132,92 @@ export default function SignupScreen() {
             secureTextEntry
           />
 
+          {/* CGU checkbox */}
+          <TouchableOpacity
+            style={styles.termsRow}
+            onPress={() => setAcceptedTerms(!acceptedTerms)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={acceptedTerms ? 'checkbox' : 'square-outline'}
+              size={22}
+              color={acceptedTerms ? colors.brand : theme.textSecondary}
+            />
+            <Text style={[styles.termsText, { color: theme.textSecondary }]}>
+              {i18n.t('acceptTerms')}{' '}
+              <Text
+                style={{ color: theme.accent, textDecorationLine: 'underline' }}
+                onPress={() => router.push('/profile/terms')}
+              >
+                {i18n.t('terms')}
+              </Text>
+              {' '}{i18n.t('termsAnd')}{' '}
+              <Text
+                style={{ color: theme.accent, textDecorationLine: 'underline' }}
+                onPress={() => router.push('/profile/privacy')}
+              >
+                {i18n.t('privacyPolicy')}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button
             title={i18n.t('signup')}
             onPress={handleSignup}
             loading={loading}
+            disabled={!acceptedTerms}
             size="lg"
             style={{ marginTop: 8 }}
           />
         </View>
 
+        {/* Social signup */}
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: theme.cardBorder }]} />
+          <Text style={[styles.dividerText, { color: theme.textSecondary }]}>or</Text>
+          <View style={[styles.dividerLine, { backgroundColor: theme.cardBorder }]} />
+        </View>
+
+        <View style={styles.socialButtons}>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.socialBtn, { backgroundColor: '#000' }]}
+              onPress={async () => {
+                setSocialLoading(true);
+                const { error: err } = await signInWithApple();
+                setSocialLoading(false);
+                if (err) setError(err.message);
+                else router.replace('/(tabs)');
+              }}
+              disabled={socialLoading}
+            >
+              <Ionicons name="logo-apple" size={20} color="#fff" />
+              <Text style={[styles.socialBtnText, { color: '#fff' }]}>Continue with Apple</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[styles.socialBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.cardBorder }]}
+            onPress={async () => {
+              setSocialLoading(true);
+              const { error: err } = await signInWithGoogle();
+              setSocialLoading(false);
+              if (err) setError(err.message);
+              else router.replace('/(tabs)');
+            }}
+            disabled={socialLoading}
+          >
+            <Ionicons name="logo-google" size={20} color="#4285F4" />
+            <Text style={[styles.socialBtnText, { color: theme.text }]}>Continue with Google</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-            Déjà un compte ?
+            {i18n.t('alreadyHaveAccount')}
           </Text>
           <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
             <Text style={[styles.link, { color: theme.accent }]}> {i18n.t('login')}</Text>
@@ -198,6 +276,48 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  socialButtons: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  socialBtnText: {
+    fontSize: 15,
     fontWeight: '600',
   },
   closeBtn: {

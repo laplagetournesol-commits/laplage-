@@ -1,15 +1,31 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StripeProvider } from '@stripe/stripe-react-native';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { SunModeProvider, useSunMode } from '@/shared/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/shared/i18n';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
+
+// Stripe n'est pas disponible sur web — wrapper conditionnel
+const StripeWrapper = Platform.OS === 'web'
+  ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+  : (() => {
+      const { StripeProvider } = require('@stripe/stripe-react-native');
+      return ({ children }: { children: React.ReactNode }) => (
+        <StripeProvider
+          publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
+          merchantIdentifier="merchant.com.lestournesols.app"
+        >
+          {children}
+        </StripeProvider>
+      );
+    })();
 
 const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!;
 
@@ -87,15 +103,21 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SunModeProvider>
           <LanguageProvider>
             <AuthProvider>
-              <StripeProvider publishableKey={STRIPE_KEY} merchantIdentifier="merchant.com.lestournesols.app">
+              <StripeWrapper>
                 <RootLayoutContent />
-              </StripeProvider>
+              </StripeWrapper>
             </AuthProvider>
           </LanguageProvider>
         </SunModeProvider>

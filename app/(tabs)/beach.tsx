@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
+import { i18n } from '@/shared/i18n';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { useAddons } from '@/features/beach/hooks/useAddons';
 import { useBeachBooking } from '@/features/beach/hooks/useBeachBooking';
@@ -67,19 +68,19 @@ export default function BeachScreen() {
         {fromMood && (
           <TouchableOpacity onPress={() => router.push('/mood')} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={22} color={theme.text} />
-            <Text style={[styles.backText, { color: theme.text }]}>Retour aux suggestions</Text>
+            <Text style={[styles.backText, { color: theme.text }]}>{i18n.t('backToSuggestions')}</Text>
           </TouchableOpacity>
         )}
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.title, { color: theme.text }]}>La Plage</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{i18n.t('theBeach')}</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              Choisissez votre transat
+              {i18n.t('chooseSunbed')}
             </Text>
           </View>
           {!loading && totalSunbeds > 0 && (
             <Badge
-              label={`${totalAvailable}/${totalSunbeds} dispo`}
+              label={`${totalAvailable}/${totalSunbeds} ${i18n.t('dispoCount')}`}
               variant={totalAvailable > 10 ? 'success' : totalAvailable > 3 ? 'warning' : 'error'}
             />
           )}
@@ -94,7 +95,7 @@ export default function BeachScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Chargement de la plage...
+            {i18n.t('loadingBeach')}
           </Text>
         </View>
       ) : (

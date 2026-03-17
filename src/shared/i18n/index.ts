@@ -6,9 +6,9 @@ const i18n = new I18n(translations);
 
 // Langue par défaut basée sur l'appareil, fallback FR
 const deviceLocale = Localization.getLocales()[0]?.languageCode ?? 'fr';
-i18n.locale = ['fr', 'es', 'en'].includes(deviceLocale) ? deviceLocale : 'fr';
+i18n.locale = ['fr', 'es', 'en'].includes(deviceLocale) ? deviceLocale : 'en';
 i18n.enableFallback = true;
-i18n.defaultLocale = 'fr';
+i18n.defaultLocale = 'en';
 
 export { i18n };
 export { translations } from './translations';

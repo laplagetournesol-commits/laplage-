@@ -34,7 +34,7 @@ export default function MoodScreen() {
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backRow} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
-          <Text style={[styles.backText, { color: theme.text }]}>Retour</Text>
+          <Text style={[styles.backText, { color: theme.text }]}>{i18n.t('back')}</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
@@ -116,7 +116,7 @@ export default function MoodScreen() {
                 </View>
               )}
               <Button
-                title={recommendation.spot.type === 'beach' ? `Réserver — Zone ${recommendation.spot.zone}` : `Réserver — ${recommendation.spot.zone}`}
+                title={recommendation.spot.type === 'beach' ? `${i18n.t('reserve')} — Zone ${recommendation.spot.zone}` : `${i18n.t('reserve')} — ${recommendation.spot.zone}`}
                 onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach?fromMood=true' : '/(tabs)/restaurant?fromMood=true')}
                 size="sm"
                 style={{ alignSelf: 'flex-start', marginTop: 8 }}

@@ -21,14 +21,15 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { useEvents } from '@/features/events/hooks/useEvents';
 import type { Event, EventCategory } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 const CATEGORY_CONFIG: Record<EventCategory, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   pool_party: { label: 'Pool Party', icon: 'water', color: '#7EC8E3' },
   dj_set: { label: 'DJ Set', icon: 'musical-notes', color: '#9B59B6' },
   dinner_show: { label: 'Dinner Show', icon: 'restaurant', color: colors.terracotta },
   brunch: { label: 'Brunch', icon: 'cafe', color: colors.sage },
-  private: { label: 'Privé', icon: 'lock-closed', color: colors.gray[500] },
-  special: { label: 'Spécial', icon: 'diamond', color: colors.sunYellow },
+  private: { label: i18n.t('categoryPrivate'), icon: 'lock-closed', color: colors.gray[500] },
+  special: { label: i18n.t('categorySpecial'), icon: 'diamond', color: colors.sunYellow },
 };
 
 type Filter = 'all' | EventCategory;
@@ -56,13 +57,13 @@ export default function EventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const filters: { key: Filter; label: string }[] = [
-    { key: 'all', label: 'Tous' },
+    { key: 'all', label: i18n.t('allFilter') },
     { key: 'pool_party', label: 'Pool Party' },
     { key: 'dj_set', label: 'DJ Set' },
-    { key: 'dinner_show', label: 'Dîner' },
+    { key: 'dinner_show', label: i18n.t('dinnerFilter') },
     { key: 'brunch', label: 'Brunch' },
-    { key: 'special', label: 'Spécial' },
-    { key: 'private', label: 'Privé' },
+    { key: 'special', label: i18n.t('specialFilter') },
+    { key: 'private', label: i18n.t('privateFilter') },
   ];
 
   const handleRefresh = async () => {
@@ -97,7 +98,7 @@ export default function EventsScreen() {
         />
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <Text style={[styles.title, { color: theme.period === 'night' ? colors.white : theme.text }]}>
-            Événements
+            {i18n.t('events')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.period === 'night' ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
             {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
@@ -144,14 +145,14 @@ export default function EventsScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Chargement des événements...
+            {i18n.t('loadingEvents')}
           </Text>
         </View>
       ) : events.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="calendar-outline" size={48} color={theme.cardBorder} />
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            Aucun événement à venir dans cette catégorie
+            {i18n.t('noEventsInCategory')}
           </Text>
         </View>
       ) : (
@@ -267,7 +268,7 @@ export default function EventsScreen() {
                         {!isFree ? (
                           <>
                             <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
-                              À partir de
+                              {i18n.t('from')}
                             </Text>
                             <Text style={[styles.priceValue, { color: theme.text }]}>
                               {event.standard_price}€
@@ -275,12 +276,12 @@ export default function EventsScreen() {
                           </>
                         ) : (
                           <Text style={[styles.priceValue, { color: colors.sage }]}>
-                            {event.is_secret ? 'Sur invitation' : 'Gratuit'}
+                            {event.is_secret ? i18n.t('onInvitation') : i18n.t('free')}
                           </Text>
                         )}
                       </View>
                       <Button
-                        title={event.is_secret ? 'Code requis' : 'Réserver'}
+                        title={event.is_secret ? i18n.t('codeRequired') : i18n.t('reserve')}
                         onPress={() => handleOpenEvent(event)}
                         size="sm"
                         variant={event.is_secret ? 'outline' : 'primary'}

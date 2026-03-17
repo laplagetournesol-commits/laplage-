@@ -7,6 +7,7 @@ import { colors } from '@/shared/theme/colors';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Badge } from '@/shared/ui/Badge';
 import type { Event, EventTicket } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 interface TicketQRCodeProps {
   visible: boolean;
@@ -26,16 +27,16 @@ export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodePr
   });
 
   const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
-    active: { label: 'Valide', variant: 'success' },
-    used: { label: 'Utilisé', variant: 'default' },
-    cancelled: { label: 'Annulé', variant: 'error' },
-    refunded: { label: 'Remboursé', variant: 'warning' },
+    active: { label: i18n.t('statusValid'), variant: 'success' },
+    used: { label: i18n.t('statusUsed'), variant: 'default' },
+    cancelled: { label: i18n.t('statusCancelled'), variant: 'error' },
+    refunded: { label: i18n.t('statusRefunded'), variant: 'warning' },
   };
 
   const status = statusConfig[ticket.status] ?? statusConfig.active;
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Mon ticket">
+    <BottomSheet visible={visible} onClose={onClose} title={i18n.t('myTicket')}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
         <View style={styles.content}>
           {/* Ticket card */}
@@ -62,7 +63,7 @@ export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodePr
             </View>
 
             <Text style={[styles.qrHint, { color: theme.textSecondary }]}>
-              Présentez ce QR code à l'entrée
+              {i18n.t('presentQR')}
             </Text>
 
             {/* Dashed separator */}
@@ -80,7 +81,7 @@ export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodePr
               <View style={styles.detailItem}>
                 <Ionicons name="time-outline" size={16} color={theme.textSecondary} />
                 <View>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Horaire</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{i18n.t('timeSlot')}</Text>
                   <Text style={[styles.detailValue, { color: theme.text }]}>
                     {event.start_time?.slice(0, 5)}{event.end_time ? ` — ${event.end_time.slice(0, 5)}` : ''}
                   </Text>
@@ -90,7 +91,7 @@ export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodePr
                 <View style={styles.detailItem}>
                   <Ionicons name="card-outline" size={16} color={theme.textSecondary} />
                   <View>
-                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Payé</Text>
+                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{i18n.t('paid')}</Text>
                     <Text style={[styles.detailValue, { color: theme.text }]}>{ticket.price}€</Text>
                   </View>
                 </View>
@@ -98,7 +99,7 @@ export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodePr
               <View style={styles.detailItem}>
                 <Ionicons name="finger-print-outline" size={16} color={theme.textSecondary} />
                 <View>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Réf.</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{i18n.t('ref')}</Text>
                   <Text style={[styles.detailValue, { color: theme.text }]}>
                     {ticket.id.slice(0, 8).toUpperCase()}
                   </Text>

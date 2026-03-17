@@ -6,6 +6,7 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import type { Event } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 interface SecretCodeModalProps {
   visible: boolean;
@@ -21,7 +22,7 @@ export function SecretCodeModal({ visible, onClose, event, onSuccess }: SecretCo
 
   const handleSubmit = () => {
     if (!code.trim()) {
-      setError('Entrez le code d\'accès');
+      setError(i18n.t('enterAccessCode'));
       return;
     }
     if (code.trim().toUpperCase() === event.secret_code?.toUpperCase()) {
@@ -29,7 +30,7 @@ export function SecretCodeModal({ visible, onClose, event, onSuccess }: SecretCo
       setError('');
       onSuccess();
     } else {
-      setError('Code incorrect');
+      setError(i18n.t('incorrectCode'));
     }
   };
 
@@ -40,19 +41,19 @@ export function SecretCodeModal({ visible, onClose, event, onSuccess }: SecretCo
   };
 
   return (
-    <BottomSheet visible={visible} onClose={handleClose} title="Événement secret">
+    <BottomSheet visible={visible} onClose={handleClose} title={i18n.t('secretEvent')}>
       <View style={styles.content}>
         <View style={[styles.iconRow, { backgroundColor: colors.sunYellowLight }]}>
           <Text style={styles.lockEmoji}>🔒</Text>
           <Text style={[styles.secretText, { color: colors.warmWood }]}>
-            Cet événement est réservé aux initiés. Entrez votre code d'accès pour découvrir les détails.
+            {i18n.t('secretEventDesc')}
           </Text>
         </View>
 
         <Text style={[styles.eventTitle, { color: theme.text }]}>{event.title}</Text>
 
         <Input
-          label="Code d'accès"
+          label={i18n.t('accessCode')}
           value={code}
           onChangeText={(text) => { setCode(text); setError(''); }}
           placeholder="XXXX0000"
@@ -62,7 +63,7 @@ export function SecretCodeModal({ visible, onClose, event, onSuccess }: SecretCo
         />
 
         <Button
-          title="Vérifier le code"
+          title={i18n.t('verifyCode')}
           onPress={handleSubmit}
           size="lg"
           style={{ marginTop: 16 }}

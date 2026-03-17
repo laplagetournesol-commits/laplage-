@@ -100,7 +100,7 @@ export default function ArrivalScreen() {
             <Badge label={existingOrder.status.toUpperCase()} variant="success" />
           </View>
           <Card style={{ gap: 8 }}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Votre commande</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{i18n.t('yourOrder')}</Text>
             {existingOrder.items.map((item, i) => (
               <View key={i} style={styles.orderItemRow}>
                 <Text style={[styles.orderItemName, { color: theme.text }]}>
@@ -113,7 +113,7 @@ export default function ArrivalScreen() {
             ))}
             <View style={[styles.divider, { backgroundColor: theme.cardBorder }]} />
             <View style={styles.orderItemRow}>
-              <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+              <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total')}</Text>
               <Text style={[styles.totalValue, { color: theme.accent }]}>{existingOrder.total_price}€</Text>
             </View>
           </Card>
@@ -139,7 +139,7 @@ export default function ArrivalScreen() {
           <Text style={{ fontSize: 40 }}>🏖️</Text>
           <Text style={[styles.title, { color: theme.text }]}>{i18n.t('arrivalTitle')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Pré-commandez pour un accueil VIP à votre arrivée
+            {i18n.t('arrivalSubtitle')}
           </Text>
         </View>
 
@@ -245,7 +245,7 @@ export default function ArrivalScreen() {
                 color: theme.text,
               },
             ]}
-            placeholder="Allergies, préférences, message pour l'équipe..."
+            placeholder={i18n.t('specialRequestsPlaceholder')}
             placeholderTextColor={theme.textSecondary}
             multiline
             numberOfLines={3}
@@ -260,7 +260,7 @@ export default function ArrivalScreen() {
         <View style={[styles.bottomBar, { backgroundColor: theme.background, borderTopColor: theme.cardBorder }]}>
           <View style={styles.bottomInfo}>
             <Text style={[styles.bottomItems, { color: theme.textSecondary }]}>
-              {totalItems} article{totalItems > 1 ? 's' : ''}
+              {totalItems} {i18n.t('articles')}
             </Text>
             <Text style={[styles.bottomTotal, { color: theme.text }]}>{totalPrice}€</Text>
           </View>

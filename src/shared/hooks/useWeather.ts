@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
-// Marbella coordinates
-const LAT = 36.5095;
-const LON = -4.8824;
+// Estepona coordinates
+const LAT = 36.4267;
+const LON = -5.1459;
 
 interface WeatherData {
   temperature: number;

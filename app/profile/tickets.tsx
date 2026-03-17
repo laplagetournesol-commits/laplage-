@@ -7,7 +7,9 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
+import { TicketQRCode } from '@/features/events/components/TicketQRCode';
 import { useAuth } from '@/contexts/AuthContext';
+import { i18n } from '@/shared/i18n';
 import { supabase } from '@/shared/lib/supabase';
 
 interface Ticket {
@@ -27,13 +29,16 @@ export default function MyTicketsScreen() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [qrTicket, setQrTicket] = useState<Ticket | null>(null);
 
   const fetchTickets = async () => {
     if (!user) return;
+    const today = new Date().toISOString().split('T')[0];
     const { data } = await supabase
       .from('event_tickets')
       .select('id, status, ticket_type, qr_code, price, event:events!inner(title, date)')
       .eq('user_id', user.id)
+      .gte('event.date', today)
       .order('created_at', { ascending: false })
       .limit(30);
 
@@ -56,10 +61,12 @@ export default function MyTicketsScreen() {
   const formatDate = (d: string) =>
     new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
+  const isFuture = (d: string) => d >= new Date().toISOString().split('T')[0];
+
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
-        title: 'Mes tickets',
+        title: i18n.t('myTickets'),
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
@@ -80,7 +87,7 @@ export default function MyTicketsScreen() {
           {tickets.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="ticket-outline" size={48} color={theme.cardBorder} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Aucun ticket</Text>
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{i18n.t('noTickets')}</Text>
             </View>
           ) : (
             tickets.map((t) => (
@@ -97,17 +104,36 @@ export default function MyTicketsScreen() {
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
                     <Badge
-                      label={t.status === 'valid' ? 'Valide' : t.status === 'used' ? 'Utilisé' : t.status}
+                      label={t.status === 'valid' ? i18n.t('valid') : t.status === 'used' ? i18n.t('used') : t.status}
                       variant={t.status === 'valid' ? 'success' : 'default'}
                       size="sm"
                     />
                     <Text style={[styles.price, { color: colors.brand }]}>{t.price}€</Text>
                   </View>
                 </View>
+              {/* QR code — uniquement pour les événements à venir */}
+              {t.qr_code && isFuture(t.event_date) && t.status === 'valid' && (
+                <TouchableOpacity
+                  style={[styles.qrBtn, { backgroundColor: colors.accentRed + '12' }]}
+                  onPress={() => setQrTicket(t)}
+                >
+                  <Ionicons name="qr-code" size={16} color={colors.accentRed} />
+                  <Text style={[styles.qrBtnText, { color: colors.accentRed }]}>{i18n.t('viewQR')}</Text>
+                </TouchableOpacity>
+              )}
               </Card>
             ))
           )}
         </ScrollView>
+      )}
+
+      {qrTicket && (
+        <TicketQRCode
+          visible={!!qrTicket}
+          onClose={() => setQrTicket(null)}
+          ticket={{ qr_code: qrTicket.qr_code, ticket_type: qrTicket.ticket_type, status: qrTicket.status, price: qrTicket.price } as any}
+          event={{ title: qrTicket.event_title, date: qrTicket.event_date } as any}
+        />
       )}
     </View>
   );
@@ -124,4 +150,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '600' },
   cardSub: { fontSize: 12, marginTop: 2 },
   price: { fontSize: 13, fontWeight: '700' },
+  qrBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingVertical: 10, borderRadius: 10 },
+  qrBtnText: { fontSize: 13, fontWeight: '700' },
 });

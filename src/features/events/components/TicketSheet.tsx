@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePurchaseTicket } from '../hooks/useTickets';
 import { usePayment } from '@/shared/hooks/usePayment';
 import type { Event, TicketType } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 interface TicketSheetProps {
   visible: boolean;
@@ -56,14 +57,14 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
     }
 
     Alert.alert(
-      isFree ? 'Inscription confirmée !' : 'Ticket acheté !',
-      `Votre ticket ${selectedType.toUpperCase()} pour ${event.title} est confirmé.`,
-      [{ text: 'Voir mon ticket', onPress: () => { onClose(); onPurchased(); } }],
+      isFree ? i18n.t('registrationConfirmed') : i18n.t('ticketPurchased'),
+      i18n.t('ticketConfirmedAlert').replace('{{type}}', selectedType.toUpperCase()).replace('{{title}}', event.title),
+      [{ text: i18n.t('viewMyTicket'), onPress: () => { onClose(); onPurchased(); } }],
     );
   };
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Choisir un ticket">
+    <BottomSheet visible={visible} onClose={onClose} title={i18n.t('chooseTicket')}>
       <View style={styles.content}>
         {/* Event summary */}
         <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
@@ -84,13 +85,13 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
           <View style={[styles.soldOutCard, { backgroundColor: colors.brandLight }]}>
             <Ionicons name="close-circle" size={20} color={colors.brand} />
             <Text style={[styles.soldOutText, { color: colors.brand }]}>
-              Événement complet — liste d'attente bientôt disponible
+              {i18n.t('eventSoldOut')}
             </Text>
           </View>
         ) : (
           <>
             {/* Ticket type selection */}
-            <Text style={[styles.sectionLabel, { color: theme.text }]}>Type de ticket</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text }]}>{i18n.t('ticketType')}</Text>
 
             {/* Standard */}
             <TouchableOpacity
@@ -110,12 +111,12 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
                 <View>
                   <Text style={[styles.ticketTypeLabel, { color: theme.text }]}>Standard</Text>
                   <Text style={[styles.ticketTypeDesc, { color: theme.textSecondary }]}>
-                    Accès à l'événement
+                    {i18n.t('eventAccess')}
                   </Text>
                 </View>
               </View>
               <Text style={[styles.ticketPrice, { color: theme.text }]}>
-                {isFree ? 'Gratuit' : `${event.standard_price}€`}
+                {isFree ? i18n.t('free') : `${event.standard_price}€`}
               </Text>
             </TouchableOpacity>
 
@@ -141,7 +142,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
                       <Badge label="Premium" variant="vip" size="sm" />
                     </View>
                     <Text style={[styles.ticketTypeDesc, { color: theme.textSecondary }]}>
-                      Accès privilégié + cocktails
+                      {i18n.t('vipAccess')}
                     </Text>
                   </View>
                 </View>
@@ -154,8 +155,8 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
             {/* CTA */}
             <Button
               title={user
-                ? (isFree ? "S'inscrire gratuitement" : `Acheter — ${price}€`)
-                : 'Se connecter pour réserver'
+                ? (isFree ? i18n.t('registerFree') : `${i18n.t('buyTicket')} — ${price}€`)
+                : i18n.t('connectToBook')
               }
               onPress={handlePurchase}
               loading={submitting}
@@ -164,7 +165,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
             />
 
             <Text style={[styles.remaining, { color: theme.textSecondary }]}>
-              {event.capacity - event.tickets_sold} place{event.capacity - event.tickets_sold > 1 ? 's' : ''} restante{event.capacity - event.tickets_sold > 1 ? 's' : ''}
+              {event.capacity - event.tickets_sold} {event.capacity - event.tickets_sold > 1 ? i18n.t('spotsLeftPlural') : i18n.t('spotsLeft')}
             </Text>
           </>
         )}

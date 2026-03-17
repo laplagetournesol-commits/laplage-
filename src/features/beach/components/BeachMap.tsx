@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Image,
@@ -7,16 +7,21 @@ import {
   Text,
   StyleSheet,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import type { Sunbed, BeachZone } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// Photo transat.png est en portrait — on affiche toute la photo
-const MAP_WIDTH = SCREEN_WIDTH;
+// Sur web desktop, limiter la largeur pour ne pas avoir une carte géante
+const MAP_WIDTH = Platform.OS === 'web' ? Math.min(SCREEN_WIDTH, 500) : SCREEN_WIDTH;
 const MAP_HEIGHT = MAP_WIDTH * 1.5;
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const REMOTE_MAP_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/transat.png`;
 
 interface SunbedWithZone extends Sunbed {
   zone: BeachZone;
@@ -32,6 +37,11 @@ interface BeachMapProps {
 export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
   const { theme } = useSunMode();
   const scrollRef = useRef<ScrollView>(null);
+  const [useRemote, setUseRemote] = useState(true);
+
+  const mapSource = useRemote
+    ? { uri: REMOTE_MAP_URL }
+    : require('../../../../assets/transat.png');
 
   return (
     <View style={styles.container}>
@@ -40,15 +50,15 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: 'rgba(34, 180, 60, 0.5)', borderWidth: 2, borderColor: 'rgba(34, 180, 60, 0.8)' }]} />
-            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Disponible</Text>
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('available')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: 'rgba(220, 38, 38, 0.5)' }]} />
-            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Réservé</Text>
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('reserved')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.sunYellow }]} />
-            <Text style={[styles.legendText, { color: theme.textSecondary }]}>Sélectionné</Text>
+            <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('selected')}</Text>
           </View>
         </View>
       </View>
@@ -58,7 +68,7 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
         ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        maximumZoomScale={4}
+        maximumZoomScale={Platform.OS === 'web' ? 1 : 4}
         minimumZoomScale={1}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
@@ -66,11 +76,12 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
         centerContent
       >
         <View style={styles.mapContainer}>
-          {/* Photo pleine — PAS d'overlay */}
+          {/* Photo chargée depuis Supabase Storage (fallback local) */}
           <Image
-            source={require('../../../../assets/transat.png')}
+            source={mapSource}
             style={styles.mapImage}
-            resizeMode="cover"
+            resizeMode="contain"
+            onError={() => setUseRemote(false)}
           />
 
           {/* Zones cliquables transparentes sur la photo */}
@@ -112,7 +123,7 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
       <View style={[styles.zoomHint, { backgroundColor: theme.card + 'DD' }]}>
         <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
         <Text style={[styles.zoomHintText, { color: theme.textSecondary }]}>
-          Pincez pour zoomer • Touchez un transat
+          {i18n.t('zoomHint')}
         </Text>
       </View>
     </View>

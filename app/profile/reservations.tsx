@@ -10,6 +10,8 @@ import { Badge } from '@/shared/ui/Badge';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
+import { i18n } from '@/shared/i18n';
 
 interface Reservation {
   id: string;
@@ -27,14 +29,16 @@ interface Reservation {
   guest_count?: number;
 }
 
-const STATUS_BADGE: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
-  pending: { label: 'En attente', variant: 'default' },
-  confirmed: { label: 'Confirmé', variant: 'success' },
-  checked_in: { label: 'Check-in', variant: 'warning' },
-  completed: { label: 'Terminé', variant: 'default' },
-  cancelled: { label: 'Annulé', variant: 'error' },
-  no_show: { label: 'No-show', variant: 'error' },
-};
+function getStatusBadge(): Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> {
+  return {
+    pending: { label: i18n.t('statusPending'), variant: 'default' },
+    confirmed: { label: i18n.t('statusConfirmed'), variant: 'success' },
+    checked_in: { label: i18n.t('statusCheckedIn'), variant: 'warning' },
+    completed: { label: i18n.t('statusCompleted'), variant: 'default' },
+    cancelled: { label: i18n.t('statusCancelled'), variant: 'error' },
+    no_show: { label: i18n.t('statusNoShow'), variant: 'error' },
+  };
+}
 
 function isModifiable(dateStr: string): boolean {
   const reservationDate = new Date(dateStr + 'T00:00:00');
@@ -61,18 +65,22 @@ export default function MyReservationsScreen() {
   const fetchReservations = async () => {
     if (!user) return;
 
+    const today = new Date().toISOString().split('T')[0];
+
     const [beachRes, restoRes] = await Promise.all([
       supabase
         .from('beach_reservations')
         .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, qr_code, sunbed:sunbeds!inner(label, zone:beach_zones!inner(name))')
         .eq('user_id', user.id)
-        .order('date', { ascending: false })
+        .gte('date', today)
+        .order('date', { ascending: true })
         .limit(30),
       supabase
         .from('restaurant_reservations')
         .select('id, date, status, deposit_amount, time_slot, guest_count, table_id, qr_code, table:restaurant_tables!inner(label, zone:restaurant_zones!inner(name))')
         .eq('user_id', user.id)
-        .order('date', { ascending: false })
+        .gte('date', today)
+        .order('date', { ascending: true })
         .limit(30),
     ]);
 
@@ -117,11 +125,46 @@ export default function MyReservationsScreen() {
     setRefreshing(false);
   };
 
+  const handleCancel = (reservation: Reservation) => {
+    Alert.alert(
+      i18n.t('cancelReservation'),
+      i18n.t('cancelConfirm'),
+      [
+        { text: i18n.t('no'), style: 'cancel' },
+        {
+          text: i18n.t('yesCancel'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Libérer l'empreinte CB si restaurant avec dépôt
+              if (reservation.type === 'restaurant' && reservation.deposit_amount && reservation.deposit_amount > 0) {
+                await apiCall('/api/payments/cancel-hold', { reservationId: reservation.id }).catch(() => {});
+              }
+
+              const table = reservation.type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+              const { error } = await supabase
+                .from(table)
+                .update({ status: 'cancelled' })
+                .eq('id', reservation.id);
+
+              if (error) throw error;
+
+              Alert.alert(i18n.t('reservationCancelled'), i18n.t('reservationCancelledDesc'));
+              fetchReservations();
+            } catch (err: any) {
+              Alert.alert(i18n.t('error'), err.message ?? i18n.t('impossibleCancel'));
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleModify = (reservation: Reservation) => {
     if (!isModifiable(reservation.date)) {
       Alert.alert(
-        'Modification impossible',
-        'Les réservations ne sont modifiables que jusqu\'à 24h avant la date prévue.',
+        i18n.t('modifyImpossible'),
+        i18n.t('modifyImpossibleDesc'),
       );
       return;
     }
@@ -139,7 +182,7 @@ export default function MyReservationsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
-        title: 'Mes réservations',
+        title: i18n.t('myReservations'),
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
@@ -155,10 +198,11 @@ export default function MyReservationsScreen() {
           {reservations.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={48} color={theme.cardBorder} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Aucune réservation</Text>
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{i18n.t('noReservations')}</Text>
             </View>
           ) : (
             reservations.map((r) => {
+              const STATUS_BADGE = getStatusBadge();
               const badge = STATUS_BADGE[r.status] ?? { label: r.status, variant: 'default' as const };
               const future = isFuture(r.date);
               const canModify = future && isModifiable(r.date) && (r.status === 'confirmed' || r.status === 'pending');
@@ -176,10 +220,10 @@ export default function MyReservationsScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.cardTitle, { color: theme.text }]}>
-                        {r.type === 'beach' ? 'Transat' : 'Table'} {r.label}
+                        {r.type === 'beach' ? i18n.t('sunbed') : i18n.t('table')} {r.label}
                       </Text>
                       <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
-                        {r.zone} • {formatDate(r.date)}{r.time_slot ? ` • ${r.time_slot === 'lunch' ? 'Déjeuner' : 'Dîner'}` : ''}
+                        {r.zone} • {formatDate(r.date)}{r.time_slot ? ` • ${r.time_slot === 'lunch' ? i18n.t('lunchService') : i18n.t('dinnerService')}` : ''}
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -187,40 +231,49 @@ export default function MyReservationsScreen() {
                       {r.total_price != null && (
                         <Text style={[styles.price, { color: colors.brand }]}>{r.total_price}€</Text>
                       )}
-                      {r.deposit_amount != null && r.total_price == null && (
-                        <Text style={[styles.price, { color: theme.textSecondary }]}>{r.deposit_amount}€ acompte</Text>
+                      {r.deposit_amount != null && r.deposit_amount > 0 && r.total_price == null && (
+                        <Text style={[styles.price, { color: theme.textSecondary }]}>{r.deposit_amount}€ {i18n.t('deposit')}</Text>
                       )}
                     </View>
                   </View>
 
-                  {/* Bouton QR code */}
-                  {r.qr_code && (r.status === 'confirmed' || r.status === 'pending' || r.status === 'checked_in') && (
+                  {/* Bouton QR code — uniquement pour les réservations à venir */}
+                  {r.qr_code && future && (r.status === 'confirmed' || r.status === 'pending' || r.status === 'checked_in') && (
                     <TouchableOpacity
                       style={[styles.qrBtn, { backgroundColor: (r.type === 'beach' ? colors.terracotta : colors.deepSea) + '12' }]}
                       onPress={() => setQrReservation(r)}
                     >
                       <Ionicons name="qr-code" size={16} color={r.type === 'beach' ? colors.terracotta : colors.deepSea} />
                       <Text style={[styles.qrBtnText, { color: r.type === 'beach' ? colors.terracotta : colors.deepSea }]}>
-                        Voir mon QR code
+                        {i18n.t('viewQR')}
                       </Text>
                     </TouchableOpacity>
                   )}
 
-                  {/* Bouton modifier ou mention non modifiable */}
+                  {/* Boutons modifier / annuler ou mention non modifiable */}
                   {canModify && (
-                    <TouchableOpacity
-                      style={[styles.modifyBtn, { borderColor: theme.cardBorder }]}
-                      onPress={() => handleModify(r)}
-                    >
-                      <Ionicons name="pencil" size={14} color={theme.accent} />
-                      <Text style={[styles.modifyBtnText, { color: theme.accent }]}>Modifier la réservation</Text>
-                    </TouchableOpacity>
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity
+                        style={[styles.modifyBtn, { borderColor: theme.cardBorder, flex: 1 }]}
+                        onPress={() => handleModify(r)}
+                      >
+                        <Ionicons name="pencil" size={14} color={theme.accent} />
+                        <Text style={[styles.modifyBtnText, { color: theme.accent }]}>{i18n.t('modify')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modifyBtn, { borderColor: 'rgba(220,38,38,0.3)', flex: 1 }]}
+                        onPress={() => handleCancel(r)}
+                      >
+                        <Ionicons name="close-circle-outline" size={14} color="#dc2626" />
+                        <Text style={[styles.modifyBtnText, { color: '#dc2626' }]}>{i18n.t('cancel')}</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
                   {showLocked && (
                     <View style={styles.lockedRow}>
                       <Ionicons name="lock-closed" size={12} color={theme.textSecondary} />
                       <Text style={[styles.lockedText, { color: theme.textSecondary }]}>
-                        Non modifiable (moins de 24h)
+                        {i18n.t('notModifiableCancellable')}
                       </Text>
                     </View>
                   )}
@@ -238,23 +291,23 @@ export default function MyReservationsScreen() {
           onClose={() => setQrReservation(null)}
           qrCode={qrReservation.qr_code!}
           type={qrReservation.type}
-          title={`${qrReservation.type === 'beach' ? 'Transat' : 'Table'} ${qrReservation.label}`}
+          title={`${qrReservation.type === 'beach' ? i18n.t('sunbed') : i18n.t('table')} ${qrReservation.label}`}
           subtitle={qrReservation.zone}
           details={[
-            { label: 'Date', value: formatDate(qrReservation.date), icon: 'calendar-outline' },
+            { label: i18n.t('date'), value: formatDate(qrReservation.date), icon: 'calendar-outline' },
             ...(qrReservation.time_slot ? [{
-              label: 'Service',
-              value: qrReservation.time_slot === 'lunch' ? 'Déjeuner' : 'Dîner',
+              label: i18n.t('service'),
+              value: qrReservation.time_slot === 'lunch' ? i18n.t('lunchService') : i18n.t('dinnerService'),
               icon: 'time-outline' as keyof typeof Ionicons.glyphMap,
             }] : []),
             ...(qrReservation.type === 'beach' ? [{
-              label: 'Horaires',
-              value: '10h00 - 19h00',
+              label: i18n.t('schedule'),
+              value: i18n.t('beachHours'),
               icon: 'sunny-outline' as keyof typeof Ionicons.glyphMap,
             }] : []),
-            { label: 'Zone', value: qrReservation.zone, icon: 'location-outline' },
+            { label: i18n.t('zone'), value: qrReservation.zone, icon: 'location-outline' },
             ...(qrReservation.guest_count ? [{
-              label: 'Personnes',
+              label: i18n.t('persons'),
               value: `${qrReservation.guest_count}`,
               icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
             }] : []),
@@ -289,6 +342,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   modifyBtnText: { fontSize: 13, fontWeight: '600' },
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   lockedRow: {
     flexDirection: 'row',
     alignItems: 'center',

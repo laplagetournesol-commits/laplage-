@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import type { BeachZoneType } from '@/shared/types';
 
-export type PricingCategory = 'transat' | 'transat_front_row' | 'bed';
+export type PricingCategory = 'transat' | 'transat_front_row' | 'bed' | 'chaise_longue';
 
 /** Mapping zone BDD → catégorie de tarification */
 export function zoneToPricingCategory(zoneType: BeachZoneType): PricingCategory {
@@ -13,6 +13,8 @@ export function zoneToPricingCategory(zoneType: BeachZoneType): PricingCategory 
       return 'transat_front_row';
     case 'vip_cabana':
       return 'bed';
+    case 'chaise_longue':
+      return 'chaise_longue';
   }
 }
 
@@ -24,7 +26,9 @@ export function pricingCategoryLabel(category: PricingCategory): string {
     case 'transat_front_row':
       return 'Transat 1ère rangée';
     case 'bed':
-      return 'Lit balinais';
+      return 'Bed';
+    case 'chaise_longue':
+      return 'Chaise longue';
   }
 }
 

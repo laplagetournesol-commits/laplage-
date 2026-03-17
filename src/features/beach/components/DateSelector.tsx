@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
+import { i18n } from '@/shared/i18n';
 
 interface DateSelectorProps {
   selectedDate: string;
@@ -10,8 +11,8 @@ interface DateSelectorProps {
 
 function getNext14Days(): { date: string; dayName: string; dayNum: string; month: string; isToday: boolean }[] {
   const days: ReturnType<typeof getNext14Days> = [];
-  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-  const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+  const dayNames = [i18n.t('daySun'), i18n.t('dayMon'), i18n.t('dayTue'), i18n.t('dayWed'), i18n.t('dayThu'), i18n.t('dayFri'), i18n.t('daySat')];
+  const monthNames = [i18n.t('monthJan'), i18n.t('monthFeb'), i18n.t('monthMar'), i18n.t('monthApr'), i18n.t('monthMay'), i18n.t('monthJun'), i18n.t('monthJul'), i18n.t('monthAug'), i18n.t('monthSep'), i18n.t('monthOct'), i18n.t('monthNov'), i18n.t('monthDec')];
 
   for (let i = 0; i < 14; i++) {
     const d = new Date();
@@ -58,7 +59,7 @@ export function DateSelector({ selectedDate, onSelect }: DateSelectorProps) {
                 { color: isSelected ? colors.white : theme.textSecondary },
               ]}
             >
-              {day.isToday ? "Auj." : day.dayName}
+              {day.isToday ? i18n.t('todayShort') : day.dayName}
             </Text>
             <Text
               style={[

@@ -17,6 +17,7 @@ import { colors } from '@/shared/theme/colors';
 import { Badge } from '@/shared/ui/Badge';
 import { Card } from '@/shared/ui/Card';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 
 type TabType = 'beach' | 'restaurant';
 
@@ -127,10 +128,20 @@ export default function ReservationsScreen() {
       onPress: () => {
         Alert.alert(
           'Confirmer l\'annulation',
-          `Annuler la réservation de ${r.clientName} ?`,
+          `Annuler la réservation de ${r.clientName} ? L'empreinte CB sera libérée.`,
           [
             { text: 'Non', style: 'cancel' },
-            { text: 'Oui, annuler', style: 'destructive', onPress: () => updateStatus(r.id, 'cancelled') },
+            {
+              text: 'Oui, annuler',
+              style: 'destructive',
+              onPress: async () => {
+                // Libérer l'empreinte CB Stripe si restaurant
+                if (tab === 'restaurant') {
+                  await apiCall('/api/payments/cancel-hold', { reservationId: r.id }).catch(() => {});
+                }
+                updateStatus(r.id, 'cancelled');
+              },
+            },
           ],
         );
       },

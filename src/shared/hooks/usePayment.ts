@@ -35,7 +35,6 @@ export function usePayment() {
 
       if (payError) {
         if (payError.code === 'Canceled') {
-          // L'utilisateur a annulé — pas d'alerte
           return { success: false };
         }
         Alert.alert('Erreur de paiement', payError.message);

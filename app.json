@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lestournesols.app",
-      "buildNumber": "7"
+      "buildNumber": "10"
     },
     "android": {
       "adaptiveIcon": {
@@ -37,6 +37,7 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
+      "expo-apple-authentication",
       "expo-localization",
       [
         "expo-notifications",

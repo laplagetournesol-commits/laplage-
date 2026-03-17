@@ -29,7 +29,7 @@ export const translations = {
 
     // Onboarding
     onboarding1Title: 'Bienvenue aux Tournesols',
-    onboarding1Subtitle: 'Votre beach club d\'exception à Marbella',
+    onboarding1Subtitle: 'Votre beach club d\'exception à Estepona',
     onboarding2Title: 'Réservez en 3 clics',
     onboarding2Subtitle: 'Transat, restaurant ou événement — tout depuis votre poche',
     onboarding3Title: 'Vivez l\'expérience',
@@ -51,6 +51,58 @@ export const translations = {
     shopSubtitle: 'Articles de plage',
     shopComingSoon: 'Bientôt disponible',
     shopComingSoonDesc: 'Notre boutique ouvrira très prochainement avec des articles exclusifs Les Tournesols.',
+
+    // Booking common
+    bookingConfirmed: 'Réservation confirmée !',
+    bookYourTable: 'Réservez votre table',
+    fullForService: 'Complet pour ce service',
+    spotsRemaining: 'places restantes',
+    full: 'Complet',
+    freeCancellation: 'Annulation gratuite jusqu\'à 24h avant',
+    reserveDeposit: 'Réserver',
+    chooseLocation: 'Choisissez un emplacement',
+    confirmation: 'Confirmation',
+    connectToBook: 'Se connecter pour réserver',
+    loadingBeach: 'Chargement de la plage...',
+    loadingEvents: 'Chargement des événements...',
+    codeRequired: 'Code requis',
+    viewQR: 'Voir mon QR code',
+    modifyReservation: 'Modifier la réservation',
+    notModifiable: 'Non modifiable (moins de 24h)',
+    modifyImpossible: 'Modification impossible',
+    modifyImpossibleDesc: 'Les réservations ne sont modifiables que jusqu\'à 24h avant la date prévue.',
+    dinnerWeekendOnly: 'Service du soir uniquement le week-end',
+    lunch: 'Midi',
+    dinner: 'Soir',
+    zoomHint: 'Pincez pour zoomer • Touchez un transat',
+
+    // Account
+    deleteAccount: 'Supprimer mon compte',
+    deleteAccountTitle: 'Supprimer mon compte',
+    deleteAccountDesc: 'Cette action est irréversible. Toutes vos données personnelles, réservations et historique seront définitivement supprimés.',
+    deleteAccountConfirm: 'Êtes-vous vraiment sûr ? Cette action ne peut pas être annulée.',
+    deleteForever: 'Supprimer définitivement',
+    yesDelete: 'Oui, supprimer',
+    noCancel: 'Non, annuler',
+    accountDeleted: 'Compte supprimé',
+    accountDeletedDesc: 'Votre compte et vos données ont été définitivement supprimés.',
+    deleteError: 'Une erreur est survenue. Contactez privacy@laplagetournesols.com pour demander la suppression manuelle.',
+    fillAllFields: 'Veuillez remplir tous les champs',
+    passwordsDontMatch: 'Les mots de passe ne correspondent pas',
+    passwordTooShort: 'Le mot de passe doit contenir au moins 6 caractères',
+    acceptTermsRequired: 'Veuillez accepter les conditions générales',
+    acceptTerms: 'J\'accepte les',
+    termsAnd: 'et la',
+    privacyPolicy: 'Politique de confidentialité',
+    savedInfo: 'Vos informations ont été mises à jour.',
+    helpTitle: 'Comment pouvons-nous vous aider ?',
+    helpSubtitle: 'Notre équipe est disponible pour répondre à toutes vos questions.',
+    noNotifications: 'Aucune notification',
+    noReservations: 'Aucune réservation',
+    noTickets: 'Aucun ticket',
+    alreadyHaveAccount: 'Déjà un compte ?',
+    joinClub: 'Rejoignez le club',
+    createYourAccount: 'Créez votre compte Les Tournesols',
 
     // Home
     greeting: {
@@ -176,6 +228,187 @@ export const translations = {
     scanQR: 'Scanner QR',
     todayReservations: 'Réservations du jour',
     version: 'Les Tournesols v1.0.0',
+
+    // Beach screen
+    theBeach: 'La Plage',
+    chooseSunbed: 'Choisissez votre transat',
+    dispoCount: 'dispo',
+    backToSuggestions: 'Retour aux suggestions',
+
+    // Restaurant screen
+    date: 'Date',
+    time: 'Heure',
+    location: 'Emplacement',
+    guestCount: 'Nombre de convives',
+    cardDeposit: 'Empreinte carte bleue',
+    cardDepositDesc: 'Débitée uniquement en cas de no-show',
+    specialRequestsRestaurant: 'Allergies, anniversaire, chaise bébé...',
+    reserveWithDeposit: 'Réserver — {{amount}}€ d\'empreinte',
+    zone: 'Zone',
+    guests: 'Convives',
+    requests: 'Demandes',
+    depositCB: 'Empreinte CB',
+    noShowWarning: 'No-show : empreinte débitée ({{amount}}€)',
+    confirmReservation: 'Confirmer la réservation',
+    tablePerfect: 'Parfait !',
+    tableReservedAlert: 'Votre table en {{zone}} est réservée pour le {{date}} à {{time}}.',
+
+    // Gallery screen
+    all: 'Tout',
+    beach: 'Plage',
+    restaurant: 'Restaurant',
+    details: 'Détails',
+
+    // Events screen
+    events: 'Événements',
+    allFilter: 'Tous',
+    dinnerFilter: 'Dîner',
+    specialFilter: 'Spécial',
+    privateFilter: 'Privé',
+    noEventsInCategory: 'Aucun événement à venir dans cette catégorie',
+    onInvitation: 'Sur invitation',
+    free: 'Gratuit',
+    filledPercent: '{{percent}}% rempli',
+
+    // Mood screen
+    moodChill: 'Chill',
+    moodChillDesc: 'Détente, tranquillité, zen',
+    moodFiesta: 'Fiesta',
+    moodFiestaDesc: 'Musique, cocktails, ambiance',
+    moodRomantic: 'Romantique',
+    moodRomanticDesc: 'Dîner à deux, sunset, champagne',
+    moodFamily: 'Famille',
+    moodFamilyDesc: 'Enfants bienvenus, activités',
+    moodBusiness: 'Business',
+    moodBusinessDesc: 'Networking, calme, Wi-Fi',
+    reserveZone: 'Réserver — Zone {{zone}}',
+    reserveAt: 'Réserver — {{zone}}',
+
+    // Live screen
+    camerasComingSoon: 'Les caméras seront bientôt disponibles pour visualiser la plage en direct.',
+
+    // Arrival screen
+    yourOrder: 'Votre commande',
+    total: 'Total',
+
+    // Help screen
+    helpAndContact: 'Aide & Contact',
+    phone: 'Téléphone',
+    address: 'Adresse',
+    hours: 'Horaires',
+
+    // Notifications
+    justNow: 'À l\'instant',
+    hoursAgo: 'Il y a {{count}}h',
+
+    // Personal Info screen
+    saved: 'Enregistré',
+    phoneLabel: 'Téléphone',
+
+    // Reservations
+    cancelReservation: 'Annuler la réservation',
+    cancelConfirm: 'Êtes-vous sûr de vouloir annuler cette réservation ?',
+    no: 'Non',
+    yesCancel: 'Oui, annuler',
+    reservationCancelled: 'Réservation annulée',
+    reservationCancelledDesc: 'Votre réservation a bien été annulée.',
+    impossibleCancel: 'Impossible d\'annuler la réservation',
+    table: 'Table',
+    lunchService: 'Déjeuner',
+    dinnerService: 'Dîner',
+    deposit: 'acompte',
+    modify: 'Modifier',
+    notModifiableCancellable: 'Non modifiable / non annulable (moins de 24h)',
+    service: 'Service',
+    beachHours: '10h00 - 19h00',
+    persons: 'Personnes',
+
+    // Tickets
+    valid: 'Valide',
+    used: 'Utilisé',
+
+    // SunbedSheet
+    sunbedLabel: 'Transat {{label}}',
+    optionsExtras: 'Options & Extras',
+    parasolIncluded: 'Parasol + table inclus',
+    chooseOptions: 'Choisir les options →',
+    options: 'Options',
+    confirmBooking: 'Confirmer la réservation',
+    summary: 'Récapitulatif',
+    schedule: 'Horaires',
+    beachSchedule: '10h00 — 19h00',
+    amountToPay: 'Montant à régler',
+    bookingConditions: 'Conditions de réservation',
+    modifiableUpTo24h: 'Modifiable jusqu\'à 24h avant',
+    nonCancellable: 'Non annulable, non remboursable',
+    noShowLost: 'No-show : montant total perdu',
+    reserveAmount: 'Réserver — {{amount}}€',
+    sunbedReservedAlert: 'Votre transat {{label}} est réservé pour le {{date}}.',
+    great: 'Super !',
+
+    // TicketSheet
+    chooseTicket: 'Choisir un ticket',
+    eventSoldOut: 'Événement complet — liste d\'attente bientôt disponible',
+    ticketType: 'Type de ticket',
+    eventAccess: 'Accès à l\'événement',
+    vipAccess: 'Accès privilégié + cocktails',
+    registerFree: 'S\'inscrire gratuitement',
+    buyAmount: 'Acheter — {{amount}}€',
+    spotsLeft: 'place restante',
+    spotsLeftPlural: 'places restantes',
+    registrationConfirmed: 'Inscription confirmée !',
+    ticketPurchased: 'Ticket acheté !',
+    ticketConfirmedAlert: 'Votre ticket {{type}} pour {{title}} est confirmé.',
+    viewMyTicket: 'Voir mon ticket',
+
+    // SecretCodeModal
+    secretEvent: 'Événement secret',
+    secretEventDesc: 'Cet événement est réservé aux initiés. Entrez votre code d\'accès pour découvrir les détails.',
+    accessCode: 'Code d\'accès',
+    enterAccessCode: 'Entrez le code d\'accès',
+    incorrectCode: 'Code incorrect',
+    verifyCode: 'Vérifier le code',
+
+    // TicketQRCode
+    presentQR: 'Présentez ce QR code à l\'entrée',
+    timeSlot: 'Horaire',
+    paid: 'Payé',
+    ref: 'Réf.',
+    statusValid: 'Valide',
+    statusUsed: 'Utilisé',
+    statusCancelled: 'Annulé',
+    statusRefunded: 'Remboursé',
+
+    // Event detail
+    inProgress: 'En cours',
+    capacity: 'Capacité',
+    places: 'places',
+    lineUp: 'Line-up',
+    pricing: 'Tarifs',
+    myTicketType: 'Mon ticket {{type}}',
+    tapForQR: 'Touchez pour voir le QR code',
+
+    // DateSelector
+    todayShort: 'Auj.',
+    daySun: 'Dim', dayMon: 'Lun', dayTue: 'Mar', dayWed: 'Mer', dayThu: 'Jeu', dayFri: 'Ven', daySat: 'Sam',
+    monthJan: 'Jan', monthFeb: 'Fév', monthMar: 'Mar', monthApr: 'Avr', monthMay: 'Mai', monthJun: 'Juin',
+    monthJul: 'Juil', monthAug: 'Août', monthSep: 'Sep', monthOct: 'Oct', monthNov: 'Nov', monthDec: 'Déc',
+
+    // Reservations screen (status badges)
+    statusPending: 'En attente',
+    statusConfirmed: 'Confirmé',
+    statusCheckedIn: 'Check-in',
+    statusCompleted: 'Terminé',
+    statusNoShow: 'No-show',
+
+    // Live cameras
+    crowdCalme: 'Calme',
+    crowdModere: 'Modéré',
+    crowdAnime: 'Animé',
+
+    // Event categories
+    categoryPrivate: 'Privé',
+    categorySpecial: 'Spécial',
   },
 
   es: {
@@ -208,7 +441,7 @@ export const translations = {
 
     // Onboarding
     onboarding1Title: 'Bienvenido a Les Tournesols',
-    onboarding1Subtitle: 'Tu beach club de excepción en Marbella',
+    onboarding1Subtitle: 'Tu beach club de excepción en Estepona',
     onboarding2Title: 'Reserva en 3 clics',
     onboarding2Subtitle: 'Tumbona, restaurante o evento — todo desde tu bolsillo',
     onboarding3Title: 'Vive la experiencia',
@@ -221,8 +454,67 @@ export const translations = {
     tabHome: 'Inicio',
     tabBeach: 'Playa',
     tabRestaurant: 'Restaurante',
+    tabShop: 'Tienda',
     tabEvents: 'Eventos',
     tabProfile: 'Perfil',
+
+    // Shop
+    discoverBeach: 'Descubrir',
+    shopSubtitle: 'Artículos de playa',
+    shopComingSoon: 'Próximamente',
+    shopComingSoonDesc: 'Nuestra tienda abrirá muy pronto con artículos exclusivos Les Tournesols.',
+
+    // Booking
+    bookingConfirmed: '¡Reserva confirmada!',
+    bookYourTable: 'Reserva tu mesa',
+    fullForService: 'Completo para este servicio',
+    spotsRemaining: 'plazas disponibles',
+    full: 'Completo',
+    freeCancellation: 'Cancelación gratuita hasta 24h antes',
+    reserveDeposit: 'Reservar',
+    chooseLocation: 'Elige una ubicación',
+    confirmation: 'Confirmación',
+    connectToBook: 'Inicia sesión para reservar',
+    loadingBeach: 'Cargando la playa...',
+    loadingEvents: 'Cargando eventos...',
+    codeRequired: 'Código requerido',
+    viewQR: 'Ver mi código QR',
+    modifyReservation: 'Modificar la reserva',
+    notModifiable: 'No modificable (menos de 24h)',
+    modifyImpossible: 'Modificación imposible',
+    modifyImpossibleDesc: 'Las reservas solo se pueden modificar hasta 24h antes.',
+    dinnerWeekendOnly: 'Servicio de cena solo los fines de semana',
+    lunch: 'Almuerzo',
+    dinner: 'Cena',
+    zoomHint: 'Pellizca para hacer zoom • Toca una tumbona',
+
+    // Account
+    deleteAccount: 'Eliminar mi cuenta',
+    deleteAccountTitle: 'Eliminar mi cuenta',
+    deleteAccountDesc: 'Esta acción es irreversible. Todos tus datos personales, reservas e historial serán eliminados definitivamente.',
+    deleteAccountConfirm: '¿Estás realmente seguro? Esta acción no se puede deshacer.',
+    deleteForever: 'Eliminar definitivamente',
+    yesDelete: 'Sí, eliminar',
+    noCancel: 'No, cancelar',
+    accountDeleted: 'Cuenta eliminada',
+    accountDeletedDesc: 'Tu cuenta y tus datos han sido eliminados definitivamente.',
+    deleteError: 'Se ha producido un error. Contacta privacy@laplagetournesols.com para solicitar la eliminación manual.',
+    fillAllFields: 'Rellena todos los campos',
+    passwordsDontMatch: 'Las contraseñas no coinciden',
+    passwordTooShort: 'La contraseña debe tener al menos 6 caracteres',
+    acceptTermsRequired: 'Debes aceptar las condiciones generales',
+    acceptTerms: 'Acepto las',
+    termsAnd: 'y la',
+    privacyPolicy: 'Política de privacidad',
+    savedInfo: 'Tu información ha sido actualizada.',
+    helpTitle: '¿Cómo podemos ayudarte?',
+    helpSubtitle: 'Nuestro equipo está disponible para responder todas tus preguntas.',
+    noNotifications: 'Sin notificaciones',
+    noReservations: 'Sin reservas',
+    noTickets: 'Sin entradas',
+    alreadyHaveAccount: '¿Ya tienes cuenta?',
+    joinClub: 'Únete al club',
+    createYourAccount: 'Crea tu cuenta Les Tournesols',
 
     // Home
     greeting: {
@@ -348,6 +640,187 @@ export const translations = {
     scanQR: 'Escanear QR',
     todayReservations: 'Reservas del día',
     version: 'Les Tournesols v1.0.0',
+
+    // Beach screen
+    theBeach: 'La Playa',
+    chooseSunbed: 'Elige tu tumbona',
+    dispoCount: 'disp.',
+    backToSuggestions: 'Volver a sugerencias',
+
+    // Restaurant screen
+    date: 'Fecha',
+    time: 'Hora',
+    location: 'Ubicación',
+    guestCount: 'Número de comensales',
+    cardDeposit: 'Preautorización de tarjeta',
+    cardDepositDesc: 'Solo se cobra en caso de no-show',
+    specialRequestsRestaurant: 'Alergias, cumpleaños, silla de bebé...',
+    reserveWithDeposit: 'Reservar — {{amount}}€ de preautorización',
+    zone: 'Zona',
+    guests: 'Comensales',
+    requests: 'Peticiones',
+    depositCB: 'Preautorización',
+    noShowWarning: 'No-show: preautorización cobrada ({{amount}}€)',
+    confirmReservation: 'Confirmar la reserva',
+    tablePerfect: '¡Perfecto!',
+    tableReservedAlert: 'Tu mesa en {{zone}} está reservada para el {{date}} a las {{time}}.',
+
+    // Gallery screen
+    all: 'Todo',
+    beach: 'Playa',
+    restaurant: 'Restaurante',
+    details: 'Detalles',
+
+    // Events screen
+    events: 'Eventos',
+    allFilter: 'Todos',
+    dinnerFilter: 'Cena',
+    specialFilter: 'Especial',
+    privateFilter: 'Privado',
+    noEventsInCategory: 'No hay eventos próximos en esta categoría',
+    onInvitation: 'Por invitación',
+    free: 'Gratis',
+    filledPercent: '{{percent}}% lleno',
+
+    // Mood screen
+    moodChill: 'Chill',
+    moodChillDesc: 'Relax, tranquilidad, zen',
+    moodFiesta: 'Fiesta',
+    moodFiestaDesc: 'Música, cócteles, ambiente',
+    moodRomantic: 'Romántico',
+    moodRomanticDesc: 'Cena para dos, sunset, champán',
+    moodFamily: 'Familia',
+    moodFamilyDesc: 'Niños bienvenidos, actividades',
+    moodBusiness: 'Business',
+    moodBusinessDesc: 'Networking, calma, Wi-Fi',
+    reserveZone: 'Reservar — Zona {{zone}}',
+    reserveAt: 'Reservar — {{zone}}',
+
+    // Live screen
+    camerasComingSoon: 'Las cámaras estarán disponibles pronto para ver la playa en directo.',
+
+    // Arrival screen
+    yourOrder: 'Tu pedido',
+    total: 'Total',
+
+    // Help screen
+    helpAndContact: 'Ayuda & Contacto',
+    phone: 'Teléfono',
+    address: 'Dirección',
+    hours: 'Horarios',
+
+    // Notifications
+    justNow: 'Ahora mismo',
+    hoursAgo: 'Hace {{count}}h',
+
+    // Personal Info screen
+    saved: 'Guardado',
+    phoneLabel: 'Teléfono',
+
+    // Reservations
+    cancelReservation: 'Cancelar la reserva',
+    cancelConfirm: '¿Estás seguro de que quieres cancelar esta reserva?',
+    no: 'No',
+    yesCancel: 'Sí, cancelar',
+    reservationCancelled: 'Reserva cancelada',
+    reservationCancelledDesc: 'Tu reserva ha sido cancelada correctamente.',
+    impossibleCancel: 'No se puede cancelar la reserva',
+    table: 'Mesa',
+    lunchService: 'Almuerzo',
+    dinnerService: 'Cena',
+    deposit: 'anticipo',
+    modify: 'Modificar',
+    notModifiableCancellable: 'No modificable / no cancelable (menos de 24h)',
+    service: 'Servicio',
+    beachHours: '10h00 - 19h00',
+    persons: 'Personas',
+
+    // Tickets
+    valid: 'Válido',
+    used: 'Usado',
+
+    // SunbedSheet
+    sunbedLabel: 'Tumbona {{label}}',
+    optionsExtras: 'Opciones y extras',
+    parasolIncluded: 'Sombrilla + mesa incluidos',
+    chooseOptions: 'Elegir opciones →',
+    options: 'Opciones',
+    confirmBooking: 'Confirmar la reserva',
+    summary: 'Resumen',
+    schedule: 'Horario',
+    beachSchedule: '10h00 — 19h00',
+    amountToPay: 'Importe a pagar',
+    bookingConditions: 'Condiciones de reserva',
+    modifiableUpTo24h: 'Modificable hasta 24h antes',
+    nonCancellable: 'No cancelable, no reembolsable',
+    noShowLost: 'No-show: importe total perdido',
+    reserveAmount: 'Reservar — {{amount}}€',
+    sunbedReservedAlert: 'Tu tumbona {{label}} está reservada para el {{date}}.',
+    great: '¡Genial!',
+
+    // TicketSheet
+    chooseTicket: 'Elegir entrada',
+    eventSoldOut: 'Evento completo — lista de espera disponible pronto',
+    ticketType: 'Tipo de entrada',
+    eventAccess: 'Acceso al evento',
+    vipAccess: 'Acceso privilegiado + cócteles',
+    registerFree: 'Inscribirse gratis',
+    buyAmount: 'Comprar — {{amount}}€',
+    spotsLeft: 'plaza restante',
+    spotsLeftPlural: 'plazas restantes',
+    registrationConfirmed: '¡Inscripción confirmada!',
+    ticketPurchased: '¡Entrada comprada!',
+    ticketConfirmedAlert: 'Tu entrada {{type}} para {{title}} está confirmada.',
+    viewMyTicket: 'Ver mi entrada',
+
+    // SecretCodeModal
+    secretEvent: 'Evento secreto',
+    secretEventDesc: 'Este evento está reservado a iniciados. Introduce tu código de acceso para descubrir los detalles.',
+    accessCode: 'Código de acceso',
+    enterAccessCode: 'Introduce el código de acceso',
+    incorrectCode: 'Código incorrecto',
+    verifyCode: 'Verificar código',
+
+    // TicketQRCode
+    presentQR: 'Presenta este código QR en la entrada',
+    timeSlot: 'Horario',
+    paid: 'Pagado',
+    ref: 'Ref.',
+    statusValid: 'Válido',
+    statusUsed: 'Usado',
+    statusCancelled: 'Cancelado',
+    statusRefunded: 'Reembolsado',
+
+    // Event detail
+    inProgress: 'En curso',
+    capacity: 'Capacidad',
+    places: 'plazas',
+    lineUp: 'Line-up',
+    pricing: 'Tarifas',
+    myTicketType: 'Mi entrada {{type}}',
+    tapForQR: 'Toca para ver el código QR',
+
+    // DateSelector
+    todayShort: 'Hoy',
+    daySun: 'Dom', dayMon: 'Lun', dayTue: 'Mar', dayWed: 'Mié', dayThu: 'Jue', dayFri: 'Vie', daySat: 'Sáb',
+    monthJan: 'Ene', monthFeb: 'Feb', monthMar: 'Mar', monthApr: 'Abr', monthMay: 'May', monthJun: 'Jun',
+    monthJul: 'Jul', monthAug: 'Ago', monthSep: 'Sep', monthOct: 'Oct', monthNov: 'Nov', monthDec: 'Dic',
+
+    // Reservations screen (status badges)
+    statusPending: 'Pendiente',
+    statusConfirmed: 'Confirmado',
+    statusCheckedIn: 'Check-in',
+    statusCompleted: 'Completado',
+    statusNoShow: 'No-show',
+
+    // Live cameras
+    crowdCalme: 'Tranquilo',
+    crowdModere: 'Moderado',
+    crowdAnime: 'Animado',
+
+    // Event categories
+    categoryPrivate: 'Privado',
+    categorySpecial: 'Especial',
   },
 
   en: {
@@ -380,7 +853,7 @@ export const translations = {
 
     // Onboarding
     onboarding1Title: 'Welcome to Les Tournesols',
-    onboarding1Subtitle: 'Your exceptional beach club in Marbella',
+    onboarding1Subtitle: 'Your exceptional beach club in Estepona',
     onboarding2Title: 'Book in 3 taps',
     onboarding2Subtitle: 'Sunbed, restaurant or event — all from your pocket',
     onboarding3Title: 'Live the experience',
@@ -393,8 +866,67 @@ export const translations = {
     tabHome: 'Home',
     tabBeach: 'Beach',
     tabRestaurant: 'Restaurant',
+    tabShop: 'Shop',
     tabEvents: 'Events',
     tabProfile: 'Profile',
+
+    // Shop
+    discoverBeach: 'Discover',
+    shopSubtitle: 'Beach items',
+    shopComingSoon: 'Coming soon',
+    shopComingSoonDesc: 'Our shop will open very soon with exclusive Les Tournesols items.',
+
+    // Booking
+    bookingConfirmed: 'Booking confirmed!',
+    bookYourTable: 'Book your table',
+    fullForService: 'Full for this service',
+    spotsRemaining: 'spots remaining',
+    full: 'Full',
+    freeCancellation: 'Free cancellation up to 24h before',
+    reserveDeposit: 'Reserve',
+    chooseLocation: 'Choose a location',
+    confirmation: 'Confirmation',
+    connectToBook: 'Log in to book',
+    loadingBeach: 'Loading beach...',
+    loadingEvents: 'Loading events...',
+    codeRequired: 'Code required',
+    viewQR: 'View my QR code',
+    modifyReservation: 'Modify reservation',
+    notModifiable: 'Not modifiable (less than 24h)',
+    modifyImpossible: 'Modification not possible',
+    modifyImpossibleDesc: 'Reservations can only be modified up to 24h before the scheduled date.',
+    dinnerWeekendOnly: 'Dinner service on weekends only',
+    lunch: 'Lunch',
+    dinner: 'Dinner',
+    zoomHint: 'Pinch to zoom • Tap a sunbed',
+
+    // Account
+    deleteAccount: 'Delete my account',
+    deleteAccountTitle: 'Delete my account',
+    deleteAccountDesc: 'This action is irreversible. All your personal data, reservations and history will be permanently deleted.',
+    deleteAccountConfirm: 'Are you really sure? This action cannot be undone.',
+    deleteForever: 'Delete permanently',
+    yesDelete: 'Yes, delete',
+    noCancel: 'No, cancel',
+    accountDeleted: 'Account deleted',
+    accountDeletedDesc: 'Your account and data have been permanently deleted.',
+    deleteError: 'An error occurred. Contact privacy@laplagetournesols.com to request manual deletion.',
+    fillAllFields: 'Please fill in all fields',
+    passwordsDontMatch: 'Passwords do not match',
+    passwordTooShort: 'Password must be at least 6 characters',
+    acceptTermsRequired: 'Please accept the terms and conditions',
+    acceptTerms: 'I accept the',
+    termsAnd: 'and the',
+    privacyPolicy: 'Privacy Policy',
+    savedInfo: 'Your information has been updated.',
+    helpTitle: 'How can we help you?',
+    helpSubtitle: 'Our team is available to answer all your questions.',
+    noNotifications: 'No notifications',
+    noReservations: 'No reservations',
+    noTickets: 'No tickets',
+    alreadyHaveAccount: 'Already have an account?',
+    joinClub: 'Join the club',
+    createYourAccount: 'Create your Les Tournesols account',
 
     // Home
     greeting: {
@@ -520,6 +1052,187 @@ export const translations = {
     scanQR: 'Scan QR',
     todayReservations: 'Today\'s reservations',
     version: 'Les Tournesols v1.0.0',
+
+    // Beach screen
+    theBeach: 'The Beach',
+    chooseSunbed: 'Choose your sunbed',
+    dispoCount: 'avail.',
+    backToSuggestions: 'Back to suggestions',
+
+    // Restaurant screen
+    date: 'Date',
+    time: 'Time',
+    location: 'Location',
+    guestCount: 'Number of guests',
+    cardDeposit: 'Card pre-authorization',
+    cardDepositDesc: 'Only charged in case of no-show',
+    specialRequestsRestaurant: 'Allergies, birthday, baby chair...',
+    reserveWithDeposit: 'Reserve — {{amount}}€ hold',
+    zone: 'Zone',
+    guests: 'Guests',
+    requests: 'Requests',
+    depositCB: 'Card hold',
+    noShowWarning: 'No-show: hold charged ({{amount}}€)',
+    confirmReservation: 'Confirm reservation',
+    tablePerfect: 'Perfect!',
+    tableReservedAlert: 'Your table in {{zone}} is reserved for {{date}} at {{time}}.',
+
+    // Gallery screen
+    all: 'All',
+    beach: 'Beach',
+    restaurant: 'Restaurant',
+    details: 'Details',
+
+    // Events screen
+    events: 'Events',
+    allFilter: 'All',
+    dinnerFilter: 'Dinner',
+    specialFilter: 'Special',
+    privateFilter: 'Private',
+    noEventsInCategory: 'No upcoming events in this category',
+    onInvitation: 'By invitation',
+    free: 'Free',
+    filledPercent: '{{percent}}% filled',
+
+    // Mood screen
+    moodChill: 'Chill',
+    moodChillDesc: 'Relaxation, tranquility, zen',
+    moodFiesta: 'Fiesta',
+    moodFiestaDesc: 'Music, cocktails, vibes',
+    moodRomantic: 'Romantic',
+    moodRomanticDesc: 'Dinner for two, sunset, champagne',
+    moodFamily: 'Family',
+    moodFamilyDesc: 'Kids welcome, activities',
+    moodBusiness: 'Business',
+    moodBusinessDesc: 'Networking, quiet, Wi-Fi',
+    reserveZone: 'Reserve — Zone {{zone}}',
+    reserveAt: 'Reserve — {{zone}}',
+
+    // Live screen
+    camerasComingSoon: 'Cameras will be available soon to view the beach live.',
+
+    // Arrival screen
+    yourOrder: 'Your order',
+    total: 'Total',
+
+    // Help screen
+    helpAndContact: 'Help & Contact',
+    phone: 'Phone',
+    address: 'Address',
+    hours: 'Hours',
+
+    // Notifications
+    justNow: 'Just now',
+    hoursAgo: '{{count}}h ago',
+
+    // Personal Info screen
+    saved: 'Saved',
+    phoneLabel: 'Phone',
+
+    // Reservations
+    cancelReservation: 'Cancel reservation',
+    cancelConfirm: 'Are you sure you want to cancel this reservation?',
+    no: 'No',
+    yesCancel: 'Yes, cancel',
+    reservationCancelled: 'Reservation cancelled',
+    reservationCancelledDesc: 'Your reservation has been successfully cancelled.',
+    impossibleCancel: 'Unable to cancel the reservation',
+    table: 'Table',
+    lunchService: 'Lunch',
+    dinnerService: 'Dinner',
+    deposit: 'deposit',
+    modify: 'Modify',
+    notModifiableCancellable: 'Not modifiable / not cancellable (less than 24h)',
+    service: 'Service',
+    beachHours: '10:00 AM - 7:00 PM',
+    persons: 'Persons',
+
+    // Tickets
+    valid: 'Valid',
+    used: 'Used',
+
+    // SunbedSheet
+    sunbedLabel: 'Sunbed {{label}}',
+    optionsExtras: 'Options & Extras',
+    parasolIncluded: 'Parasol + table included',
+    chooseOptions: 'Choose options →',
+    options: 'Options',
+    confirmBooking: 'Confirm booking',
+    summary: 'Summary',
+    schedule: 'Schedule',
+    beachSchedule: '10:00 AM — 7:00 PM',
+    amountToPay: 'Amount to pay',
+    bookingConditions: 'Booking conditions',
+    modifiableUpTo24h: 'Modifiable up to 24h before',
+    nonCancellable: 'Non-cancellable, non-refundable',
+    noShowLost: 'No-show: full amount lost',
+    reserveAmount: 'Reserve — {{amount}}€',
+    sunbedReservedAlert: 'Your sunbed {{label}} is reserved for {{date}}.',
+    great: 'Great!',
+
+    // TicketSheet
+    chooseTicket: 'Choose a ticket',
+    eventSoldOut: 'Event sold out — waitlist coming soon',
+    ticketType: 'Ticket type',
+    eventAccess: 'Event access',
+    vipAccess: 'Priority access + cocktails',
+    registerFree: 'Register for free',
+    buyAmount: 'Buy — {{amount}}€',
+    spotsLeft: 'spot remaining',
+    spotsLeftPlural: 'spots remaining',
+    registrationConfirmed: 'Registration confirmed!',
+    ticketPurchased: 'Ticket purchased!',
+    ticketConfirmedAlert: 'Your {{type}} ticket for {{title}} is confirmed.',
+    viewMyTicket: 'View my ticket',
+
+    // SecretCodeModal
+    secretEvent: 'Secret event',
+    secretEventDesc: 'This event is reserved for insiders. Enter your access code to discover the details.',
+    accessCode: 'Access code',
+    enterAccessCode: 'Enter the access code',
+    incorrectCode: 'Incorrect code',
+    verifyCode: 'Verify code',
+
+    // TicketQRCode
+    presentQR: 'Present this QR code at the entrance',
+    timeSlot: 'Time',
+    paid: 'Paid',
+    ref: 'Ref.',
+    statusValid: 'Valid',
+    statusUsed: 'Used',
+    statusCancelled: 'Cancelled',
+    statusRefunded: 'Refunded',
+
+    // Event detail
+    inProgress: 'In progress',
+    capacity: 'Capacity',
+    places: 'spots',
+    lineUp: 'Line-up',
+    pricing: 'Pricing',
+    myTicketType: 'My {{type}} ticket',
+    tapForQR: 'Tap to see the QR code',
+
+    // DateSelector
+    todayShort: 'Today',
+    daySun: 'Sun', dayMon: 'Mon', dayTue: 'Tue', dayWed: 'Wed', dayThu: 'Thu', dayFri: 'Fri', daySat: 'Sat',
+    monthJan: 'Jan', monthFeb: 'Feb', monthMar: 'Mar', monthApr: 'Apr', monthMay: 'May', monthJun: 'Jun',
+    monthJul: 'Jul', monthAug: 'Aug', monthSep: 'Sep', monthOct: 'Oct', monthNov: 'Nov', monthDec: 'Dec',
+
+    // Reservations screen (status badges)
+    statusPending: 'Pending',
+    statusConfirmed: 'Confirmed',
+    statusCheckedIn: 'Checked in',
+    statusCompleted: 'Completed',
+    statusNoShow: 'No-show',
+
+    // Live cameras
+    crowdCalme: 'Quiet',
+    crowdModere: 'Moderate',
+    crowdAnime: 'Busy',
+
+    // Event categories
+    categoryPrivate: 'Private',
+    categorySpecial: 'Special',
   },
 } as const;
 

@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
+import { i18n } from '@/shared/i18n';
 
 export default function PrivacyScreen() {
   const { theme } = useSunMode();
@@ -12,7 +13,7 @@ export default function PrivacyScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
-        title: 'Confidentialité',
+        title: i18n.t('privacy'),
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
@@ -29,7 +30,7 @@ export default function PrivacyScreen() {
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>1. Responsable du traitement</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Le responsable du traitement des données est La Plage Royale S.L., Paseo Marítimo, 29602 Marbella, Espagne.{'\n'}Email : privacy@laplageroyale.com
+          Le responsable du traitement des données est Pitch Beach S.L., Sociedad Limitada, dont le siège social est situé à Playa de la Rada, Lote CH18, 29680 Estepona, Málaga, Espagne.{'\n'}Email : privacy@laplagetournesols.com
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>2. Données collectées</Text>
@@ -44,7 +45,7 @@ export default function PrivacyScreen() {
           • Données de géolocalisation (uniquement pour la météo locale){'\n'}
           • Identifiant de notification push{'\n\n'}
           Données de paiement :{'\n'}
-          Les informations bancaires (numéro de carte, date d'expiration) sont collectées et traitées exclusivement par Stripe. La Plage Royale ne stocke jamais vos données bancaires.
+          Les informations bancaires (numéro de carte, date d'expiration) sont collectées et traitées exclusivement par Stripe, certifié PCI DSS. Les Tournesols ne stocke jamais vos données bancaires sur ses serveurs. Stripe traite les prépaiements (transats, chaises longues, tickets événements) et les pré-autorisations bancaires (empreintes de carte pour les réservations restaurant).
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>3. Base légale du traitement</Text>
@@ -98,13 +99,13 @@ export default function PrivacyScreen() {
           • Droit d'opposition{'\n'}
           • Droit à la limitation du traitement{'\n'}
           • Droit de retirer votre consentement à tout moment{'\n\n'}
-          Pour exercer ces droits, contactez-nous à : privacy@laplageroyale.com{'\n'}
+          Pour exercer ces droits, contactez-nous à : privacy@laplagetournesols.com{'\n'}
           Vous disposez également du droit d'introduire une réclamation auprès de l'AEPD (Agencia Española de Protección de Datos).
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>9. Suppression de compte</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
-          Vous pouvez demander la suppression complète de votre compte et de toutes vos données personnelles en envoyant un email à privacy@laplageroyale.com. La suppression sera effective dans un délai maximum de 30 jours.{'\n\n'}Les données soumises à des obligations légales de conservation (transactions financières) seront anonymisées et conservées pour la durée requise par la loi.
+          Vous pouvez demander la suppression complète de votre compte et de toutes vos données personnelles en envoyant un email à privacy@laplagetournesols.com. La suppression sera effective dans un délai maximum de 30 jours.{'\n\n'}Les données soumises à des obligations légales de conservation (transactions financières) seront anonymisées et conservées pour la durée requise par la loi.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.text }]}>10. Mineurs</Text>
@@ -130,8 +131,8 @@ export default function PrivacyScreen() {
         <Text style={[styles.sectionTitle, { color: theme.text }]}>14. Contact DPO</Text>
         <Text style={[styles.body, { color: theme.textSecondary }]}>
           Pour toute question relative à la protection de vos données :{'\n'}
-          Email : privacy@laplageroyale.com{'\n'}
-          La Plage Royale S.L., Paseo Marítimo, 29602 Marbella, Espagne
+          Email : privacy@laplagetournesols.com{'\n'}
+          Pitch Beach S.L., Playa de la Rada, Lote CH18, 29680 Estepona, Málaga, Espagne
         </Text>
       </ScrollView>
     </View>

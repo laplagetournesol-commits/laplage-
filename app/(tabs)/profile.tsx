@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/shared/lib/supabase';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -68,6 +69,43 @@ export default function ProfileScreen() {
       [
         { text: i18n.t('cancel'), style: 'cancel' },
         { text: i18n.t('logout'), style: 'destructive', onPress: signOut },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      i18n.t('deleteAccountTitle'),
+      i18n.t('deleteAccountDesc'),
+      [
+        { text: i18n.t('cancel'), style: 'cancel' },
+        {
+          text: i18n.t('deleteForever'),
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              i18n.t('confirmation'),
+              i18n.t('deleteAccountConfirm'),
+              [
+                { text: i18n.t('noCancel'), style: 'cancel' },
+                {
+                  text: i18n.t('yesDelete'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      const { error } = await supabase.rpc('delete_my_account');
+                      if (error) throw error;
+                      await signOut();
+                      Alert.alert(i18n.t('accountDeleted'), i18n.t('accountDeletedDesc'));
+                    } catch {
+                      Alert.alert(i18n.t('error'), i18n.t('deleteError'));
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
       ]
     );
   };
@@ -275,6 +313,14 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* Delete account */}
+        <View style={[styles.section, { marginTop: 8 }]}>
+          <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteBtn}>
+            <Ionicons name="trash-outline" size={16} color={colors.accentRed} />
+            <Text style={styles.deleteText}>{i18n.t('deleteAccount')}</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={[styles.version, { color: theme.textSecondary }]}>
           {i18n.t('version')}
         </Text>
@@ -356,4 +402,6 @@ const styles = StyleSheet.create({
   menuRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   menuValue: { fontSize: 13 },
   version: { fontSize: 11, textAlign: 'center', marginTop: 24 },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+  deleteText: { fontSize: 13, color: colors.accentRed, fontWeight: '500' },
 });

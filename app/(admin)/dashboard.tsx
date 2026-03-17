@@ -242,6 +242,36 @@ export default function DashboardScreen() {
             <Text style={[styles.managementLabel, { color: theme.text }]}>Broadcast</Text>
             <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Push & emails</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: '#8B5CF6' + '10', borderColor: '#8B5CF6' + '25' }]}
+            onPress={() => router.push('/(admin)/shop-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: '#8B5CF6' + '18' }]}>
+              <Ionicons name="bag-handle" size={22} color="#8B5CF6" />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Shop</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Articles & stock</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: '#F59E0B' + '10', borderColor: '#F59E0B' + '25' }]}
+            onPress={() => router.push('/(admin)/pricing-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: '#F59E0B' + '18' }]}>
+              <Ionicons name="pricetag" size={22} color="#F59E0B" />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Tarifs</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Prix & saisons</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: '#06B6D4' + '10', borderColor: '#06B6D4' + '25' }]}
+            onPress={() => router.push('/(admin)/contact-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: '#06B6D4' + '18' }]}>
+              <Ionicons name="call" size={22} color="#06B6D4" />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Contact</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Aide & infos</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

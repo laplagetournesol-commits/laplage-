@@ -19,7 +19,7 @@ export interface Profile {
   updated_at: string;
 }
 
-export type BeachZoneType = 'standard' | 'premium' | 'front_row' | 'vip_cabana';
+export type BeachZoneType = 'standard' | 'premium' | 'front_row' | 'vip_cabana' | 'chaise_longue';
 
 export interface BeachZone {
   id: string;

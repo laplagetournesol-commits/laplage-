@@ -103,7 +103,7 @@ export default function LiveScreen() {
             <Ionicons name="videocam-off-outline" size={48} color={theme.textSecondary} />
             <Text style={[styles.emptyTitle, { color: theme.text }]}>{i18n.t('noCameras')}</Text>
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              Les caméras seront bientôt disponibles pour visualiser la plage en direct.
+              {i18n.t('camerasComingSoon')}
             </Text>
           </View>
         ) : (

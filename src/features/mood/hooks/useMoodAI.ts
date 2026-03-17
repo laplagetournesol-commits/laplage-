@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { i18n } from '@/shared/i18n';
 
 export type MoodType = 'chill' | 'fiesta' | 'romantic' | 'family' | 'business';
 
@@ -10,11 +11,11 @@ interface MoodOption {
 }
 
 export const MOOD_OPTIONS: MoodOption[] = [
-  { id: 'chill', emoji: '🧘', label: 'Chill', description: 'Détente, tranquillité, zen' },
-  { id: 'fiesta', emoji: '🎉', label: 'Fiesta', description: 'Musique, cocktails, ambiance' },
-  { id: 'romantic', emoji: '💕', label: 'Romantique', description: 'Dîner à deux, sunset, champagne' },
-  { id: 'family', emoji: '👨‍👩‍👧‍👦', label: 'Famille', description: 'Enfants bienvenus, activités' },
-  { id: 'business', emoji: '💼', label: 'Business', description: 'Networking, calme, Wi-Fi' },
+  { id: 'chill', emoji: '🧘', get label() { return i18n.t('moodChill'); }, get description() { return i18n.t('moodChillDesc'); } },
+  { id: 'fiesta', emoji: '🎉', get label() { return i18n.t('moodFiesta'); }, get description() { return i18n.t('moodFiestaDesc'); } },
+  { id: 'romantic', emoji: '💕', get label() { return i18n.t('moodRomantic'); }, get description() { return i18n.t('moodRomanticDesc'); } },
+  { id: 'family', emoji: '👨‍👩‍👧‍👦', get label() { return i18n.t('moodFamily'); }, get description() { return i18n.t('moodFamilyDesc'); } },
+  { id: 'business', emoji: '💼', get label() { return i18n.t('moodBusiness'); }, get description() { return i18n.t('moodBusinessDesc'); } },
 ];
 
 export interface MoodRecommendation {

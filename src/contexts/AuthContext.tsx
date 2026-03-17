@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as AuthSession from 'expo-auth-session';
+import * as Crypto from 'expo-crypto';
 import { supabase } from '@/shared/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import type { Profile } from '@/shared/types';
@@ -10,6 +14,8 @@ interface AuthContextValue {
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null; hasSession: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -69,6 +75,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error ? new Error(error.message) : null };
   };
 
+  const signInWithApple = async (): Promise<{ error: Error | null }> => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        return { error: new Error('No identity token returned from Apple') };
+      }
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+      });
+
+      return { error: error ? new Error(error.message) : null };
+    } catch (err: any) {
+      if (err.code === 'ERR_REQUEST_CANCELED') {
+        return { error: null }; // User cancelled
+      }
+      return { error: new Error(err.message ?? 'Apple sign-in failed') };
+    }
+  };
+
+  const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
+    try {
+      const redirectUri = AuthSession.makeRedirectUri();
+      const nonce = Crypto.randomUUID();
+
+      const discovery = {
+        authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenEndpoint: 'https://oauth2.googleapis.com/token',
+      };
+
+      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
+      if (!clientId) {
+        return { error: new Error('Google Client ID not configured') };
+      }
+
+      const request = new AuthSession.AuthRequest({
+        clientId,
+        redirectUri,
+        scopes: ['openid', 'email', 'profile'],
+        responseType: AuthSession.ResponseType.IdToken,
+        extraParams: { nonce },
+      });
+
+      const result = await request.promptAsync(discovery);
+
+      if (result.type !== 'success' || !result.params.id_token) {
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          return { error: null }; // User cancelled
+        }
+        return { error: new Error('Google sign-in failed') };
+      }
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: result.params.id_token,
+        nonce,
+      });
+
+      return { error: error ? new Error(error.message) : null };
+    } catch (err: any) {
+      return { error: new Error(err.message ?? 'Google sign-in failed') };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -87,6 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         signUp,
         signIn,
+        signInWithApple,
+        signInWithGoogle,
         signOut,
         refreshProfile,
       }}

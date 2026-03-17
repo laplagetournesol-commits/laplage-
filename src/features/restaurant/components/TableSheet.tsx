@@ -10,6 +10,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import type { RestaurantZone } from '@/shared/types';
+import { i18n } from '@/shared/i18n';
 
 interface TableSheetProps {
   visible: boolean;
@@ -56,7 +57,7 @@ export function TableSheet({
   const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long',
   });
-  const timeLabel = timeSlot === 'lunch' ? '12h00 — 16h00' : '19h30 — 23h30';
+  const timeLabel = timeSlot === 'lunch' ? '12h00 — 16h00' : '19h00 — 23h30';
   const zoneIcon = zone.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline';
 
   const handleBook = async () => {
@@ -68,9 +69,9 @@ export function TableSheet({
       setTimeout(() => setShowQR(true), 400);
     } else if (result.success) {
       Alert.alert(
-        'Réservation confirmée !',
-        `Votre table en ${zone.name} est réservée pour le ${formattedDate} (${timeSlot === 'lunch' ? 'déjeuner' : 'dîner'}).`,
-        [{ text: 'Parfait !', onPress: onClose }]
+        i18n.t('bookingConfirmed'),
+        `${i18n.t('tableReservedAlert').replace('{{zone}}', zone.name).replace('{{date}}', formattedDate).replace('{{time}}', timeSlot === 'lunch' ? i18n.t('lunchService') : i18n.t('dinnerService'))}`,
+        [{ text: i18n.t('tablePerfect'), onPress: onClose }]
       );
     }
   };
@@ -80,7 +81,7 @@ export function TableSheet({
     setQrCode(null);
   };
 
-  const title = step === 'select' ? zone.name : 'Confirmation';
+  const title = step === 'select' ? zone.name : i18n.t('confirmation');
 
   return (
     <>
@@ -118,7 +119,7 @@ export function TableSheet({
 
             {/* Nombre de convives */}
             <View style={styles.guestRow}>
-              <Text style={[styles.guestLabel, { color: theme.text }]}>Convives</Text>
+              <Text style={[styles.guestLabel, { color: theme.text }]}>{i18n.t('guests')}</Text>
               <View style={styles.guestCounter}>
                 <TouchableOpacity
                   onPress={() => onSetGuestCount(guestCount - 1)}
@@ -141,10 +142,10 @@ export function TableSheet({
               <Ionicons name="card-outline" size={16} color={colors.warmWood} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.preAuthText, { color: colors.warmWood }]}>
-                  Pré-autorisation : 30€/personne ({depositAmount}€)
+                  {i18n.t('cardDeposit')} : 30€/{i18n.t('persons').toLowerCase()} ({depositAmount}€)
                 </Text>
                 <Text style={[styles.preAuthSubtext, { color: colors.warmWood }]}>
-                  No-show : pré-autorisation débitée
+                  {i18n.t('cardDepositDesc')}
                 </Text>
               </View>
             </View>
@@ -152,7 +153,7 @@ export function TableSheet({
             {/* Demandes spéciales */}
             <View style={{ marginTop: 16 }}>
               <Text style={[styles.guestLabel, { color: theme.text, marginBottom: 8 }]}>
-                Demandes spéciales
+                {i18n.t('specialRequests')}
               </Text>
               <TextInput
                 style={[
@@ -161,13 +162,13 @@ export function TableSheet({
                 ]}
                 value={specialRequests}
                 onChangeText={onSetSpecialRequests}
-                placeholder="Allergies, occasion spéciale..."
+                placeholder={i18n.t('specialRequestsRestaurant')}
                 placeholderTextColor={theme.textSecondary}
                 multiline
               />
             </View>
 
-            <Button title="Réserver" onPress={onGoToConfirm} style={{ marginTop: 16 }} />
+            <Button title={i18n.t('reserve')} onPress={onGoToConfirm} style={{ marginTop: 16 }} />
           </View>
         )}
 
@@ -175,31 +176,31 @@ export function TableSheet({
           <View style={styles.content}>
             <TouchableOpacity onPress={onGoBack} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={18} color={theme.accent} />
-              <Text style={[styles.backText, { color: theme.accent }]}>Retour</Text>
+              <Text style={[styles.backText, { color: theme.accent }]}>{i18n.t('back')}</Text>
             </TouchableOpacity>
 
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
-              <Text style={[styles.summaryTitle, { color: theme.text }]}>Récapitulatif</Text>
+              <Text style={[styles.summaryTitle, { color: theme.text }]}>{i18n.t('summary')}</Text>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Zone</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('zone')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{zone.name}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Date</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('date')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{formattedDate}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Service</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('service')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
-                  {timeSlot === 'lunch' ? 'Déjeuner' : 'Dîner'} ({timeLabel})
+                  {timeSlot === 'lunch' ? i18n.t('lunchService') : i18n.t('dinnerService')} ({timeLabel})
                 </Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Convives</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('guests')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>{guestCount}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Pré-autorisation</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('depositCB')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
                   30€/pers. ({depositAmount}€ total)
                 </Text>
@@ -208,29 +209,29 @@ export function TableSheet({
 
             <View style={[styles.depositRow, { borderTopColor: theme.cardBorder }]}>
               <Text style={[styles.depositLabel, { color: theme.textSecondary }]}>
-                Pré-autorisation
+                {i18n.t('depositCB')}
               </Text>
               <Text style={[styles.depositValue, { color: colors.brand }]}>{depositAmount}€</Text>
             </View>
 
             <View style={[styles.policyCard, { backgroundColor: colors.sunYellowLight, borderColor: colors.sunYellow + '40' }]}>
-              <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>Conditions de réservation</Text>
+              <Text style={[styles.policyCardTitle, { color: colors.warmWood }]}>{i18n.t('bookingConditions')}</Text>
               <View style={styles.policyItem}>
                 <Ionicons name="pencil-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Modifiable jusqu'à 24h avant</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>{i18n.t('modifiableUpTo24h')}</Text>
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="close-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>Annulation gratuite jusqu'à 24h avant</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>{i18n.t('freeCancellation')}</Text>
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : pré-autorisation débitée ({depositAmount}€)</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : {i18n.t('depositCB')} ({depositAmount}€)</Text>
               </View>
             </View>
 
             <Button
-              title={user ? `Confirmer — ${depositAmount}€ de pré-autorisation` : 'Se connecter pour réserver'}
+              title={user ? `${i18n.t('confirm')} — ${depositAmount}€` : i18n.t('connectToBook')}
               onPress={handleBook}
               loading={booking}
               size="lg"
@@ -251,10 +252,10 @@ export function TableSheet({
         title={`Restaurant — ${zone.name}`}
         subtitle={zone.name}
         details={[
-          { label: 'Date', value: formattedDate, icon: 'calendar-outline' },
-          { label: 'Service', value: timeSlot === 'lunch' ? 'Déjeuner (12h-16h)' : 'Dîner (19h30-23h30)', icon: 'time-outline' },
-          { label: 'Zone', value: zone.name, icon: zoneIcon },
-          { label: 'Convives', value: `${guestCount}`, icon: 'people-outline' },
+          { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
+          { label: i18n.t('service'), value: timeSlot === 'lunch' ? `${i18n.t('lunchService')} (12h-16h)` : `${i18n.t('dinnerService')} (19h-23h30)`, icon: 'time-outline' },
+          { label: i18n.t('zone'), value: zone.name, icon: zoneIcon },
+          { label: i18n.t('guests'), value: `${guestCount}`, icon: 'people-outline' },
         ]}
         deposit={`${depositAmount}€`}
       />

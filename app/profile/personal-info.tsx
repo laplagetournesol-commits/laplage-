@@ -10,6 +10,7 @@ import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/shared/lib/supabase';
+import { i18n } from '@/shared/i18n';
 
 export default function PersonalInfoScreen() {
   const { theme } = useSunMode();
@@ -29,16 +30,16 @@ export default function PersonalInfoScreen() {
     setSaving(false);
 
     if (error) {
-      Alert.alert('Erreur', error.message);
+      Alert.alert(i18n.t('error'), error.message);
     } else {
-      Alert.alert('Enregistré', 'Vos informations ont été mises à jour.');
+      Alert.alert(i18n.t('saved'), i18n.t('savedInfo'));
     }
   };
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
-        title: 'Informations personnelles',
+        title: i18n.t('personalInfo'),
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
@@ -59,14 +60,14 @@ export default function PersonalInfoScreen() {
 
         <View style={{ marginTop: 16 }}>
           <Input
-            label="Nom complet"
+            label={i18n.t('fullName')}
             icon="person-outline"
             value={fullName}
             onChangeText={setFullName}
             autoCapitalize="words"
           />
           <Input
-            label="Téléphone"
+            label={i18n.t('phoneLabel')}
             icon="call-outline"
             value={phone}
             onChangeText={setPhone}
@@ -75,7 +76,7 @@ export default function PersonalInfoScreen() {
           />
         </View>
 
-        <Button title="Enregistrer" onPress={handleSave} loading={saving} style={{ marginTop: 20 }} />
+        <Button title={i18n.t('save')} onPress={handleSave} loading={saving} style={{ marginTop: 20 }} />
       </ScrollView>
     </View>
   );
