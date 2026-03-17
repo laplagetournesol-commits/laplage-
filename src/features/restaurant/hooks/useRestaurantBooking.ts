@@ -103,25 +103,41 @@ export function useRestaurantBooking() {
         }
       }
 
-      const { data: reservation, error: resError } = await supabase
+      // Vérifier s'il existe déjà une réservation pending pour cette zone/date/créneau
+      const { data: existingRes } = await supabase
         .from('restaurant_reservations')
-        .insert({
-          user_id: user.id,
-          zone_id: state.zone.id,
-          table_id: null,
-          date: state.date,
-          time: state.time,
-          time_slot: timeSlotForDB,
-          guest_count: state.guestCount,
-          status: 'pending',
-          deposit_amount: depositAmount,
-          deposit_paid: false,
-          special_requests: state.specialRequests || null,
-        })
-        .select()
-        .single();
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('zone_id', state.zone.id)
+        .eq('date', state.date)
+        .eq('time_slot', timeSlotForDB)
+        .eq('status', 'pending')
+        .maybeSingle();
 
-      if (resError) throw new Error(resError.message);
+      let reservation = existingRes;
+
+      if (!reservation) {
+        const { data: newRes, error: resError } = await supabase
+          .from('restaurant_reservations')
+          .insert({
+            user_id: user.id,
+            zone_id: state.zone.id,
+            table_id: null,
+            date: state.date,
+            time: state.time,
+            time_slot: timeSlotForDB,
+            guest_count: state.guestCount,
+            status: 'pending',
+            deposit_amount: depositAmount,
+            deposit_paid: false,
+            special_requests: state.specialRequests || null,
+          })
+          .select()
+          .single();
+
+        if (resError) throw new Error(resError.message);
+        reservation = newRes;
+      }
 
       // Le push sera envoyé après le paiement (dans restaurant.tsx)
 

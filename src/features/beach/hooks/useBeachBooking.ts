@@ -135,24 +135,39 @@ export function useBeachBooking() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Vous devez être connecté pour réserver');
 
-      // Créer la réservation
-      const { data: reservation, error: resError } = await supabase
+      // Vérifier s'il existe déjà une réservation pending pour ce transat/date
+      const { data: existing } = await supabase
         .from('beach_reservations')
-        .insert({
-          user_id: user.id,
-          sunbed_id: state.sunbed.id,
-          date: state.date,
-          status: 'pending',
-          total_price: totalPrice,
-          deposit_amount: depositAmount,
-          deposit_paid: false,
-          guest_count: state.guestCount,
-          special_requests: state.specialRequests || null,
-        })
-        .select()
-        .single();
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('sunbed_id', state.sunbed.id)
+        .eq('date', state.date)
+        .eq('status', 'pending')
+        .maybeSingle();
 
-      if (resError) throw new Error(resError.message);
+      let reservation = existing;
+
+      if (!reservation) {
+        // Créer la réservation
+        const { data: newRes, error: resError } = await supabase
+          .from('beach_reservations')
+          .insert({
+            user_id: user.id,
+            sunbed_id: state.sunbed.id,
+            date: state.date,
+            status: 'pending',
+            total_price: totalPrice,
+            deposit_amount: depositAmount,
+            deposit_paid: false,
+            guest_count: state.guestCount,
+            special_requests: state.specialRequests || null,
+          })
+          .select()
+          .single();
+
+        if (resError) throw new Error(resError.message);
+        reservation = newRes;
+      }
 
       // Ajouter les add-ons
       if (state.selectedAddons.length > 0 && reservation) {
