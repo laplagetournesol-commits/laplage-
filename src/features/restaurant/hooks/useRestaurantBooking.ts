@@ -113,7 +113,7 @@ export function useRestaurantBooking() {
           time: state.time,
           time_slot: timeSlotForDB,
           guest_count: state.guestCount,
-          status: 'confirmed',
+          status: 'pending',
           deposit_amount: depositAmount,
           deposit_paid: false,
           special_requests: state.specialRequests || null,

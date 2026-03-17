@@ -142,7 +142,7 @@ export function useBeachBooking() {
           user_id: user.id,
           sunbed_id: state.sunbed.id,
           date: state.date,
-          status: 'confirmed',
+          status: 'pending',
           total_price: totalPrice,
           deposit_amount: depositAmount,
           deposit_paid: false,

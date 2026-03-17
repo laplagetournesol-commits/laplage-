@@ -65,6 +65,9 @@ export default function RestaurantScreen() {
       }
     }
 
+    // Paiement réussi (ou pas de paiement requis) → confirmer la réservation
+    await supabase.from('restaurant_reservations').update({ status: 'confirmed' }).eq('id', result.reservationId);
+
     // Push de confirmation après paiement réussi
     apiCall('/api/notifications/booking-confirmed', { type: 'restaurant', reservationId: result.reservationId }).catch(() => {});
 

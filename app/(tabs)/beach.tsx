@@ -55,6 +55,9 @@ export default function BeachScreen() {
       }
     }
 
+    // Paiement réussi (ou pas de paiement requis) → confirmer la réservation
+    await supabase.from('beach_reservations').update({ status: 'confirmed' }).eq('id', result.reservationId);
+
     // Push de confirmation seulement après paiement réussi
     apiCall('/api/notifications/booking-confirmed', { type: 'beach', reservationId: result.reservationId }).catch(() => {});
 

@@ -70,14 +70,14 @@ export default function MyReservationsScreen() {
     const [beachRes, restoRes] = await Promise.all([
       supabase
         .from('beach_reservations')
-        .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, qr_code, sunbed:sunbeds!inner(label, zone:beach_zones!inner(name))')
+        .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, qr_code, sunbed:sunbeds(label, zone:beach_zones(name))')
         .eq('user_id', user.id)
         .gte('date', today)
         .order('date', { ascending: true })
         .limit(30),
       supabase
         .from('restaurant_reservations')
-        .select('id, date, status, deposit_amount, time_slot, guest_count, table_id, qr_code, table:restaurant_tables!inner(label, zone:restaurant_zones!inner(name))')
+        .select('id, date, status, deposit_amount, time_slot, guest_count, table_id, qr_code, table:restaurant_tables(label, zone:restaurant_zones(name))')
         .eq('user_id', user.id)
         .gte('date', today)
         .order('date', { ascending: true })

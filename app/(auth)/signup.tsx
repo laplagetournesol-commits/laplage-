@@ -181,7 +181,7 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.socialButtons}>
-          {(Platform.OS === 'ios' || Platform.OS === 'web') && (
+          {Platform.OS === 'ios' && (
             <TouchableOpacity
               style={[styles.socialBtn, { backgroundColor: '#000' }]}
               onPress={async () => {
