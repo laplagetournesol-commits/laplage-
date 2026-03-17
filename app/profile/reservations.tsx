@@ -207,6 +207,11 @@ export default function MyReservationsScreen() {
         headerShown: true,
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ padding: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+        ),
       }} />
 
       {loading ? (
