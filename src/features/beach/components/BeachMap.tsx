@@ -119,6 +119,20 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
         </View>
       </ScrollView>
 
+      {/* Légende prix */}
+      <View style={styles.priceLegend}>
+        <View style={[styles.priceLegendItem, { backgroundColor: 'rgba(101, 67, 33, 0.92)' }]}>
+          <Text style={styles.priceLegendIcon}>🏖</Text>
+          <Text style={styles.priceLegendLabel}>{i18n.t('categorySunbed')} + {i18n.t('parasolIncluded').split('+')[0].trim().toLowerCase()}</Text>
+          <Text style={styles.priceLegendPrice}>20€ / {i18n.t('perDay')}</Text>
+        </View>
+        <View style={[styles.priceLegendItem, { backgroundColor: 'rgba(85, 85, 60, 0.92)' }]}>
+          <Text style={styles.priceLegendIcon}>🪑</Text>
+          <Text style={styles.priceLegendLabel}>{i18n.t('categoryLoungeChair')}</Text>
+          <Text style={styles.priceLegendPrice}>10€ / {i18n.t('perDay')}</Text>
+        </View>
+      </View>
+
       {/* Hint zoom */}
       <View style={[styles.zoomHint, { backgroundColor: theme.card + 'DD' }]}>
         <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
@@ -208,6 +222,35 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  priceLegend: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+  },
+  priceLegendItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  priceLegendIcon: {
+    fontSize: 14,
+  },
+  priceLegendLabel: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
+  priceLegendPrice: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   zoomHint: {
     position: 'absolute',

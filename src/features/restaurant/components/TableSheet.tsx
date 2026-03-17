@@ -54,11 +54,12 @@ export function TableSheet({
 
   if (!zone) return null;
 
-  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString(i18n.locale, {
     weekday: 'long', day: 'numeric', month: 'long',
   });
-  const timeLabel = timeSlot === 'lunch' ? '12h00 — 16h00' : '19h00 — 23h30';
+  const timeLabel = timeSlot === 'lunch' ? i18n.t('lunchHours') : i18n.t('dinnerHours');
   const zoneIcon = zone.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline';
+  const zoneName = zone.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior');
 
   const handleBook = async () => {
     if (!user) { router.push('/(auth)/login'); return; }
@@ -70,7 +71,7 @@ export function TableSheet({
     } else if (result.success) {
       Alert.alert(
         i18n.t('bookingConfirmed'),
-        `${i18n.t('tableReservedAlert').replace('{{zone}}', zone.name).replace('{{date}}', formattedDate).replace('{{time}}', timeSlot === 'lunch' ? i18n.t('lunchService') : i18n.t('dinnerService'))}`,
+        `${i18n.t('tableReservedAlert').replace('{{zone}}', zoneName).replace('{{date}}', formattedDate).replace('{{time}}', timeSlot === 'lunch' ? i18n.t('lunchService') : i18n.t('dinnerService'))}`,
         [{ text: i18n.t('tablePerfect'), onPress: onClose }]
       );
     }
@@ -81,7 +82,7 @@ export function TableSheet({
     setQrCode(null);
   };
 
-  const title = step === 'select' ? zone.name : i18n.t('confirmation');
+  const title = step === 'select' ? zoneName : i18n.t('confirmation');
 
   return (
     <>
@@ -91,7 +92,7 @@ export function TableSheet({
           <View style={styles.content}>
             <View style={styles.row}>
               <Badge
-                label={zone.name}
+                label={zoneName}
                 variant={zone.zone_type === 'terrasse' ? 'default' : 'vip'}
               />
             </View>
@@ -113,7 +114,7 @@ export function TableSheet({
               </View>
               <View style={styles.infoRow}>
                 <Ionicons name={zoneIcon as any} size={16} color={theme.accent} />
-                <Text style={[styles.infoText, { color: theme.text }]}>{zone.name}</Text>
+                <Text style={[styles.infoText, { color: theme.text }]}>{zoneName}</Text>
               </View>
             </View>
 
@@ -183,7 +184,7 @@ export function TableSheet({
               <Text style={[styles.summaryTitle, { color: theme.text }]}>{i18n.t('summary')}</Text>
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('zone')}</Text>
-                <Text style={[styles.summaryValue, { color: theme.text }]}>{zone.name}</Text>
+                <Text style={[styles.summaryValue, { color: theme.text }]}>{zoneName}</Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('date')}</Text>
@@ -202,7 +203,7 @@ export function TableSheet({
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('depositCB')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
-                  30€/pers. ({depositAmount}€ total)
+                  30€/{i18n.t('perPerson')} ({depositAmount}€ {i18n.t('totalLabel')})
                 </Text>
               </View>
             </View>
@@ -226,7 +227,7 @@ export function TableSheet({
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>No-show : {i18n.t('depositCB')} ({depositAmount}€)</Text>
+                <Text style={[styles.policyItemText, { color: colors.warmWood }]}>{i18n.t('noShowWarning').replace('{{amount}}', String(depositAmount))}</Text>
               </View>
             </View>
 
@@ -249,12 +250,12 @@ export function TableSheet({
         onClose={handleCloseQR}
         qrCode={qrCode}
         type="restaurant"
-        title={`Restaurant — ${zone.name}`}
-        subtitle={zone.name}
+        title={`${i18n.t('tabRestaurant')} — ${zoneName}`}
+        subtitle={zoneName}
         details={[
           { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
-          { label: i18n.t('service'), value: timeSlot === 'lunch' ? `${i18n.t('lunchService')} (12h-16h)` : `${i18n.t('dinnerService')} (19h-23h30)`, icon: 'time-outline' },
-          { label: i18n.t('zone'), value: zone.name, icon: zoneIcon },
+          { label: i18n.t('service'), value: timeSlot === 'lunch' ? `${i18n.t('lunchService')} (${i18n.t('lunchHours')})` : `${i18n.t('dinnerService')} (${i18n.t('dinnerHours')})`, icon: 'time-outline' },
+          { label: i18n.t('zone'), value: zoneName, icon: zoneIcon },
           { label: i18n.t('guests'), value: `${guestCount}`, icon: 'people-outline' },
         ]}
         deposit={`${depositAmount}€`}

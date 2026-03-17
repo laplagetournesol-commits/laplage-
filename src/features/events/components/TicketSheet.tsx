@@ -31,7 +31,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
   const price = selectedType === 'vip' && hasVip ? event.vip_price! : event.standard_price;
   const isFree = event.standard_price === 0;
   const isSoldOut = event.tickets_sold >= event.capacity;
-  const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString(i18n.locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

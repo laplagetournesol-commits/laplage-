@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
+import { i18n } from '@/shared/i18n';
 import type { RestaurantZone } from '@/shared/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -32,8 +33,12 @@ export function RestaurantMap({ zones, selectedZoneId, onSelectZone }: Restauran
     return zoneType === 'terrasse' ? 'sunny-outline' : 'home-outline';
   };
 
+  const getZoneName = (zoneType: string): string => {
+    return zoneType === 'terrasse' ? i18n.t('terrace') : i18n.t('interior');
+  };
+
   const getZoneSubtitle = (zoneType: string): string => {
-    return zoneType === 'terrasse' ? 'En plein air, face à la mer' : 'Salle climatisée, ambiance cosy';
+    return zoneType === 'terrasse' ? i18n.t('terrasseDesc') : i18n.t('interiorDesc');
   };
 
   return (
@@ -83,7 +88,7 @@ export function RestaurantMap({ zones, selectedZoneId, onSelectZone }: Restauran
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.zoneName, isFull && styles.zoneNameFull]}>
-                    {zone.name}
+                    {getZoneName(zone.zone_type)}
                   </Text>
                   <Text style={[styles.zoneSubtitle, isFull && styles.zoneSubtitleFull]}>
                     {getZoneSubtitle(zone.zone_type)}
@@ -94,13 +99,13 @@ export function RestaurantMap({ zones, selectedZoneId, onSelectZone }: Restauran
               <View style={styles.zoneCardFooter}>
                 {isFull ? (
                   <View style={styles.fullBadge}>
-                    <Text style={styles.fullBadgeText}>Complet</Text>
+                    <Text style={styles.fullBadgeText}>{i18n.t('full')}</Text>
                   </View>
                 ) : (
                   <View style={styles.availableBadge}>
                     <View style={styles.availableDot} />
                     <Text style={styles.availableText}>
-                      {zone.availableCount} table{zone.availableCount > 1 ? 's' : ''} dispo
+                      {zone.availableCount} {i18n.t('tablesAvailable')}
                     </Text>
                   </View>
                 )}

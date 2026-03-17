@@ -177,7 +177,7 @@ export default function MyReservationsScreen() {
   };
 
   const formatDate = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    new Date(d + 'T00:00:00').toLocaleDateString(i18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>

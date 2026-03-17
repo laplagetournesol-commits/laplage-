@@ -59,7 +59,7 @@ export default function MyTicketsScreen() {
   const handleRefresh = async () => { setRefreshing(true); await fetchTickets(); setRefreshing(false); };
 
   const formatDate = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    new Date(d + 'T00:00:00').toLocaleDateString(i18n.locale, { day: 'numeric', month: 'short' });
 
   const isFuture = (d: string) => d >= new Date().toISOString().split('T')[0];
 

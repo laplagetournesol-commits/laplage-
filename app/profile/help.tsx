@@ -40,7 +40,7 @@ const DEFAULTS: Record<string, string> = {
   contact_instagram: '@laplageroyale',
   contact_instagram_url: 'https://instagram.com/laplageroyale',
   contact_address: 'Paseo Marítimo, 29602 Marbella, Málaga, Espagne',
-  contact_hours: 'Plage : 10h — 19h\nRestaurant : 12h — 16h / 19h — 23h30\nOuvert tous les jours en saison',
+  contact_hours: i18n.t('defaultContactHours'),
 };
 
 export default function HelpScreen() {

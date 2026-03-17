@@ -19,7 +19,7 @@ interface TicketQRCodeProps {
 export function TicketQRCode({ visible, onClose, ticket, event }: TicketQRCodeProps) {
   const { theme } = useSunMode();
 
-  const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString(i18n.locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

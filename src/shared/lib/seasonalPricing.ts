@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { i18n } from '@/shared/i18n';
 import type { BeachZoneType } from '@/shared/types';
 
 export type PricingCategory = 'transat' | 'transat_front_row' | 'bed' | 'chaise_longue';
@@ -22,13 +23,13 @@ export function zoneToPricingCategory(zoneType: BeachZoneType): PricingCategory 
 export function pricingCategoryLabel(category: PricingCategory): string {
   switch (category) {
     case 'transat':
-      return 'Transat';
+      return i18n.t('categorySunbed');
     case 'transat_front_row':
-      return 'Transat 1ère rangée';
+      return i18n.t('categoryFrontRow');
     case 'bed':
-      return 'Bed';
+      return i18n.t('categoryBed');
     case 'chaise_longue':
-      return 'Chaise longue';
+      return i18n.t('categoryLoungeChair');
   }
 }
 
@@ -75,16 +76,16 @@ export function getSeasonalInclusions(
 
   // Inclusions de base par catégorie
   if (category === 'transat' || category === 'transat_front_row') {
-    inclusions.push('Parasol + table inclus');
+    inclusions.push(i18n.t('parasolIncluded'));
   }
   if (category === 'bed') {
-    inclusions.push('Parasol + table inclus');
-    inclusions.push('Service prioritaire');
+    inclusions.push(i18n.t('parasolIncluded'));
+    inclusions.push(i18n.t('priorityService'));
   }
 
   // Inclusions saisonnières
   if (seasonLabel === 'Été' && category === 'bed') {
-    inclusions.push('Cocktail maison offert');
+    inclusions.push(i18n.t('freeHomeCocktail'));
   }
 
   return inclusions;

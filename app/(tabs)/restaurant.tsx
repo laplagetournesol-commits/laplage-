@@ -39,7 +39,7 @@ export default function RestaurantScreen() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
 
-  const formattedDate = new Date(booking.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(booking.date + 'T00:00:00').toLocaleDateString(i18n.locale, {
     weekday: 'long', day: 'numeric', month: 'long',
   });
 
@@ -68,7 +68,7 @@ export default function RestaurantScreen() {
     } else {
       Alert.alert(
         i18n.t('bookingConfirmed'),
-        `${i18n.t('tableReservedAlert').replace('{{zone}}', booking.zone?.name ?? '').replace('{{date}}', formattedDate).replace('{{time}}', booking.time.replace(':', 'h'))}`,
+        `${i18n.t('tableReservedAlert').replace('{{zone}}', booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')).replace('{{date}}', formattedDate).replace('{{time}}', booking.time.replace(':', 'h'))}`,
         [{ text: i18n.t('tablePerfect') }]
       );
     }
@@ -88,7 +88,7 @@ export default function RestaurantScreen() {
               <Text style={[styles.backLabel, { color: theme.text }]}>{i18n.t('backToSuggestions')}</Text>
             </TouchableOpacity>
           )}
-          <Text style={[styles.title, { color: theme.text }]}>Restaurant</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{i18n.t('tabRestaurant')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             {i18n.t('bookYourTable')}
           </Text>
@@ -136,6 +136,7 @@ export default function RestaurantScreen() {
               const isSelected = booking.zone?.id === zone.id;
               const isFull = zone.isFull;
               const icon = zone.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline';
+              const zoneLabel = zone.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior');
 
               return (
                 <TouchableOpacity
@@ -160,7 +161,7 @@ export default function RestaurantScreen() {
                     styles.zoneName,
                     { color: isSelected ? colors.white : theme.text },
                   ]}>
-                    {zone.name}
+                    {zoneLabel}
                   </Text>
                   {isFull && (
                     <View style={styles.fullBadge}>
@@ -243,7 +244,7 @@ export default function RestaurantScreen() {
           <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('zone')}</Text>
-              <Text style={[styles.summaryValue, { color: theme.text }]}>{booking.zone?.name}</Text>
+              <Text style={[styles.summaryValue, { color: theme.text }]}>{booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('date')}</Text>
@@ -280,7 +281,7 @@ export default function RestaurantScreen() {
               </View>
               <View style={styles.policyItem}>
                 <Ionicons name="alert-circle-outline" size={13} color={colors.warmWood} />
-                <Text style={[styles.policyText, { color: colors.warmWood }]}>No-show : {i18n.t('depositCB')} ({booking.depositAmount}€)</Text>
+                <Text style={[styles.policyText, { color: colors.warmWood }]}>{i18n.t('noShowWarning').replace('{{amount}}', String(booking.depositAmount))}</Text>
               </View>
             </View>
           )}
@@ -302,12 +303,12 @@ export default function RestaurantScreen() {
           onClose={() => { setShowQR(false); setQrCode(null); }}
           qrCode={qrCode}
           type="restaurant"
-          title={`Restaurant — ${booking.zone?.name}`}
-          subtitle={booking.zone?.name ?? ''}
+          title={`${i18n.t('tabRestaurant')} — ${booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}`}
+          subtitle={booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}
           details={[
             { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
             { label: i18n.t('time'), value: booking.time.replace(':', 'h'), icon: 'time-outline' },
-            { label: i18n.t('zone'), value: booking.zone?.name ?? '', icon: booking.zone?.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline' },
+            { label: i18n.t('zone'), value: booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior'), icon: booking.zone?.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline' },
             { label: i18n.t('guests'), value: `${booking.guestCount}`, icon: 'people-outline' },
           ]}
           deposit={booking.requireDeposit ? `${booking.depositAmount}€` : undefined}

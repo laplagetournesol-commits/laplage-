@@ -61,7 +61,7 @@ export default function SignupScreen() {
       setError(err.message);
     } else if (!hasSession) {
       Alert.alert(
-        'Vérifiez votre email',
+        i18n.t('checkEmailTitle'),
         i18n.t('checkEmail'),
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
       );

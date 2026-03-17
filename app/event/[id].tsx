@@ -109,7 +109,7 @@ export default function EventDetailScreen() {
   // Check if user has a ticket for this event
   const myTicket = tickets.find((t) => t.event_id === event.id && t.status === 'active');
 
-  const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString(i18n.locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -162,8 +162,8 @@ export default function EventDetailScreen() {
                 <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
                 <Text style={styles.categoryLabel}>{cat.label}</Text>
               </View>
-              {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
-              {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+              {event.is_secret && <Badge label={i18n.t('secretLabel')} variant="vip" size="sm" />}
+              {event.category === 'private' && <Badge label={i18n.t('categoryPrivate')} variant="vip" size="sm" />}
             </View>
 
             <Text style={styles.heroTitle}>{event.title}</Text>
@@ -183,7 +183,7 @@ export default function EventDetailScreen() {
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={18} color={theme.accent} />
               <View>
-                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Date</Text>
+                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{i18n.t('date')}</Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{formattedDate}</Text>
               </View>
             </View>

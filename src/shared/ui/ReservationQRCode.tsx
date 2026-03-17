@@ -6,6 +6,7 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Badge } from '@/shared/ui/Badge';
+import { i18n } from '@/shared/i18n';
 
 interface ReservationDetail {
   label: string;
@@ -41,15 +42,15 @@ export function ReservationQRCode({
   const { theme } = useSunMode();
 
   const typeConfig = {
-    beach: { icon: 'umbrella' as const, color: colors.terracotta, label: 'Plage' },
-    restaurant: { icon: 'restaurant' as const, color: colors.deepSea, label: 'Restaurant' },
-    event: { icon: 'calendar' as const, color: colors.accentRed, label: 'Événement' },
+    beach: { icon: 'umbrella' as const, color: colors.terracotta, label: i18n.t('tabBeach') },
+    restaurant: { icon: 'restaurant' as const, color: colors.deepSea, label: i18n.t('tabRestaurant') },
+    event: { icon: 'calendar' as const, color: colors.accentRed, label: i18n.t('event') },
   };
 
   const config = typeConfig[type];
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Ma réservation">
+    <BottomSheet visible={visible} onClose={onClose} title={i18n.t('myReservationTitle')}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
         <View style={styles.content}>
           {/* Ticket card */}
@@ -78,7 +79,7 @@ export function ReservationQRCode({
             </View>
 
             <Text style={[styles.qrHint, { color: theme.textSecondary }]}>
-              Présentez ce QR code à votre arrivée
+              {i18n.t('presentQRReservation')}
             </Text>
 
             {/* Dashed separator */}

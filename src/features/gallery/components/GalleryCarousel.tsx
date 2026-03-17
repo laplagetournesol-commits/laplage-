@@ -18,6 +18,23 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const CARD_HEIGHT = 200;
 
+const GALLERY_LABEL_KEYS: Record<string, string> = {
+  'Vue aérienne': 'galleryAerialView',
+  'Nos transats': 'galleryOurSunbeds',
+  'La plage vue du ciel': 'galleryBeachFromSky',
+  'Les Tournesols': 'galleryLesTournesols',
+  'Cocktail fraise': 'galleryStrawberryCocktail',
+  'Serviette Les Tournesols': 'galleryTowel',
+  'Art de la table': 'galleryTableSetting',
+  'Terrasse vue mer': 'galleryTerraceSeaView',
+  'Terrasse': 'galleryTerrace',
+  'Terrasse extérieure': 'galleryOutdoorTerrace',
+  'Salle intérieure': 'galleryIndoorRoom',
+  'Restaurant': 'galleryRestaurant',
+  'Vue sur la plage': 'galleryBeachView',
+  'Table privée': 'galleryPrivateTable',
+};
+
 export function GalleryCarousel() {
   const { theme } = useSunMode();
   const router = useRouter();
@@ -59,7 +76,7 @@ export function GalleryCarousel() {
                 resizeMode="cover"
               />
               <View style={styles.labelContainer}>
-                <Text style={styles.label}>{photo.label}</Text>
+                <Text style={styles.label}>{GALLERY_LABEL_KEYS[photo.label] ? i18n.t(GALLERY_LABEL_KEYS[photo.label]) : photo.label}</Text>
               </View>
             </View>
           </TouchableOpacity>

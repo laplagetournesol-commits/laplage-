@@ -66,7 +66,7 @@ export default function NotificationsScreen() {
     const diffH = Math.floor((now.getTime() - date.getTime()) / 3600000);
     if (diffH < 1) return i18n.t('justNow');
     if (diffH < 24) return i18n.t('hoursAgo').replace('{{count}}', String(diffH));
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    return date.toLocaleDateString(i18n.locale, { day: 'numeric', month: 'short' });
   };
 
   return (

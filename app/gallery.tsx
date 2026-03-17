@@ -18,6 +18,24 @@ import { useSunMode } from '@/shared/theme';
 import { i18n } from '@/shared/i18n';
 import { useGalleryPhotos, GalleryItem } from '@/features/gallery/galleryData';
 
+const GALLERY_LABEL_KEYS: Record<string, string> = {
+  'Vue aérienne': 'galleryAerialView',
+  'Nos transats': 'galleryOurSunbeds',
+  'La plage vue du ciel': 'galleryBeachFromSky',
+  'Les Tournesols': 'galleryLesTournesols',
+  'Cocktail fraise': 'galleryStrawberryCocktail',
+  'Serviette Les Tournesols': 'galleryTowel',
+  'Art de la table': 'galleryTableSetting',
+  'Terrasse vue mer': 'galleryTerraceSeaView',
+  'Terrasse': 'galleryTerrace',
+  'Terrasse extérieure': 'galleryOutdoorTerrace',
+  'Salle intérieure': 'galleryIndoorRoom',
+  'Restaurant': 'galleryRestaurant',
+  'Vue sur la plage': 'galleryBeachView',
+  'Table privée': 'galleryPrivateTable',
+};
+const translateLabel = (label: string) => GALLERY_LABEL_KEYS[label] ? i18n.t(GALLERY_LABEL_KEYS[label]) : label;
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COLUMN_GAP = 3;
 const NUM_COLUMNS = 3;
@@ -77,7 +95,7 @@ export default function GalleryScreen() {
         transition={200}
       />
       <View style={styles.fullscreenLabel}>
-        <Text style={styles.fullscreenLabelText}>{item.label}</Text>
+        <Text style={styles.fullscreenLabelText}>{translateLabel(item.label)}</Text>
       </View>
     </View>
   );

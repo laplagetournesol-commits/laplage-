@@ -22,6 +22,8 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { AnimatedEntry, AnimatedScale } from '@/shared/ui/AnimatedEntry';
 import { i18n } from '@/shared/i18n';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
+import type { Language } from '@/shared/i18n/translations';
 import { useWeather, windDescription } from '@/shared/hooks/useWeather';
 import { supabase } from '@/shared/lib/supabase';
 import { GalleryCarousel } from '@/features/gallery/components/GalleryCarousel';
@@ -79,6 +81,13 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const { weather } = useWeather();
+  const { locale, setLanguage } = useLanguage();
+
+  const LANGS: { key: Language; flag: string }[] = [
+    { key: 'fr', flag: '🇫🇷' },
+    { key: 'es', flag: '🇪🇸' },
+    { key: 'en', flag: '🇬🇧' },
+  ];
 
   const [featuredEvent, setFeaturedEvent] = useState<any>(null);
   useEffect(() => {
@@ -122,19 +131,35 @@ export default function HomeScreen() {
                   {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => {
-                  if (user) {
-                    router.push('/(tabs)/profile');
-                  } else {
-                    router.push('/(auth)/login');
-                  }
-                }}
-              >
-                <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
-                  <Ionicons name="person" size={20} color={colors.black} />
+              <View style={styles.heroRight}>
+                <View style={styles.langFlags}>
+                  {LANGS.map((l) => (
+                    <TouchableOpacity
+                      key={l.key}
+                      onPress={() => setLanguage(l.key)}
+                      style={[
+                        styles.langFlagBtn,
+                        locale === l.key && styles.langFlagActive,
+                      ]}
+                    >
+                      <Text style={{ fontSize: 18 }}>{l.flag}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (user) {
+                      router.push('/(tabs)/profile');
+                    } else {
+                      router.push('/(auth)/login');
+                    }
+                  }}
+                >
+                  <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
+                    <Ionicons name="person" size={20} color={colors.black} />
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
 
             </AnimatedEntry>
@@ -260,7 +285,7 @@ export default function HomeScreen() {
                 )}
                 <Text style={styles.eventTitle}>{featuredEvent.title}</Text>
                 <Text style={styles.eventDate}>
-                  {new Date(featuredEvent.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {new Date(featuredEvent.date + 'T00:00:00').toLocaleDateString(i18n.locale, { weekday: 'long', day: 'numeric', month: 'long' })}
                   {featuredEvent.start_time ? ` • ${featuredEvent.start_time.slice(0, 5).replace(':', 'h')}` : ''}
                   {featuredEvent.end_time ? ` - ${featuredEvent.end_time.slice(0, 5).replace(':', 'h')}` : ''}
                 </Text>
@@ -373,6 +398,24 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
     marginTop: 16,
+  },
+  heroRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  langFlags: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  langFlagBtn: {
+    padding: 4,
+    borderRadius: 8,
+    opacity: 0.5,
+  },
+  langFlagActive: {
+    opacity: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   greeting: {
     fontSize: 14,

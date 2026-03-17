@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { i18n } from '@/shared/i18n';
 import type { Event, TicketType, EventTicket } from '@/shared/types';
 
 export function usePurchaseTicket() {
@@ -12,20 +13,20 @@ export function usePurchaseTicket() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Vous devez être connecté');
+      if (!user) throw new Error(i18n.t('connectToBook'));
 
       const price = ticketType === 'vip' ? (event.vip_price ?? event.standard_price) : event.standard_price;
 
       // Vérifier la capacité
       if (event.tickets_sold >= event.capacity) {
-        throw new Error('Événement complet');
+        throw new Error(i18n.t('full'));
       }
 
       // Réserver la place d'abord (atomique : SQL incrémente uniquement si < capacity)
       const { data: updated, error: updateError } = await supabase
         .rpc('increment_tickets_sold', { p_event_id: event.id });
 
-      if (updateError || updated === false) throw new Error('Événement complet');
+      if (updateError || updated === false) throw new Error(i18n.t('full'));
 
       // Place réservée — créer le ticket
       const { data: ticket, error: ticketError } = await supabase

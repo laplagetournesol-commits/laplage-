@@ -36,9 +36,9 @@ type Filter = 'all' | EventCategory;
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
-  const day = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+  const day = d.toLocaleDateString(i18n.locale, { weekday: 'short' });
   const num = d.getDate();
-  const month = d.toLocaleDateString('fr-FR', { month: 'short' });
+  const month = d.toLocaleDateString(i18n.locale, { month: 'short' });
   return `${day.charAt(0).toUpperCase() + day.slice(1)} ${num} ${month}`;
 }
 
@@ -78,8 +78,8 @@ export default function EventsScreen() {
 
   // Get current month/year label
   const monthLabel = events.length > 0
-    ? new Date(events[0].date + 'T00:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-    : new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    ? new Date(events[0].date + 'T00:00:00').toLocaleDateString(i18n.locale, { month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString(i18n.locale, { month: 'long', year: 'numeric' });
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -191,8 +191,8 @@ export default function EventsScreen() {
                         <View style={styles.eventCategoryRow}>
                           <Ionicons name={cat.icon} size={14} color="rgba(255,255,255,0.9)" />
                           <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
-                          {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
-                          {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+                          {event.is_secret && <Badge label={i18n.t('secretLabel')} variant="vip" size="sm" />}
+                          {event.category === 'private' && <Badge label={i18n.t('categoryPrivate')} variant="vip" size="sm" />}
                         </View>
                         <Text style={styles.eventTitle}>{event.title}</Text>
                       </View>
@@ -210,8 +210,8 @@ export default function EventsScreen() {
                           <Text style={styles.eventCategoryLabel}>{cat.label}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', gap: 6 }}>
-                          {event.is_secret && <Badge label="Secret" variant="vip" size="sm" />}
-                          {event.category === 'private' && <Badge label="Privé" variant="vip" size="sm" />}
+                          {event.is_secret && <Badge label={i18n.t('secretLabel')} variant="vip" size="sm" />}
+                          {event.category === 'private' && <Badge label={i18n.t('categoryPrivate')} variant="vip" size="sm" />}
                         </View>
                       </View>
                       <Text style={styles.eventTitle}>{event.title}</Text>

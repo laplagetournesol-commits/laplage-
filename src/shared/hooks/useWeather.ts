@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { i18n } from '@/shared/i18n';
 
 // Estepona coordinates
 const LAT = 36.4267;
@@ -14,25 +15,25 @@ interface WeatherData {
 
 // WMO Weather interpretation codes → description + icon
 function interpretWeatherCode(code: number): { description: string; icon: string } {
-  if (code === 0) return { description: 'Ensoleillé', icon: '☀️' };
-  if (code === 1) return { description: 'Plutôt dégagé', icon: '🌤️' };
-  if (code === 2) return { description: 'Partiellement nuageux', icon: '⛅' };
-  if (code === 3) return { description: 'Couvert', icon: '☁️' };
-  if (code >= 45 && code <= 48) return { description: 'Brouillard', icon: '🌫️' };
-  if (code >= 51 && code <= 55) return { description: 'Bruine', icon: '🌦️' };
-  if (code >= 61 && code <= 65) return { description: 'Pluie', icon: '🌧️' };
-  if (code >= 66 && code <= 67) return { description: 'Pluie verglaçante', icon: '🌧️' };
-  if (code >= 71 && code <= 77) return { description: 'Neige', icon: '❄️' };
-  if (code >= 80 && code <= 82) return { description: 'Averses', icon: '🌦️' };
-  if (code >= 95) return { description: 'Orage', icon: '⛈️' };
-  return { description: 'Variable', icon: '🌤️' };
+  if (code === 0) return { description: i18n.t('weatherSunny'), icon: '☀️' };
+  if (code === 1) return { description: i18n.t('weatherMostlyClear'), icon: '🌤️' };
+  if (code === 2) return { description: i18n.t('weatherPartlyCloudy'), icon: '⛅' };
+  if (code === 3) return { description: i18n.t('weatherOvercast'), icon: '☁️' };
+  if (code >= 45 && code <= 48) return { description: i18n.t('weatherFog'), icon: '🌫️' };
+  if (code >= 51 && code <= 55) return { description: i18n.t('weatherDrizzle'), icon: '🌦️' };
+  if (code >= 61 && code <= 65) return { description: i18n.t('weatherRain'), icon: '🌧️' };
+  if (code >= 66 && code <= 67) return { description: i18n.t('weatherFreezingRain'), icon: '🌧️' };
+  if (code >= 71 && code <= 77) return { description: i18n.t('weatherSnow'), icon: '❄️' };
+  if (code >= 80 && code <= 82) return { description: i18n.t('weatherShowers'), icon: '🌦️' };
+  if (code >= 95) return { description: i18n.t('weatherThunderstorm'), icon: '⛈️' };
+  return { description: i18n.t('weatherVariable'), icon: '🌤️' };
 }
 
 function windDescription(speed: number): string {
-  if (speed < 5) return 'Calme';
-  if (speed < 15) return 'Vent léger';
-  if (speed < 30) return 'Vent modéré';
-  return 'Vent fort';
+  if (speed < 5) return i18n.t('windCalm');
+  if (speed < 15) return i18n.t('windLight');
+  if (speed < 30) return i18n.t('windModerate');
+  return i18n.t('windStrong');
 }
 
 export function useWeather() {

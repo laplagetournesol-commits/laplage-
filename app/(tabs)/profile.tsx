@@ -177,7 +177,7 @@ export default function ProfileScreen() {
             <TouchableOpacity style={styles.sunDebug} onPress={cycleSunMode}>
               <Ionicons name="sunny" size={16} color={theme.accent} />
               <Text style={[styles.sunDebugText, { color: theme.textSecondary }]}>
-                Sun Mode : {isOverridden ? period : 'auto'} (tap pour changer)
+                Sun Mode : {isOverridden ? period : 'auto'}
               </Text>
             </TouchableOpacity>
           )}
@@ -214,7 +214,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <Text style={[styles.profileName, { color: colors.white }]}>
-              {profile?.full_name ?? 'Utilisateur'}
+              {profile?.full_name ?? i18n.t('userDefault')}
             </Text>
             <Text style={[styles.profileEmail, { color: 'rgba(255,255,255,0.7)' }]}>
               {user.email}

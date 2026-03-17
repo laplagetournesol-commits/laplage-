@@ -32,68 +32,70 @@ export interface MoodRecommendation {
 }
 
 // Recommandations pré-configurées (fallback sans API Claude)
-const RECOMMENDATIONS: Record<MoodType, MoodRecommendation> = {
-  chill: {
-    spot: {
-      type: 'beach',
-      zone: 'Premium',
-      description: 'Un transat Premium face à la mer, à l\'écart de l\'animation. Le bruit des vagues et une brise légère.',
+function getRecommendations(): Record<MoodType, MoodRecommendation> {
+  return {
+    chill: {
+      spot: {
+        type: 'beach',
+        zone: 'Premium',
+        description: i18n.t('moodChillSpotDesc'),
+      },
+      drinks: [i18n.t('moodChillDrink1'), i18n.t('moodChillDrink2'), i18n.t('moodChillDrink3')],
+      food: [i18n.t('moodChillFood1'), i18n.t('moodChillFood2')],
+      playlist: 'Chill Ibiza Sunset — Deep house & organic sounds',
+      tip: i18n.t('moodChillTip'),
+      addons: [i18n.t('moodAddonParasolXL'), i18n.t('moodAddonTowelKit')],
     },
-    drinks: ['Mojito Classique', 'Eau de coco fraîche', 'Thé glacé maison'],
-    food: ['Plateau de fruits frais', 'Poke bowl açaí'],
-    playlist: 'Chill Ibiza Sunset — Deep house mélodique & sons organiques',
-    tip: 'Demandez le transat P7 ou P8, ils sont les plus isolés avec la meilleure vue.',
-    addons: ['Parasol XL', 'Kit serviettes'],
-  },
-  fiesta: {
-    spot: {
-      type: 'beach',
-      zone: 'Front Row',
-      description: 'Première ligne, au cœur de l\'action ! Près des enceintes et du bar.',
+    fiesta: {
+      spot: {
+        type: 'beach',
+        zone: 'Front Row',
+        description: i18n.t('moodFiestaSpotDesc'),
+      },
+      drinks: [i18n.t('moodFiestaDrink1'), i18n.t('moodFiestaDrink2'), 'Spritz Aperol'],
+      food: [i18n.t('moodFiestaFood1'), i18n.t('moodFiestaFood2')],
+      playlist: 'Pool Party Anthems — Hit remixes & tropical house',
+      tip: i18n.t('moodFiestaTip'),
+      addons: [i18n.t('moodFiestaDrink1'), i18n.t('moodAddonCoffeeTable')],
     },
-    drinks: ['Pack Cocktails x4', 'Bouteille de Rosé', 'Spritz Aperol'],
-    food: ['Nachos à partager', 'Plateau de tapas'],
-    playlist: 'Pool Party Anthems — Hit remixes & tropical house',
-    tip: 'Le dimanche est Sunday Rosé Day — rosé à volonté et DJ set toute la journée !',
-    addons: ['Pack Cocktails x4', 'Table basse'],
-  },
-  romantic: {
-    spot: {
-      type: 'restaurant',
-      zone: 'Vue Mer',
-      description: 'Table pour deux en première ligne, face au coucher de soleil. Service discret et attentionné.',
+    romantic: {
+      spot: {
+        type: 'restaurant',
+        zone: i18n.t('moodRomanticZone'),
+        description: i18n.t('moodRomanticSpotDesc'),
+      },
+      drinks: ['Champagne Moët', 'Cocktail Rose Petal', i18n.t('moodRomanticDrink3')],
+      food: [i18n.t('moodRomanticFood1'), i18n.t('moodRomanticFood2'), i18n.t('moodRomanticFood3')],
+      playlist: 'Mediterranean Jazz — Bossa nova & acoustic jazz',
+      tip: i18n.t('moodRomanticTip'),
+      addons: ['Champagne'],
     },
-    drinks: ['Champagne Moët', 'Cocktail Rose Petal', 'Vin blanc Chablis'],
-    food: ['Huîtres fraîches (6)', 'Homard grillé', 'Tiramisu pour deux'],
-    playlist: 'Mediterranean Jazz — Bossa nova & jazz acoustique',
-    tip: 'Réservez le service dîner (19h30) pour profiter du sunset depuis votre table.',
-    addons: ['Champagne'],
-  },
-  family: {
-    spot: {
-      type: 'beach',
-      zone: 'Standard',
-      description: 'Zone Standard, spacieuse et accessible. Proche des sanitaires et du bar à glaces.',
+    family: {
+      spot: {
+        type: 'beach',
+        zone: 'Standard',
+        description: i18n.t('moodFamilySpotDesc'),
+      },
+      drinks: [i18n.t('moodFamilyDrink1'), i18n.t('moodFamilyDrink2'), i18n.t('moodFamilyDrink3')],
+      food: [i18n.t('moodFamilyFood1'), i18n.t('moodFamilyFood2'), i18n.t('moodFamilyFood3')],
+      playlist: 'Beach Family Vibes — Pop feel-good & soft reggae',
+      tip: i18n.t('moodFamilyTip'),
+      addons: [i18n.t('moodAddonParasolXL'), i18n.t('moodAddonCoffeeTable'), i18n.t('moodAddonTowelKit')],
     },
-    drinks: ['Jus d\'orange pressé', 'Limonade maison', 'Cocktail sans alcool'],
-    food: ['Fish & chips enfant', 'Plateau de fruits', 'Glace artisanale'],
-    playlist: 'Beach Family Vibes — Pop feel-good & reggae doux',
-    tip: 'Le brunch du dimanche inclut des activités pour les enfants !',
-    addons: ['Parasol XL', 'Table basse', 'Kit serviettes'],
-  },
-  business: {
-    spot: {
-      type: 'restaurant',
-      zone: 'Lounge',
-      description: 'Espace Lounge intimiste avec banquettes confortables. Wi-Fi haut débit et prises disponibles.',
+    business: {
+      spot: {
+        type: 'restaurant',
+        zone: 'Lounge',
+        description: i18n.t('moodBusinessSpotDesc'),
+      },
+      drinks: [i18n.t('moodBusinessDrink1'), 'San Pellegrino', 'Gin Tonic premium'],
+      food: ['Club sandwich', i18n.t('moodBusinessFood2'), i18n.t('moodBusinessFood3')],
+      playlist: 'Focus & Groove — Lo-fi & minimal deep house',
+      tip: i18n.t('moodBusinessTip'),
+      addons: [],
     },
-    drinks: ['Espresso double', 'Eau San Pellegrino', 'Gin Tonic premium'],
-    food: ['Club sandwich', 'Salade César', 'Café gourmand'],
-    playlist: 'Focus & Groove — Lo-fi & deep house minimaliste',
-    tip: 'Le Lounge est le plus calme entre 14h et 17h, idéal pour vos réunions.',
-    addons: [],
-  },
-};
+  };
+}
 
 // Persiste le dernier mood entre navigations (survit au remount du composant)
 let lastMood: MoodType | null = null;
@@ -111,7 +113,7 @@ export function useMoodAI() {
     // Pour l'instant, on utilise les recommandations pré-configurées
     // Plus tard, on pourra appeler l'API Claude pour des recommandations personnalisées
     await new Promise((r) => setTimeout(r, 1200)); // Simule un appel API
-    const rec = RECOMMENDATIONS[mood];
+    const rec = getRecommendations()[mood];
     setRecommendation(rec);
     setLoading(false);
 

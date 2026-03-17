@@ -75,7 +75,7 @@ export function SunbedSheet({
 
   if (!sunbed) return null;
 
-  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString(i18n.locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -118,10 +118,10 @@ export function SunbedSheet({
         <View style={styles.content}>
           <View style={styles.row}>
             <Badge
-              label={categoryLabel || (sunbed.zone.zone_type === 'vip_cabana' ? 'Lit balinais' : sunbed.zone.name)}
+              label={categoryLabel || (sunbed.zone.zone_type === 'vip_cabana' ? i18n.t('balinaiseBed') : sunbed.zone.name)}
               variant={sunbed.zone.zone_type === 'vip_cabana' ? 'vip' : 'default'}
             />
-            {sunbed.is_double && <Badge label="Double" variant="success" size="sm" />}
+            {sunbed.is_double && <Badge label={i18n.t('double')} variant="success" size="sm" />}
             {seasonLabel && <Badge label={seasonLabel} variant="success" size="sm" />}
           </View>
           <View style={styles.row}>
@@ -136,7 +136,7 @@ export function SunbedSheet({
           <View style={[styles.infoCardCompact, { backgroundColor: theme.backgroundSecondary }]}>
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={14} color={theme.accent} />
-              <Text style={[styles.infoTextCompact, { color: theme.text }]}>{formattedDate}  •  10h — 19h</Text>
+              <Text style={[styles.infoTextCompact, { color: theme.text }]}>{formattedDate}  •  {i18n.t('beachSchedule')}</Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="location-outline" size={14} color={theme.accent} />
@@ -357,7 +357,7 @@ export function SunbedSheet({
         qrCode={qrCode}
         type="beach"
         title={`${i18n.t('sunbed')} ${sunbed.label}`}
-        subtitle={`Zone ${sunbed.zone.name}`}
+        subtitle={`${i18n.t('zone')} ${sunbed.zone.name}`}
         details={[
           { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
           { label: i18n.t('schedule'), value: i18n.t('beachSchedule'), icon: 'time-outline' },

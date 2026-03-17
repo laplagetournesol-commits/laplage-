@@ -101,7 +101,7 @@ export default function MoodScreen() {
                 <Text style={[styles.resultTitle, { color: theme.text }]}>{i18n.t('idealSpot')}</Text>
               </View>
               <Badge
-                label={`Zone ${recommendation.spot.zone}`}
+                label={`${i18n.t('zone')} ${recommendation.spot.zone}`}
                 variant={recommendation.spot.zone === 'VIP Cabanas' ? 'vip' : 'success'}
                 size="sm"
               />
@@ -116,7 +116,7 @@ export default function MoodScreen() {
                 </View>
               )}
               <Button
-                title={recommendation.spot.type === 'beach' ? `${i18n.t('reserve')} — Zone ${recommendation.spot.zone}` : `${i18n.t('reserve')} — ${recommendation.spot.zone}`}
+                title={recommendation.spot.type === 'beach' ? `${i18n.t('reserve')} — ${i18n.t('zone')} ${recommendation.spot.zone}` : `${i18n.t('reserve')} — ${recommendation.spot.zone}`}
                 onPress={() => router.push(recommendation.spot.type === 'beach' ? '/(tabs)/beach?fromMood=true' : '/(tabs)/restaurant?fromMood=true')}
                 size="sm"
                 style={{ alignSelf: 'flex-start', marginTop: 8 }}
