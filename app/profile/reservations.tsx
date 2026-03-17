@@ -41,12 +41,9 @@ function getStatusBadge(): Record<string, { label: string; variant: 'success' | 
   };
 }
 
-function isModifiable(dateStr: string): boolean {
-  const reservationDate = new Date(dateStr + 'T00:00:00');
-  const now = new Date();
-  const diffMs = reservationDate.getTime() - now.getTime();
-  const diffHours = diffMs / (1000 * 60 * 60);
-  return diffHours >= 24;
+function isModifiable(_dateStr: string): boolean {
+  // Toujours modifiable pour l'instant (pas d'acompte)
+  return true;
 }
 
 function isFuture(dateStr: string): boolean {
