@@ -25,6 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePayment } from '@/shared/hooks/usePayment';
 import { useRestaurantCapacity } from '@/features/restaurant/hooks/useRestaurantCapacity';
 import { apiCall } from '@/shared/lib/api';
+import { supabase } from '@/shared/lib/supabase';
 import { i18n } from '@/shared/i18n';
 
 export default function RestaurantScreen() {
@@ -57,6 +58,8 @@ export default function RestaurantScreen() {
         amount: booking.depositAmount,
       });
       if (!payResult.success) {
+        // Paiement annulé/échoué → supprimer la réservation
+        await supabase.from('restaurant_reservations').delete().eq('id', result.reservationId);
         setShowConfirm(false);
         return;
       }

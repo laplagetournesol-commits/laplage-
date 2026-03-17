@@ -13,6 +13,7 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { i18n } from '@/shared/i18n';
 import { apiCall } from '@/shared/lib/api';
+import { supabase } from '@/shared/lib/supabase';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { useAddons } from '@/features/beach/hooks/useAddons';
 import { useBeachBooking } from '@/features/beach/hooks/useBeachBooking';
@@ -47,7 +48,11 @@ export default function BeachScreen() {
         reservationId: result.reservationId,
         amount: booking.depositAmount,
       });
-      if (!payResult.success) return { success: false };
+      if (!payResult.success) {
+        // Paiement annulé/échoué → supprimer la réservation
+        await supabase.from('beach_reservations').delete().eq('id', result.reservationId);
+        return { success: false };
+      }
     }
 
     // Push de confirmation seulement après paiement réussi
