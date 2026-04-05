@@ -2,7 +2,7 @@
   "expo": {
     "name": "Les Tournesols",
     "slug": "laplagetournesols",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "tournesol",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lestournesols.app",
-      "buildNumber": "13"
+      "buildNumber": "22"
     },
     "android": {
       "adaptiveIcon": {
@@ -52,7 +52,7 @@
             "buildReactNativeFromSource": true
           },
           "android": {
-            "compileSdkVersion": 35,
+            "compileSdkVersion": 36,
             "targetSdkVersion": 34,
             "minSdkVersion": 24,
             "kotlinVersion": "2.0.21"
@@ -66,7 +66,10 @@
           "merchantIdentifier": "merchant.com.lestournesols.app",
           "enableGooglePay": false
         }
-      ]
+      ],
+      "expo-image",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": false

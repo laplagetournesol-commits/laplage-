@@ -179,10 +179,26 @@ export function useScanReservation() {
     }
   }, [reservation]);
 
+  // Libérer le transat (admin: quand le client part)
+  const release = useCallback(async () => {
+    if (!reservation || reservation.type !== 'beach') return;
+
+    try {
+      await supabase
+        .from('beach_reservations')
+        .update({ status: 'completed' })
+        .eq('id', reservation.id);
+
+      setReservation((r) => r ? { ...r, status: 'completed' } : null);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }, [reservation]);
+
   const reset = useCallback(() => {
     setReservation(null);
     setError(null);
   }, []);
 
-  return { scan, checkIn, reset, reservation, loading, error };
+  return { scan, checkIn, release, reset, reservation, loading, error };
 }

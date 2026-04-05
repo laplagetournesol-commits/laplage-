@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   FlatList,
   ImageBackground,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -69,7 +71,7 @@ function SlideItem({ item, index, scrollX }: { item: OnboardingSlide; index: num
 
   return (
     <View style={styles.slide}>
-      <ImageBackground source={item.image} style={styles.slideImage} resizeMode="cover">
+      <ImageBackground source={item.image} style={[styles.slideImage, item.id === '1' && { backgroundColor: '#2a2a1e' }]} resizeMode={item.id === '1' ? 'contain' : 'cover'}>
         <LinearGradient
           colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.5)', 'rgba(15,27,45,0.95)']}
           style={StyleSheet.absoluteFill}
@@ -97,7 +99,12 @@ export default function OnboardingScreen() {
 
   const handleNext = () => {
     if (currentIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+      const nextIndex = currentIndex + 1;
+      if (Platform.OS === 'web') {
+        flatListRef.current?.scrollToOffset({ offset: nextIndex * width, animated: true });
+      } else {
+        flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      }
     } else {
       finishOnboarding();
     }

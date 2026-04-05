@@ -33,31 +33,35 @@ const { width, height } = Dimensions.get('window');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const droneVideoSource = require('../../assets/gallery/drone-video-1.mp4');
 
+// Native video component — separated to avoid conditional hook calls
+let NativeHeroVideo: React.ComponentType | null = null;
+if (Platform.OS !== 'web') {
+  const { useVideoPlayer, VideoView } = require('expo-video');
+  NativeHeroVideo = function NativeHeroVideoInner() {
+    const player = useVideoPlayer(droneVideoSource, (p: any) => {
+      p.loop = true;
+      p.muted = true;
+      p.play();
+    });
+
+    return (
+      <VideoView
+        player={player}
+        style={styles.bgImage}
+        contentFit="cover"
+        nativeControls={false}
+        allowsFullscreen={false}
+        allowsPictureInPicture={false}
+      />
+    );
+  };
+}
+
 function HeroVideo() {
   if (Platform.OS === 'web') {
-    // expo-video crashes on some browsers (Firefox) — use static image on web
     return <Image source={require('../../assets/splash-icon.png')} style={styles.bgImage} resizeMode="cover" />;
   }
-
-  // Native: dynamic import to avoid loading expo-video on web
-  const { useVideoPlayer, VideoView } = require('expo-video');
-  const player = useVideoPlayer(droneVideoSource, (p: any) => {
-    p.loop = true;
-    p.muted = true;
-    p.playbackRate = 1.5;
-    p.play();
-  });
-
-  return (
-    <VideoView
-      player={player}
-      style={styles.bgImage}
-      contentFit="cover"
-      nativeControls={false}
-      allowsFullscreen={false}
-      allowsPictureInPicture={false}
-    />
-  );
+  return NativeHeroVideo ? <NativeHeroVideo /> : null;
 }
 
 function QuickAction({
@@ -125,8 +129,19 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Web Logo */}
+        {Platform.OS === 'web' && (
+          <View style={{ alignItems: 'center', paddingTop: insets.top + 40, paddingBottom: 8 }}>
+            <Image
+              source={require('../../assets/logo-tournesols.png')}
+              style={{ width: 220, height: 60 }}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
         {/* Hero Section */}
-        <View style={[styles.hero, { paddingTop: insets.top }]}>
+        <View style={[styles.hero, { paddingTop: Platform.OS === 'web' ? 0 : insets.top }]}>
           <View style={styles.heroContent}>
             <AnimatedEntry delay={100} direction="up">
             <View style={styles.heroTop}>
@@ -139,13 +154,6 @@ export default function HomeScreen() {
                     {profile?.full_name?.split(' ')[0] ?? i18n.t('welcome')}
                   </Text>
                 </View>
-                {Platform.OS === 'web' && (
-                  <Image
-                    source={require('../../assets/splash-icon.png')}
-                    style={{ width: 140, height: 44 }}
-                    resizeMode="contain"
-                  />
-                )}
               </View>
               <View style={styles.heroRight}>
                 <View style={styles.langFlags}>

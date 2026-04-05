@@ -31,10 +31,12 @@ interface SunbedWithZone extends Sunbed {
 interface BeachMapProps {
   sunbeds: SunbedWithZone[];
   selectedId: string | null;
+  secondarySelectedId?: string | null;
   onSelect: (sunbed: SunbedWithZone) => void;
+  onReservedPress?: (sunbed: SunbedWithZone) => void;
 }
 
-export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
+export function BeachMap({ sunbeds, selectedId, secondarySelectedId, onSelect, onReservedPress }: BeachMapProps) {
   const { theme } = useSunMode();
   const scrollRef = useRef<ScrollView>(null);
   const [useRemote, setUseRemote] = useState(true);
@@ -87,13 +89,17 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
           {/* Zones cliquables transparentes sur la photo */}
           {sunbeds.map((sunbed) => {
             const isSelected = sunbed.id === selectedId;
+            const isPaired = sunbed.id === secondarySelectedId;
             const isReserved = sunbed.isReserved;
 
             return (
               <TouchableOpacity
                 key={sunbed.id}
-                activeOpacity={isReserved ? 1 : 0.6}
-                onPress={() => !isReserved && onSelect(sunbed)}
+                activeOpacity={isReserved && !onReservedPress ? 1 : 0.6}
+                onPress={() => {
+                  if (isReserved && onReservedPress) { onReservedPress(sunbed); return; }
+                  if (!isReserved && !isPaired) onSelect(sunbed);
+                }}
                 style={[
                   styles.marker,
                   {
@@ -107,7 +113,7 @@ export function BeachMap({ sunbeds, selectedId, onSelect }: BeachMapProps) {
                 <View
                   style={[
                     styles.markerInner,
-                    isSelected && styles.markerSelected,
+                    (isSelected || isPaired) && styles.markerSelected,
                     isReserved && styles.markerReserved,
                   ]}
                 >

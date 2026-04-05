@@ -21,6 +21,7 @@ interface SunbedSheetProps {
   visible: boolean;
   onClose: () => void;
   sunbed: (Sunbed & { zone: BeachZone }) | null;
+  secondarySunbed?: (Sunbed & { zone: BeachZone }) | null;
   date: string;
   addons: Addon[];
   selectedAddons: SelectedAddon[];
@@ -47,6 +48,7 @@ export function SunbedSheet({
   visible,
   onClose,
   sunbed,
+  secondarySunbed,
   date,
   addons,
   selectedAddons,
@@ -140,7 +142,9 @@ export function SunbedSheet({
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="location-outline" size={14} color={theme.accent} />
-              <Text style={[styles.infoTextCompact, { color: theme.text }]}>{sunbed.zone.name} — {sunbed.label}</Text>
+              <Text style={[styles.infoTextCompact, { color: theme.text }]}>
+                {sunbed.zone.name} — {sunbed.label}{secondarySunbed ? ` + ${secondarySunbed.label}` : ''}
+              </Text>
             </View>
           </View>
 
@@ -286,7 +290,7 @@ export function SunbedSheet({
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{i18n.t('sunbed')}</Text>
                 <Text style={[styles.summaryValue, { color: theme.text }]}>
-                  {sunbed.label} ({sunbed.zone.name})
+                  {sunbed.label}{secondarySunbed ? ` + ${secondarySunbed.label}` : ''} ({sunbed.zone.name})
                 </Text>
               </View>
               <View style={styles.summaryRow}>
@@ -360,12 +364,12 @@ export function SunbedSheet({
         onClose={handleCloseQR}
         qrCode={qrCode}
         type="beach"
-        title={`${i18n.t('sunbed')} ${sunbed.label}`}
+        title={`${i18n.t('sunbed')} ${sunbed.label}${secondarySunbed ? ` + ${secondarySunbed.label}` : ''}`}
         subtitle={`${i18n.t('zone')} ${sunbed.zone.name}`}
         details={[
           { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
           { label: i18n.t('schedule'), value: i18n.t('beachSchedule'), icon: 'time-outline' },
-          { label: i18n.t('location'), value: `${sunbed.zone.name} — ${sunbed.label}`, icon: 'location-outline' },
+          { label: i18n.t('location'), value: `${sunbed.zone.name} — ${sunbed.label}${secondarySunbed ? ` + ${secondarySunbed.label}` : ''}`, icon: 'location-outline' },
           { label: i18n.t('persons'), value: `${guestCount}`, icon: 'people-outline' },
         ]}
         price={`${totalPrice}€`}

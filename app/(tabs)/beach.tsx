@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,11 @@ export default function BeachScreen() {
   const { addons } = useAddons(booking.date);
   const { pay } = usePayment();
   const [sheetVisible, setSheetVisible] = useState(false);
+
+  // Calculer le transat secondaire quand sunbed ou guestCount change
+  useEffect(() => {
+    booking.updateSecondary(sunbeds);
+  }, [booking.sunbed?.id, booking.guestCount, sunbeds]);
 
   const handleSelectSunbed = (sunbed: any) => {
     booking.selectSunbed(sunbed);
@@ -114,6 +119,7 @@ export default function BeachScreen() {
         <BeachMap
           sunbeds={sunbeds}
           selectedId={booking.sunbed?.id ?? null}
+          secondarySelectedId={booking.secondarySunbed?.id ?? null}
           onSelect={handleSelectSunbed}
         />
       )}
@@ -123,6 +129,7 @@ export default function BeachScreen() {
         visible={sheetVisible}
         onClose={handleClose}
         sunbed={booking.sunbed}
+        secondarySunbed={booking.secondarySunbed}
         date={booking.date}
         addons={addons}
         selectedAddons={booking.selectedAddons}

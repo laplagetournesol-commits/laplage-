@@ -38,6 +38,10 @@ function RootLayoutContent() {
   usePushNotifications();
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      setReady(true);
+      return;
+    }
     AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
       if (!value) {
         AsyncStorage.setItem(ONBOARDING_KEY, 'true').then(() => {
@@ -67,7 +71,7 @@ function RootLayoutContent() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="(auth)"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+          options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen
           name="event/[id]"

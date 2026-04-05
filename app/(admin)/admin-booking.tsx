@@ -42,6 +42,7 @@ export default function AdminBookingScreen() {
   const [timeSlot, setTimeSlot] = useState<'lunch' | 'dinner'>('lunch');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedSunbed, setSelectedSunbed] = useState<(Sunbed & { zone: BeachZone }) | null>(null);
+  const [secondaryId, setSecondaryId] = useState<string | null>(null);
 
   // Beach: réutilise le même hook + carte que les clients
   const { sunbeds, loading: beachLoading } = useSunbeds(date);
@@ -55,7 +56,31 @@ export default function AdminBookingScreen() {
   useEffect(() => {
     setSelectedId(null);
     setSelectedSunbed(null);
+    setSecondaryId(null);
   }, [date, type, timeSlot]);
+
+  // Calculer le transat secondaire quand sunbed ou guestCount change
+  useEffect(() => {
+    if (!selectedSunbed || guestCount < 2 || selectedSunbed.is_double || type !== 'beach') {
+      setSecondaryId(null);
+      return;
+    }
+    const sameRow = sunbeds
+      .filter((sb) =>
+        sb.zone_id === selectedSunbed.zone_id &&
+        Number(sb.svg_y) === Number(selectedSunbed.svg_y) &&
+        sb.id !== selectedSunbed.id &&
+        !sb.isReserved
+      );
+    const x = Number(selectedSunbed.svg_x);
+    let best: typeof sunbeds[number] | null = null;
+    let bestDist = Infinity;
+    for (const sb of sameRow) {
+      const dist = Math.abs(Number(sb.svg_x) - x);
+      if (dist < bestDist) { bestDist = dist; best = sb; }
+    }
+    setSecondaryId(best?.id ?? null);
+  }, [selectedSunbed?.id, guestCount, sunbeds, type]);
 
   // Charger tables restaurant
   useEffect(() => {
@@ -100,6 +125,44 @@ export default function AdminBookingScreen() {
     setSelectedSunbed(sunbed);
   };
 
+  const handleReservedPress = async (sunbed: Sunbed & { zone: BeachZone } & { isReserved: boolean }) => {
+    // Chercher la réservation active pour ce transat
+    const { data: res } = await supabase
+      .from('beach_reservations')
+      .select('id, status, guest_count, special_requests, secondary_sunbed_id, profile:profiles(full_name)')
+      .eq('date', date)
+      .in('status', ['confirmed', 'checked_in'])
+      .or(`sunbed_id.eq.${sunbed.id},secondary_sunbed_id.eq.${sunbed.id}`)
+      .maybeSingle();
+
+    if (!res) {
+      Alert.alert('Erreur', 'Aucune réservation trouvée pour ce transat');
+      return;
+    }
+
+    const clientName = (res as any).profile?.full_name || res.special_requests || 'Client';
+    const statusLabel = res.status === 'checked_in' ? 'check-in fait' : 'confirmé';
+
+    Alert.alert(
+      `Transat ${sunbed.label}`,
+      `Réservé par ${clientName}\nStatut : ${statusLabel}\n${res.guest_count} pers.`,
+      [
+        { text: 'Fermer', style: 'cancel' },
+        {
+          text: 'Libérer le transat',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase
+              .from('beach_reservations')
+              .update({ status: 'completed' })
+              .eq('id', res.id);
+            Alert.alert('Transat libéré', `${sunbed.label} est maintenant disponible`);
+          },
+        },
+      ],
+    );
+  };
+
   const handleSubmit = async () => {
     if (!selectedId) {
       Alert.alert('Erreur', `Sélectionnez un ${type === 'beach' ? 'transat' : 'table'}`);
@@ -120,6 +183,7 @@ export default function AdminBookingScreen() {
         const { error } = await supabase.from('beach_reservations').insert({
           user_id: user.id,
           sunbed_id: selectedId,
+          secondary_sunbed_id: secondaryId,
           date,
           status: 'confirmed',
           total_price: 0,
@@ -283,7 +347,9 @@ export default function AdminBookingScreen() {
             <BeachMap
               sunbeds={sunbeds}
               selectedId={selectedId}
+              secondarySelectedId={secondaryId}
               onSelect={handleSelectSunbed}
+              onReservedPress={handleReservedPress}
             />
           )}
         </View>

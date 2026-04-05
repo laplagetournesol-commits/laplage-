@@ -11,10 +11,16 @@ interface SelectedAddon {
   quantity: number;
 }
 
+interface SunbedWithZone extends Sunbed {
+  zone: BeachZone;
+  isReserved?: boolean;
+}
+
 interface BookingState {
   step: BookingStep;
   date: string;
-  sunbed: (Sunbed & { zone: BeachZone }) | null;
+  sunbed: SunbedWithZone | null;
+  secondarySunbed: SunbedWithZone | null;
   guestCount: number;
   selectedAddons: SelectedAddon[];
   specialRequests: string;
@@ -29,6 +35,7 @@ export function useBeachBooking() {
     step: 'select',
     date: getDefaultDate(),
     sunbed: null,
+    secondarySunbed: null,
     guestCount: 1,
     selectedAddons: [],
     specialRequests: '',
@@ -58,11 +65,11 @@ export function useBeachBooking() {
   }, [state.date, state.sunbed?.id]);
 
   const setDate = useCallback((date: string) => {
-    setState((s) => ({ ...s, date, sunbed: null, step: 'select', seasonalPrice: null, seasonLabel: null, seasonInclusions: [], categoryLabel: null }));
+    setState((s) => ({ ...s, date, sunbed: null, secondarySunbed: null, step: 'select', seasonalPrice: null, seasonLabel: null, seasonInclusions: [], categoryLabel: null }));
   }, []);
 
-  const selectSunbed = useCallback((sunbed: (Sunbed & { zone: BeachZone }) | null) => {
-    setState((s) => ({ ...s, sunbed }));
+  const selectSunbed = useCallback((sunbed: SunbedWithZone | null) => {
+    setState((s) => ({ ...s, sunbed, secondarySunbed: null }));
   }, []);
 
   const goToAddons = useCallback(() => {
@@ -82,6 +89,38 @@ export function useBeachBooking() {
 
   const setGuestCount = useCallback((count: number) => {
     setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 10)) }));
+  }, []);
+
+  // Chercher et définir le transat voisin quand guest_count >= 2
+  const updateSecondary = useCallback((allSunbeds: SunbedWithZone[]) => {
+    setState((s) => {
+      if (!s.sunbed || s.guestCount < 2 || s.sunbed.is_double) {
+        return s.secondarySunbed ? { ...s, secondarySunbed: null } : s;
+      }
+      // Chercher les voisins dans la même rangée (même zone, même svg_y)
+      const sameRow = allSunbeds
+        .filter((sb) =>
+          sb.zone_id === s.sunbed!.zone_id &&
+          Number(sb.svg_y) === Number(s.sunbed!.svg_y) &&
+          sb.id !== s.sunbed!.id &&
+          !sb.isReserved
+        )
+        .sort((a, b) => Number(a.svg_x) - Number(b.svg_x));
+
+      const x = Number(s.sunbed.svg_x);
+      // Voisin le plus proche (préférer la droite)
+      let best: SunbedWithZone | null = null;
+      let bestDist = Infinity;
+      for (const sb of sameRow) {
+        const dist = Math.abs(Number(sb.svg_x) - x);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = sb;
+        }
+      }
+      if (best?.id === s.secondarySunbed?.id) return s;
+      return { ...s, secondarySunbed: best };
+    });
   }, []);
 
   const toggleAddon = useCallback((addon: Addon) => {
@@ -154,6 +193,7 @@ export function useBeachBooking() {
           .insert({
             user_id: user.id,
             sunbed_id: state.sunbed.id,
+            secondary_sunbed_id: state.secondarySunbed?.id ?? null,
             date: state.date,
             status: 'pending',
             total_price: totalPrice,
@@ -201,6 +241,7 @@ export function useBeachBooking() {
       step: 'select',
       date: getDefaultDate(),
       sunbed: null,
+      secondarySunbed: null,
       guestCount: 1,
       selectedAddons: [],
       specialRequests: '',
@@ -224,6 +265,7 @@ export function useBeachBooking() {
     setDate,
     selectSunbed,
     setGuestCount,
+    updateSecondary,
     toggleAddon,
     updateAddonQuantity,
     setSpecialRequests,

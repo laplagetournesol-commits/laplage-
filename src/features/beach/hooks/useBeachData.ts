@@ -19,12 +19,16 @@ export function useSunbeds(date: string) {
     const [zonesRes, sunbedsRes, reservationsRes] = await Promise.all([
       supabase.from('beach_zones').select('*').eq('is_active', true).order('sort_order'),
       supabase.from('sunbeds').select('*').eq('is_active', true),
-      supabase.from('beach_reservations').select('sunbed_id').eq('date', date).eq('status', 'confirmed'),
+      supabase.from('beach_reservations').select('sunbed_id, secondary_sunbed_id').eq('date', date).in('status', ['confirmed', 'checked_in']),
     ]);
 
     const zonesData = (zonesRes.data ?? []) as BeachZone[];
     const sunbedsData = (sunbedsRes.data ?? []) as Sunbed[];
-    const reservedIds = new Set((reservationsRes.data ?? []).map((r: { sunbed_id: string }) => r.sunbed_id));
+    const reservedIds = new Set<string>();
+    for (const r of (reservationsRes.data ?? []) as { sunbed_id: string; secondary_sunbed_id: string | null }[]) {
+      reservedIds.add(r.sunbed_id);
+      if (r.secondary_sunbed_id) reservedIds.add(r.secondary_sunbed_id);
+    }
 
     const zoneMap = new Map(zonesData.map((z) => [z.id, z]));
 

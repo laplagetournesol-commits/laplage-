@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ImageBackground,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -63,6 +64,12 @@ export default function ProfileScreen() {
   const { locale, setLanguage, languageLabel } = useLanguage();
 
   const handleSignOut = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(i18n.t('logoutConfirm'))) {
+        signOut();
+      }
+      return;
+    }
     Alert.alert(
       i18n.t('logout'),
       i18n.t('logoutConfirm'),
@@ -74,6 +81,23 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(i18n.t('deleteAccountDesc'))) {
+        if (window.confirm(i18n.t('deleteAccountConfirm'))) {
+          (async () => {
+            try {
+              const { error } = await supabase.rpc('delete_my_account');
+              if (error) throw error;
+              await signOut();
+              window.alert(i18n.t('accountDeletedDesc'));
+            } catch {
+              window.alert(i18n.t('deleteError'));
+            }
+          })();
+        }
+      }
+      return;
+    }
     Alert.alert(
       i18n.t('deleteAccountTitle'),
       i18n.t('deleteAccountDesc'),
@@ -210,7 +234,7 @@ export default function ProfileScreen() {
           <View style={[styles.profileHeader, { paddingTop: insets.top + 16 }]}>
             <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
               <Text style={styles.avatarText}>
-                {(profile?.full_name ?? '?')[0].toUpperCase()}
+                {(profile?.full_name || '?')[0].toUpperCase()}
               </Text>
             </View>
             <Text style={[styles.profileName, { color: colors.white }]}>

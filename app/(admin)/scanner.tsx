@@ -23,7 +23,7 @@ export default function ScannerScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
-  const { scan, checkIn, reset, reservation, loading, error } = useScanReservation();
+  const { scan, checkIn, release, reset, reservation, loading, error } = useScanReservation();
   const [scanned, setScanned] = useState(false);
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
@@ -89,6 +89,7 @@ export default function ScannerScreen() {
   const statusLabels: Record<string, { text: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
     confirmed: { text: 'Confirmé', variant: 'success' },
     checked_in: { text: 'Déjà check-in', variant: 'warning' },
+    completed: { text: 'Terminé (libéré)', variant: 'default' },
     active: { text: 'Valide', variant: 'success' },
     used: { text: 'Déjà utilisé', variant: 'warning' },
     cancelled: { text: 'Annulé', variant: 'error' },
@@ -106,6 +107,26 @@ export default function ScannerScreen() {
     (reservation.type !== 'event' && reservation.status === 'confirmed') ||
     (reservation.type === 'event' && reservation.status === 'active')
   );
+
+  const canRelease = reservation && reservation.type === 'beach' && reservation.status === 'checked_in';
+
+  const handleRelease = () => {
+    Alert.alert(
+      'Libérer le transat',
+      `Remettre le transat ${reservation?.locationLabel} en disponible ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Libérer',
+          style: 'destructive',
+          onPress: async () => {
+            await release();
+            Vibration.vibrate(100);
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -309,6 +330,17 @@ export default function ScannerScreen() {
                 }
               </Text>
             </View>
+          )}
+
+          {canRelease && (
+            <Button
+              title="Libérer le transat"
+              onPress={handleRelease}
+              variant="outline"
+              size="lg"
+              icon={<Ionicons name="log-out-outline" size={20} color={colors.terracotta} />}
+              style={{ marginBottom: 10 }}
+            />
           )}
 
           <Button
