@@ -1,0 +1,14 @@
+/node_modules
+/ios
+/android_backup
+/photos
+/photos google
+/photos plage
+/captures
+/supabase
+/server
+/src
+/app
+/assets
+*.aab
+*.bak
