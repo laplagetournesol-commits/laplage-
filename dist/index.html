@@ -23,7 +23,20 @@
         flex: 1;
       }
     </style>
-  <link rel="icon" href="/favicon.ico" /></head>
+  <link rel="icon" href="/favicon.ico" />
+    <style id="beach-overrides">
+      /* Cacher les numéros sur les marqueurs de la carte plage */
+      div[style*="font-size:8px"][style*="font-weight:900"][style*="color:rgb(255,255,255)"],
+      div[style*="font-size: 8px"][style*="font-weight: 900"][style*="color: rgb(255, 255, 255)"] {
+        visibility: hidden !important;
+      }
+      /* Cacher la bannière de prix en bas de la carte */
+      div[style*="position:absolute"][style*="bottom:40px"][style*="flex-direction:row"],
+      div[style*="position: absolute"][style*="bottom: 40px"][style*="flex-direction: row"] {
+        display: none !important;
+      }
+    </style>
+  </head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
