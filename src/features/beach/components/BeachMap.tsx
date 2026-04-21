@@ -117,7 +117,7 @@ export function BeachMap({ sunbeds, selectedId, secondarySelectedId, onSelect, o
                     isReserved && styles.markerReserved,
                   ]}
                 >
-                  <Text style={styles.markerLabel}>{sunbed.label}</Text>
+                  {/* Label masqué côté client, visible uniquement dans la réservation */}
                 </View>
               </TouchableOpacity>
             );
@@ -125,19 +125,7 @@ export function BeachMap({ sunbeds, selectedId, secondarySelectedId, onSelect, o
         </View>
       </ScrollView>
 
-      {/* Légende prix */}
-      <View style={styles.priceLegend}>
-        <View style={[styles.priceLegendItem, { backgroundColor: 'rgba(101, 67, 33, 0.92)' }]}>
-          <Text style={styles.priceLegendIcon}>🏖</Text>
-          <Text style={styles.priceLegendLabel}>{i18n.t('categorySunbed')} + {i18n.t('parasolIncluded').split('+')[0].trim().toLowerCase()}</Text>
-          <Text style={styles.priceLegendPrice}>20€ / {i18n.t('perDay')}</Text>
-        </View>
-        <View style={[styles.priceLegendItem, { backgroundColor: 'rgba(85, 85, 60, 0.92)' }]}>
-          <Text style={styles.priceLegendIcon}>🪑</Text>
-          <Text style={styles.priceLegendLabel}>{i18n.t('categoryLoungeChair')}</Text>
-          <Text style={styles.priceLegendPrice}>10€ / {i18n.t('perDay')}</Text>
-        </View>
-      </View>
+      {/* Bannière prix supprimée */}
 
       {/* Hint zoom */}
       <View style={[styles.zoomHint, { backgroundColor: theme.card + 'DD' }]}>
