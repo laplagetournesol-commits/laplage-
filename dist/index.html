@@ -30,10 +30,35 @@
       div[style*="font-size: 8px"][style*="font-weight: 900"][style*="color: rgb(255, 255, 255)"] {
         visibility: hidden !important;
       }
-      /* Cacher la bannière de prix en bas de la carte */
+      /* Cacher l'ancienne bannière de prix */
       div[style*="position:absolute"][style*="bottom:40px"][style*="flex-direction:row"],
       div[style*="position: absolute"][style*="bottom: 40px"][style*="flex-direction: row"] {
         display: none !important;
+      }
+      /* Nouvelle bannière de prix */
+      #price-banner {
+        position: fixed;
+        bottom: 56px;
+        left: 0;
+        right: 0;
+        display: flex;
+        z-index: 999;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      #price-banner .pb-item {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 6px;
+        gap: 6px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      #price-banner .pb-price {
+        font-weight: 800;
+        font-size: 13px;
       }
     </style>
   </head>
@@ -46,5 +71,27 @@
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
   <script src="/_expo/static/js/web/entry-v2-nolabels.js" defer></script>
+  <div id="price-banner" style="display:none;">
+    <div class="pb-item" style="background:rgba(212,175,55,0.92);">
+      <span>1ère Ligne</span>
+      <span class="pb-price">25€ / jour</span>
+    </div>
+    <div class="pb-item" style="background:rgba(101,67,33,0.92);">
+      <span>Transat + parasol</span>
+      <span class="pb-price">20€ / jour</span>
+    </div>
+    <div class="pb-item" style="background:rgba(85,85,60,0.92);">
+      <span>Chaise longue</span>
+      <span class="pb-price">10€ / jour</span>
+    </div>
+  </div>
+  <script>
+    // Afficher la bannière uniquement sur la page plage
+    function checkBanner() {
+      var b = document.getElementById('price-banner');
+      if (b) b.style.display = location.pathname.includes('beach') ? 'flex' : 'none';
+    }
+    setInterval(checkBanner, 500);
+  </script>
 </body>
 </html>
