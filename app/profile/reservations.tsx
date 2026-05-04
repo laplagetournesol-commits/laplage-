@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePayment } from '@/shared/hooks/usePayment';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
+import { formatLocalDate } from '@/shared/lib/date';
 import { i18n } from '@/shared/i18n';
 
 interface Reservation {
@@ -25,6 +26,7 @@ interface Reservation {
   total_price?: number;
   deposit_amount?: number;
   time_slot?: string;
+  time?: string;
   sunbed_id?: string;
   table_id?: string;
   guest_count?: number;
@@ -41,9 +43,15 @@ function getStatusBadge(): Record<string, { label: string; variant: 'success' | 
   };
 }
 
-function isModifiable(_dateStr: string): boolean {
-  // Toujours modifiable pour l'instant (pas d'acompte)
-  return true;
+function isModifiable(reservation: Reservation, depositStartsOn: string | null): boolean {
+  // Avant la date de début de la politique : toujours modifiable
+  if (!depositStartsOn || reservation.date < depositStartsOn) return true;
+  // À partir de la politique : annulable seulement si > 24h avant le créneau
+  const startTime = reservation.time
+    ?? (reservation.time_slot === 'dinner' ? '19:00' : '12:00');
+  const reservationDate = new Date(`${reservation.date}T${startTime}:00`);
+  const cutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return reservationDate > cutoff;
 }
 
 function isFuture(dateStr: string): boolean {
@@ -59,7 +67,19 @@ export default function MyReservationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [qrReservation, setQrReservation] = useState<Reservation | null>(null);
+  const [depositStartsOn, setDepositStartsOn] = useState<string | null>(null);
   const { pay } = usePayment();
+
+  useEffect(() => {
+    supabase
+      .from('restaurant_settings')
+      .select('value')
+      .eq('key', 'deposit_starts_on')
+      .single()
+      .then(({ data }) => {
+        if (data) setDepositStartsOn(data.value as string);
+      });
+  }, []);
 
   const handlePay = async (reservation: Reservation) => {
     const amount = reservation.total_price ?? reservation.deposit_amount ?? 0;
@@ -83,38 +103,49 @@ export default function MyReservationsScreen() {
   const fetchReservations = async () => {
     if (!user) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocalDate(new Date());
 
     const [beachRes, restoRes] = await Promise.all([
       supabase
         .from('beach_reservations')
-        .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, qr_code, sunbed:sunbeds(label, zone:beach_zones(name))')
+        .select('id, date, status, total_price, deposit_amount, guest_count, sunbed_id, qr_code, sunbed:sunbeds!sunbed_id(label, zone:beach_zones(name)), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label, zone:beach_zones(name)))')
         .eq('user_id', user.id)
         .gte('date', today)
         .order('date', { ascending: true })
         .limit(30),
       supabase
         .from('restaurant_reservations')
-        .select('id, date, status, deposit_amount, time_slot, guest_count, table_id, qr_code, table:restaurant_tables(label, zone:restaurant_zones(name))')
+        .select('id, date, status, deposit_amount, time, time_slot, guest_count, table_id, qr_code, table:restaurant_tables(label, zone:restaurant_zones(name))')
         .eq('user_id', user.id)
         .gte('date', today)
         .order('date', { ascending: true })
         .limit(30),
     ]);
 
-    const beach: Reservation[] = (beachRes.data ?? []).map((r: any) => ({
-      id: r.id,
-      date: r.date,
-      status: r.status,
-      type: 'beach' as const,
-      label: r.sunbed?.label ?? '?',
-      zone: r.sunbed?.zone?.name ?? '',
-      qr_code: r.qr_code,
-      total_price: r.total_price,
-      deposit_amount: r.deposit_amount,
-      sunbed_id: r.sunbed_id,
-      guest_count: r.guest_count,
-    }));
+    const beach: Reservation[] = (beachRes.data ?? []).map((r: any) => {
+      const linked = (r.linked_sunbeds ?? [])
+        .map((l: any) => l.sunbed)
+        .filter(Boolean);
+      const labels: string[] = linked.length > 0
+        ? linked.map((s: any) => s.label).filter(Boolean)
+        : [r.sunbed?.label].filter(Boolean);
+      const zones: string[] = linked.length > 0
+        ? Array.from(new Set(linked.map((s: any) => s.zone?.name).filter(Boolean)))
+        : [r.sunbed?.zone?.name].filter(Boolean);
+      return {
+        id: r.id,
+        date: r.date,
+        status: r.status,
+        type: 'beach' as const,
+        label: labels.join(', ') || '?',
+        zone: zones.join(', '),
+        qr_code: r.qr_code,
+        total_price: r.total_price,
+        deposit_amount: r.deposit_amount,
+        sunbed_id: r.sunbed_id,
+        guest_count: r.guest_count,
+      };
+    });
 
     const resto: Reservation[] = (restoRes.data ?? []).map((r: any) => ({
       id: r.id,
@@ -126,6 +157,7 @@ export default function MyReservationsScreen() {
       qr_code: r.qr_code,
       deposit_amount: r.deposit_amount,
       time_slot: r.time_slot,
+      time: r.time,
       table_id: r.table_id,
       guest_count: r.guest_count,
     }));
@@ -141,6 +173,26 @@ export default function MyReservationsScreen() {
     setRefreshing(true);
     await fetchReservations();
     setRefreshing(false);
+  };
+
+  const handleDelete = (reservation: Reservation) => {
+    Alert.alert(
+      i18n.t('delete') ?? 'Supprimer',
+      i18n.t('deleteConfirm') ?? 'Supprimer définitivement cette réservation ?',
+      [
+        { text: i18n.t('no'), style: 'cancel' },
+        {
+          text: i18n.t('yesDelete') ?? 'Oui, supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            const table = reservation.type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+            const { error } = await supabase.from(table).delete().eq('id', reservation.id);
+            if (error) Alert.alert('Erreur', error.message);
+            else await fetchReservations();
+          },
+        },
+      ],
+    );
   };
 
   const handleCancel = (reservation: Reservation) => {
@@ -179,7 +231,7 @@ export default function MyReservationsScreen() {
   };
 
   const handleModify = (reservation: Reservation) => {
-    if (!isModifiable(reservation.date)) {
+    if (!isModifiable(reservation, depositStartsOn)) {
       Alert.alert(
         i18n.t('modifyImpossible'),
         i18n.t('modifyImpossibleDesc'),
@@ -228,8 +280,8 @@ export default function MyReservationsScreen() {
               const STATUS_BADGE = getStatusBadge();
               const badge = STATUS_BADGE[r.status] ?? { label: r.status, variant: 'default' as const };
               const future = isFuture(r.date);
-              const canModify = future && isModifiable(r.date) && (r.status === 'confirmed' || r.status === 'pending');
-              const showLocked = future && !isModifiable(r.date) && (r.status === 'confirmed' || r.status === 'pending');
+              const canModify = future && isModifiable(r, depositStartsOn) && (r.status === 'confirmed' || r.status === 'pending');
+              const showLocked = future && !isModifiable(r, depositStartsOn) && (r.status === 'confirmed' || r.status === 'pending');
 
               return (
                 <Card key={r.id} style={styles.card}>
@@ -273,8 +325,8 @@ export default function MyReservationsScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {/* Bouton Payer — pour les réservations en attente */}
-                  {r.status === 'pending' && future && (
+                  {/* Bouton Payer — pour les réservations en attente avec un montant à régler */}
+                  {r.status === 'pending' && future && (r.total_price ?? r.deposit_amount ?? 0) > 0 && (
                     <TouchableOpacity
                       style={[styles.payBtn, { backgroundColor: colors.brand }]}
                       onPress={() => handlePay(r)}
@@ -310,6 +362,19 @@ export default function MyReservationsScreen() {
                         {i18n.t('notModifiableCancellable')}
                       </Text>
                     </View>
+                  )}
+
+                  {/* Bouton supprimer pour les résa annulées */}
+                  {r.status === 'cancelled' && (
+                    <TouchableOpacity
+                      style={[styles.deleteBtn, { borderColor: 'rgba(220,38,38,0.3)' }]}
+                      onPress={() => handleDelete(r)}
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#dc2626" />
+                      <Text style={[styles.modifyBtnText, { color: '#dc2626' }]}>
+                        {i18n.t('delete') ?? 'Supprimer'}
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </Card>
               );
@@ -376,6 +441,16 @@ const styles = StyleSheet.create({
   },
   payBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   modifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

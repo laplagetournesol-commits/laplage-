@@ -1,10 +1,117 @@
 import { Router } from 'express';
+import { Resend } from 'resend';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
-import { sendPushToTokens, sendPushToUser, sendPushToAll } from '../lib/push';
+import { sendPushToTokens, sendPushToUser, sendPushToUsers, sendPushToAll } from '../lib/push';
 import { sendReminders } from '../cron/reminders';
 
 const router = Router();
+
+const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'reservations@laplage-tournesol.com';
+
+async function sendConfirmationEmail(
+  userId: string,
+  type: 'beach' | 'restaurant',
+  reservationId: string,
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { data: authData } = await supabase.auth.admin.getUserById(userId);
+  const to = authData?.user?.email;
+  if (!to) return;
+
+  const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+  const { data: resa } = await supabase
+    .from(table)
+    .select('date, time, time_slot, guest_count')
+    .eq('id', reservationId)
+    .single();
+
+  const typeLabel = type === 'beach' ? 'Transat' : 'Restaurant';
+  const formattedDate = resa?.date
+    ? new Date(`${resa.date}T00:00:00`).toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      })
+    : '';
+  const service = resa?.time
+    ?? (resa?.time_slot === 'dinner' ? 'Dîner' : resa?.time_slot === 'lunch' ? 'Déjeuner' : '');
+
+  try {
+    await new Resend(process.env.RESEND_API_KEY).emails.send({
+      from: fromEmail,
+      to,
+      subject: `Confirmation ${typeLabel} - La Plage Tournesol`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a5276;">Réservation confirmée</h2>
+          <p>Votre réservation <strong>${typeLabel}</strong> est confirmée.</p>
+          ${formattedDate ? `<p>Date : <strong>${formattedDate}</strong></p>` : ''}
+          ${service ? `<p>Créneau : <strong>${service}</strong></p>` : ''}
+          ${resa?.guest_count ? `<p>Personnes : <strong>${resa.guest_count}</strong></p>` : ''}
+          <p>Référence : <strong>${reservationId}</strong></p>
+          <p>Merci et à bientôt !</p>
+          <p style="color: #888; font-size: 12px;">La Plage Tournesol</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('Erreur envoi email confirmation:', err);
+  }
+}
+
+async function notifyAdminsOfNewReservation(
+  bookerUserId: string,
+  type: 'beach' | 'restaurant',
+  reservationId: string,
+): Promise<void> {
+  const { data: admins } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('role', 'admin');
+
+  const adminIds = (admins ?? [])
+    .map((a) => a.id)
+    .filter((id) => id !== bookerUserId);
+
+  if (adminIds.length === 0) return;
+
+  const { data: bookerProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', bookerUserId)
+    .single();
+
+  const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+  const { data: resa } = await supabase
+    .from(table)
+    .select('date, time, time_slot, guest_count')
+    .eq('id', reservationId)
+    .single();
+
+  const clientName = bookerProfile?.full_name ?? 'Un client';
+  const typeLabel = type === 'beach' ? 'plage' : 'restaurant';
+  const formattedDate = resa?.date
+    ? new Date(`${resa.date}T00:00:00`).toLocaleDateString('fr-FR', {
+        weekday: 'short', day: 'numeric', month: 'short',
+      })
+    : '';
+  const service = type === 'restaurant' && resa?.time
+    ? ` à ${resa.time}`
+    : type === 'restaurant' && resa?.time_slot
+      ? resa.time_slot === 'dinner' ? ' (dîner)' : ' (déjeuner)'
+      : '';
+  const guests = resa?.guest_count ? `${resa.guest_count} pers.` : '';
+
+  const title = `Nouvelle réservation ${typeLabel}`;
+  const body = `${clientName} — ${guests}${formattedDate ? ` — ${formattedDate}${service}` : ''}`.trim();
+
+  await sendPushToUsers(
+    adminIds,
+    title,
+    body,
+    { type: 'admin_new_reservation', reservationType: type, reservationId },
+  );
+}
 
 /**
  * POST /api/notifications/register-token
@@ -181,6 +288,14 @@ router.post('/booking-confirmed', requireAuth, async (req: AuthenticatedRequest,
       `Votre réservation ${label} a été enregistrée. À bientôt !`,
       { type: 'booking_confirmed', reservationType: type, reservationId },
     );
+
+    sendConfirmationEmail(userId, type, reservationId).catch((err) => {
+      console.error('Email confirmation échoué:', err);
+    });
+
+    notifyAdminsOfNewReservation(userId, type, reservationId).catch((err) => {
+      console.error('Push admin échoué:', err);
+    });
 
     res.json({ success: true, sent });
   } catch (err: any) {

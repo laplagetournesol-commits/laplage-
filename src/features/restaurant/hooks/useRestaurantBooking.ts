@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
+import { formatLocalDate } from '@/shared/lib/date';
 import type { RestaurantZone } from '@/shared/types';
 
 export type RestaurantBookingStep = 'select' | 'confirm';
@@ -25,18 +26,25 @@ export function useRestaurantBooking() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [requireDeposit, setRequireDeposit] = useState(false);
+  const [forcedDeposit, setForcedDeposit] = useState(false);
+  const [depositStartsOn, setDepositStartsOn] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
       .from('restaurant_settings')
-      .select('value')
-      .eq('key', 'require_deposit')
-      .single()
+      .select('key, value')
+      .in('key', ['require_deposit', 'deposit_starts_on'])
       .then(({ data }) => {
-        if (data) setRequireDeposit(data.value as boolean);
+        for (const row of data ?? []) {
+          if (row.key === 'require_deposit') setForcedDeposit(row.value as boolean);
+          if (row.key === 'deposit_starts_on') setDepositStartsOn(row.value as string);
+        }
       });
   }, []);
+
+  // Empreinte requise si la date de la résa est au-delà du seuil OU si admin a forcé
+  const dateRequiresDeposit = depositStartsOn ? state.date >= depositStartsOn : false;
+  const requireDeposit = forcedDeposit || dateRequiresDeposit;
 
   const setDate = useCallback((date: string) => {
     setState((s) => ({ ...s, date }));
@@ -59,7 +67,7 @@ export function useRestaurantBooking() {
   }, []);
 
   const setGuestCount = useCallback((count: number) => {
-    setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 12)) }));
+    setState((s) => ({ ...s, guestCount: Math.max(1, Math.min(count, 99)) }));
   }, []);
 
   const setSpecialRequests = useCallback((text: string) => {
@@ -127,7 +135,7 @@ export function useRestaurantBooking() {
             time: state.time,
             time_slot: timeSlotForDB,
             guest_count: state.guestCount,
-            status: 'pending',
+            status: requireDeposit ? 'pending' : 'confirmed',
             deposit_amount: depositAmount,
             deposit_paid: false,
             special_requests: state.specialRequests || null,
@@ -139,7 +147,7 @@ export function useRestaurantBooking() {
         reservation = newRes;
       }
 
-      // Le push sera envoyé après le paiement (dans restaurant.tsx)
+      // Le push/email sera envoyé après confirmation (dans restaurant.tsx)
 
       setSubmitting(false);
       return { success: true, reservationId: reservation.id, qrCode: reservation.qr_code };
@@ -181,7 +189,5 @@ export function useRestaurantBooking() {
 }
 
 function getDefaultDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+  return formatLocalDate(new Date());
 }
