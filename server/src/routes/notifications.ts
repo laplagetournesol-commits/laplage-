@@ -59,6 +59,70 @@ async function sendConfirmationEmail(
   }
 }
 
+const ADMIN_NOTIFY_EMAIL = 'johanna@dresscodepress.com';
+
+async function sendAdminNotificationEmail(
+  bookerUserId: string,
+  type: 'beach' | 'restaurant',
+  reservationId: string,
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { data: bookerProfile } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', bookerUserId)
+    .single();
+
+  const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+  const { data: resa } = await supabase
+    .from(table)
+    .select('date, time, time_slot, guest_count, deposit_amount, deposit_paid, total_price, guest_name, guest_email, guest_phone')
+    .eq('id', reservationId)
+    .single();
+
+  const typeLabel = type === 'beach' ? 'Plage' : 'Restaurant';
+  const formattedDate = resa?.date
+    ? new Date(`${resa.date}T00:00:00`).toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      })
+    : '';
+  const service = (resa as any)?.time
+    ?? ((resa as any)?.time_slot === 'dinner' ? 'Dîner' : (resa as any)?.time_slot === 'lunch' ? 'Déjeuner' : '');
+
+  const clientName = (resa as any)?.guest_name ?? bookerProfile?.full_name ?? 'Client';
+  const clientContact = (resa as any)?.guest_email ?? (resa as any)?.guest_phone ?? bookerProfile?.email ?? '';
+  const guests = (resa as any)?.guest_count ?? '?';
+  const deposit = (resa as any)?.deposit_amount ?? 0;
+  const depositPaid = (resa as any)?.deposit_paid ?? false;
+  const totalPrice = (resa as any)?.total_price;
+
+  try {
+    await new Resend(process.env.RESEND_API_KEY).emails.send({
+      from: fromEmail,
+      to: ADMIN_NOTIFY_EMAIL,
+      subject: `[Nouvelle résa ${typeLabel}] ${clientName} — ${formattedDate}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a5276;">Nouvelle réservation ${typeLabel}</h2>
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr><td style="padding:6px;color:#666;">Client :</td><td style="padding:6px;"><strong>${clientName}</strong></td></tr>
+            <tr><td style="padding:6px;color:#666;">Contact :</td><td style="padding:6px;">${clientContact}</td></tr>
+            <tr><td style="padding:6px;color:#666;">Date :</td><td style="padding:6px;"><strong>${formattedDate}</strong></td></tr>
+            ${service ? `<tr><td style="padding:6px;color:#666;">Créneau :</td><td style="padding:6px;">${service}</td></tr>` : ''}
+            <tr><td style="padding:6px;color:#666;">Personnes :</td><td style="padding:6px;">${guests}</td></tr>
+            ${totalPrice != null ? `<tr><td style="padding:6px;color:#666;">Total :</td><td style="padding:6px;"><strong>${totalPrice}€</strong></td></tr>` : ''}
+            ${deposit > 0 ? `<tr><td style="padding:6px;color:#666;">Caution :</td><td style="padding:6px;">${deposit}€ — ${depositPaid ? '✅ Payée' : '⏳ Non payée'}</td></tr>` : ''}
+            <tr><td style="padding:6px;color:#666;">Référence :</td><td style="padding:6px;font-family:monospace;font-size:11px;">${reservationId}</td></tr>
+          </table>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('Erreur envoi email admin:', err);
+  }
+}
+
 async function notifyAdminsOfNewReservation(
   bookerUserId: string,
   type: 'beach' | 'restaurant',
@@ -291,6 +355,10 @@ router.post('/booking-confirmed', requireAuth, async (req: AuthenticatedRequest,
 
     sendConfirmationEmail(userId, type, reservationId).catch((err) => {
       console.error('Email confirmation échoué:', err);
+    });
+
+    sendAdminNotificationEmail(userId, type, reservationId).catch((err) => {
+      console.error('Email admin échoué:', err);
     });
 
     notifyAdminsOfNewReservation(userId, type, reservationId).catch((err) => {

@@ -74,7 +74,7 @@ export function useRestaurantBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  const depositAmount = requireDeposit ? 30 * state.guestCount : 0;
+  const depositAmount = requireDeposit ? 25 * state.guestCount : 0;
 
   // Déduire le time_slot pour la BDD (lunch/dinner)
   const timeSlotForDB = parseInt(state.time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
@@ -135,7 +135,7 @@ export function useRestaurantBooking() {
             time: state.time,
             time_slot: timeSlotForDB,
             guest_count: state.guestCount,
-            status: requireDeposit ? 'pending' : 'confirmed',
+            status: 'confirmed',
             deposit_amount: depositAmount,
             deposit_paid: false,
             special_requests: state.specialRequests || null,

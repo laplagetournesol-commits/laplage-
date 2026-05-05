@@ -20,127 +20,78 @@ import { DateSelector } from '@/features/beach/components/DateSelector';
 import { BeachMap } from '@/features/beach/components/BeachMap';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { supabase } from '@/shared/lib/supabase';
+import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone } from '@/shared/types';
 
 type BookingType = 'beach' | 'restaurant';
-
-interface TableOption {
-  id: string;
-  label: string;
-  seats: number;
-  zoneName: string;
-}
 
 export default function AdminBookingScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
 
   const [type, setType] = useState<BookingType>('beach');
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => formatLocalDate(new Date()));
   const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   const [guestCount, setGuestCount] = useState(1);
   const [timeSlot, setTimeSlot] = useState<'lunch' | 'dinner'>('lunch');
+  // Restaurant : sélection unique
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedSunbed, setSelectedSunbed] = useState<(Sunbed & { zone: BeachZone }) | null>(null);
-  const [secondaryId, setSecondaryId] = useState<string | null>(null);
+  // Plage : sélection multiple de transats
+  const [selectedSunbedIds, setSelectedSunbedIds] = useState<Set<string>>(new Set());
 
   // Beach: réutilise le même hook + carte que les clients
   const { sunbeds, loading: beachLoading } = useSunbeds(date);
 
-  // Restaurant
-  const [tables, setTables] = useState<TableOption[]>([]);
-  const [loadingTables, setLoadingTables] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Reset sélection quand on change de type ou date
   useEffect(() => {
     setSelectedId(null);
-    setSelectedSunbed(null);
-    setSecondaryId(null);
+    setSelectedSunbedIds(new Set());
   }, [date, type, timeSlot]);
-
-  // Calculer le transat secondaire quand sunbed ou guestCount change
-  useEffect(() => {
-    if (!selectedSunbed || guestCount < 2 || selectedSunbed.is_double || type !== 'beach') {
-      setSecondaryId(null);
-      return;
-    }
-    const sameRow = sunbeds
-      .filter((sb) =>
-        sb.zone_id === selectedSunbed.zone_id &&
-        Number(sb.svg_y) === Number(selectedSunbed.svg_y) &&
-        sb.id !== selectedSunbed.id &&
-        !sb.isReserved
-      );
-    const x = Number(selectedSunbed.svg_x);
-    let best: typeof sunbeds[number] | null = null;
-    let bestDist = Infinity;
-    for (const sb of sameRow) {
-      const dist = Math.abs(Number(sb.svg_x) - x);
-      if (dist < bestDist) { bestDist = dist; best = sb; }
-    }
-    setSecondaryId(best?.id ?? null);
-  }, [selectedSunbed?.id, guestCount, sunbeds, type]);
-
-  // Charger tables restaurant
-  useEffect(() => {
-    if (type !== 'restaurant') return;
-    loadAvailableTables();
-  }, [date, type, timeSlot]);
-
-  const loadAvailableTables = async () => {
-    setLoadingTables(true);
-
-    const { data: allTables } = await supabase
-      .from('restaurant_tables')
-      .select('id, label, seats, zone:restaurant_zones(name)')
-      .eq('is_active', true)
-      .order('label');
-
-    const { data: booked } = await supabase
-      .from('restaurant_reservations')
-      .select('table_id')
-      .eq('date', date)
-      .eq('time_slot', timeSlot)
-      .in('status', ['confirmed', 'checked_in', 'pending']);
-
-    const bookedIds = new Set((booked ?? []).map((r: any) => r.table_id));
-
-    setTables(
-      (allTables ?? [])
-        .filter((t: any) => !bookedIds.has(t.id))
-        .map((t: any) => ({
-          id: t.id,
-          label: t.label,
-          seats: t.seats,
-          zoneName: t.zone?.name ?? '',
-        })),
-    );
-    setLoadingTables(false);
-  };
 
   const handleSelectSunbed = (sunbed: Sunbed & { zone: BeachZone } & { isReserved: boolean }) => {
     if (sunbed.isReserved) return;
-    setSelectedId(sunbed.id);
-    setSelectedSunbed(sunbed);
+    setSelectedSunbedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sunbed.id)) {
+        next.delete(sunbed.id);
+      } else {
+        next.add(sunbed.id);
+      }
+      return next;
+    });
   };
 
   const handleReservedPress = async (sunbed: Sunbed & { zone: BeachZone } & { isReserved: boolean }) => {
-    // Chercher la réservation active pour ce transat
-    const { data: res } = await supabase
-      .from('beach_reservations')
-      .select('id, status, guest_count, special_requests, secondary_sunbed_id, profile:profiles(full_name)')
+    // Trouver la liaison active pour ce transat
+    const { data: link } = await supabase
+      .from('beach_reservation_sunbeds')
+      .select('reservation_id')
+      .eq('sunbed_id', sunbed.id)
       .eq('date', date)
       .in('status', ['confirmed', 'checked_in'])
-      .or(`sunbed_id.eq.${sunbed.id},secondary_sunbed_id.eq.${sunbed.id}`)
       .maybeSingle();
 
-    if (!res) {
+    if (!link) {
       Alert.alert('Erreur', 'Aucune réservation trouvée pour ce transat');
       return;
     }
 
-    const clientName = (res as any).profile?.full_name || res.special_requests || 'Client';
+    const { data: res } = await supabase
+      .from('beach_reservations')
+      .select('id, status, guest_count, guest_name, guest_phone, special_requests, profile:profiles(full_name)')
+      .eq('id', link.reservation_id)
+      .maybeSingle();
+
+    if (!res) {
+      Alert.alert('Erreur', 'Réservation introuvable');
+      return;
+    }
+
+    const clientName = (res as any).guest_name || (res as any).profile?.full_name || res.special_requests || 'Client';
     const statusLabel = res.status === 'checked_in' ? 'check-in fait' : 'confirmé';
 
     Alert.alert(
@@ -149,14 +100,14 @@ export default function AdminBookingScreen() {
       [
         { text: 'Fermer', style: 'cancel' },
         {
-          text: 'Libérer le transat',
+          text: 'Libérer la réservation',
           style: 'destructive',
           onPress: async () => {
             await supabase
               .from('beach_reservations')
               .update({ status: 'completed' })
               .eq('id', res.id);
-            Alert.alert('Transat libéré', `${sunbed.label} est maintenant disponible`);
+            Alert.alert('Réservation libérée', `Tous les transats associés sont libres.`);
           },
         },
       ],
@@ -164,8 +115,22 @@ export default function AdminBookingScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedId) {
-      Alert.alert('Erreur', `Sélectionnez un ${type === 'beach' ? 'transat' : 'table'}`);
+    const sunbedIds = Array.from(selectedSunbedIds);
+    if (type === 'beach' && sunbedIds.length === 0) {
+      Alert.alert('Erreur', 'Sélectionnez au moins un transat');
+      return;
+    }
+
+    const name = guestName.trim();
+    const phone = guestPhone.trim();
+    const email = guestEmail.trim();
+
+    if (!name) {
+      Alert.alert('Erreur', "Nom de l'invité requis");
+      return;
+    }
+    if (!phone) {
+      Alert.alert('Erreur', "Numéro de téléphone requis");
       return;
     }
 
@@ -175,42 +140,69 @@ export default function AdminBookingScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Non connecté');
 
-      const note = guestName.trim()
-        ? `Réservé par l'admin pour : ${guestName.trim()}`
-        : 'Réservation admin';
+      const guestFields = {
+        guest_name: name,
+        guest_phone: phone,
+        guest_email: email || null,
+      };
 
       if (type === 'beach') {
-        const { error } = await supabase.from('beach_reservations').insert({
-          user_id: user.id,
-          sunbed_id: selectedId,
-          secondary_sunbed_id: secondaryId,
+        // Une seule réservation avec N transats liés via la table de liaison
+        const { data: newRes, error: resError } = await supabase
+          .from('beach_reservations')
+          .insert({
+            user_id: user.id,
+            sunbed_id: sunbedIds[0],
+            secondary_sunbed_id: null,
+            date,
+            status: 'confirmed',
+            total_price: 0,
+            deposit_amount: 0,
+            deposit_paid: true,
+            guest_count: guestCount,
+            special_requests: 'Réservation admin',
+            ...guestFields,
+          })
+          .select()
+          .single();
+        if (resError) throw new Error(resError.message);
+
+        const linkRows = sunbedIds.map((id) => ({
+          reservation_id: newRes.id,
+          sunbed_id: id,
           date,
           status: 'confirmed',
-          total_price: 0,
-          deposit_amount: 0,
-          deposit_paid: true,
-          guest_count: guestCount,
-          special_requests: note,
-        });
-        if (error) throw new Error(error.message);
+        }));
+        const { error: linkError } = await supabase
+          .from('beach_reservation_sunbeds')
+          .insert(linkRows);
+        if (linkError) {
+          await supabase.from('beach_reservations').delete().eq('id', newRes.id);
+          throw new Error(linkError.message);
+        }
       } else {
         const { error } = await supabase.from('restaurant_reservations').insert({
           user_id: user.id,
-          table_id: selectedId,
+          table_id: null,
           date,
           time_slot: timeSlot,
           status: 'confirmed',
           deposit_amount: 0,
           deposit_paid: true,
           guest_count: guestCount,
-          special_requests: note,
+          special_requests: 'Réservation admin',
+          ...guestFields,
         });
         if (error) throw new Error(error.message);
       }
 
+      const summary = type === 'beach'
+        ? `${sunbedIds.length} transat${sunbedIds.length > 1 ? 's' : ''} bloqué${sunbedIds.length > 1 ? 's' : ''} pour ${name}`
+        : `Réservation pour ${guestCount} pers. — ${name}`;
+
       Alert.alert(
         'Réservation créée',
-        `${type === 'beach' ? 'Transat' : 'Table'} bloqué(e) pour ${guestName.trim() || 'admin'}`,
+        summary,
         [{ text: 'OK', onPress: () => router.back() }],
       );
     } catch (err: any) {
@@ -221,7 +213,11 @@ export default function AdminBookingScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.screen, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
       <Stack.Screen
         options={{
           title: 'Réservation admin',
@@ -233,6 +229,13 @@ export default function AdminBookingScreen() {
           ),
         }}
       />
+
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
 
       {/* Top section: type, name, date, guests */}
       <View style={styles.topSection}>
@@ -288,13 +291,34 @@ export default function AdminBookingScreen() {
             </TouchableOpacity>
             <Text style={[styles.counterValue, { color: theme.text }]}>{guestCount}</Text>
             <TouchableOpacity
-              onPress={() => setGuestCount(Math.min(10, guestCount + 1))}
+              onPress={() => setGuestCount(Math.min(99, guestCount + 1))}
               style={[styles.counterBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
             >
               <Ionicons name="add" size={18} color={theme.text} />
             </TouchableOpacity>
           </View>
         </View>
+
+        <TextInput
+          style={[styles.input, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder, marginTop: 8 }]}
+          placeholder="Téléphone"
+          placeholderTextColor={theme.textSecondary}
+          value={guestPhone}
+          onChangeText={setGuestPhone}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+        />
+
+        <TextInput
+          style={[styles.input, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder, marginTop: 8 }]}
+          placeholder="Email (optionnel)"
+          placeholderTextColor={theme.textSecondary}
+          value={guestEmail}
+          onChangeText={setGuestEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+        />
 
         {/* Date */}
         <DateSelector selectedDate={date} onSelect={setDate} />
@@ -346,8 +370,8 @@ export default function AdminBookingScreen() {
           ) : (
             <BeachMap
               sunbeds={sunbeds}
-              selectedId={selectedId}
-              secondarySelectedId={secondaryId}
+              selectedId={null}
+              selectedIds={selectedSunbedIds}
               onSelect={handleSelectSunbed}
               onReservedPress={handleReservedPress}
             />
@@ -355,51 +379,35 @@ export default function AdminBookingScreen() {
         </View>
       )}
 
-      {/* Restaurant: grille de tables */}
+      {/* Restaurant : pas de sélection de table — la salle attribue sur place */}
       {type === 'restaurant' && (
-        <ScrollView
-          contentContainerStyle={[styles.tableList, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {loadingTables ? (
-            <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 20 }} />
-          ) : tables.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              Aucune table disponible
-            </Text>
-          ) : (
-            <View style={styles.grid}>
-              {tables.map((t) => (
-                <TouchableOpacity
-                  key={t.id}
-                  onPress={() => setSelectedId(t.id)}
-                  style={[
-                    styles.slotBtn,
-                    {
-                      backgroundColor: selectedId === t.id ? colors.deepSea : theme.card,
-                      borderColor: selectedId === t.id ? colors.deepSea : theme.cardBorder,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.slotLabel, { color: selectedId === t.id ? colors.white : theme.text }]}>
-                    {t.label}
-                  </Text>
-                  <Text style={[styles.slotSub, { color: selectedId === t.id ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
-                    {t.zoneName} — {t.seats} pl.
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+        <View style={[styles.restaurantInfo, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+          <Ionicons name="information-circle-outline" size={18} color={theme.accent} />
+          <Text style={[styles.restaurantInfoText, { color: theme.text }]}>
+            La table sera attribuée à l'arrivée par la salle.
+          </Text>
+        </View>
       )}
 
+      </ScrollView>
+
       {/* Bouton confirmer — fixé en bas */}
-      {selectedId && (
+      {((type === 'beach' && selectedSunbedIds.size > 0) || type === 'restaurant') && (
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, backgroundColor: theme.background }]}>
-          {selectedSunbed && type === 'beach' && (
+          {type === 'beach' && (
             <Text style={[styles.selectedLabel, { color: theme.text }]}>
-              Transat {selectedSunbed.label} — {selectedSunbed.zone.name}
+              {(() => {
+                const labels = sunbeds
+                  .filter((sb) => selectedSunbedIds.has(sb.id))
+                  .map((sb) => sb.label)
+                  .join(', ');
+                return `${selectedSunbedIds.size} transat${selectedSunbedIds.size > 1 ? 's' : ''} : ${labels}`;
+              })()}
+            </Text>
+          )}
+          {type === 'restaurant' && (
+            <Text style={[styles.selectedLabel, { color: theme.text }]}>
+              {guestCount} pers. — {timeSlot === 'lunch' ? 'Déjeuner' : 'Dîner'}
             </Text>
           )}
           <TouchableOpacity
@@ -416,19 +424,32 @@ export default function AdminBookingScreen() {
               <>
                 <Ionicons name="checkmark-circle" size={20} color={colors.white} />
                 <Text style={styles.submitText}>
-                  Bloquer gratuitement
+                  {type === 'beach' && selectedSunbedIds.size > 1
+                    ? `Bloquer ${selectedSunbedIds.size} transats`
+                    : 'Bloquer gratuitement'}
                 </Text>
               </>
             )}
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  restaurantInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  restaurantInfoText: { flex: 1, fontSize: 13, fontWeight: '500' },
   topSection: { gap: 10, paddingTop: 8, paddingBottom: 4 },
   row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
   chip: {
