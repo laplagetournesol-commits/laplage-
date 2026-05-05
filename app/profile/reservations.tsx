@@ -206,18 +206,13 @@ export default function MyReservationsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Libérer l'empreinte CB si restaurant avec dépôt
-              if (reservation.type === 'restaurant' && reservation.deposit_amount && reservation.deposit_amount > 0) {
-                await apiCall('/api/payments/cancel-hold', { reservationId: reservation.id }).catch(() => {});
+              const result = await apiCall<{ cancelled?: boolean; error?: string }>(
+                '/api/payments/cancel-reservation',
+                { reservationId: reservation.id, type: reservation.type },
+              );
+              if (!result?.cancelled) {
+                throw new Error(result?.error ?? i18n.t('impossibleCancel'));
               }
-
-              const table = reservation.type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
-              const { error } = await supabase
-                .from(table)
-                .update({ status: 'cancelled' })
-                .eq('id', reservation.id);
-
-              if (error) throw error;
 
               Alert.alert(i18n.t('reservationCancelled'), i18n.t('reservationCancelledDesc'));
               fetchReservations();

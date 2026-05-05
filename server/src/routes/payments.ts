@@ -151,4 +151,94 @@ router.post('/cancel-hold', requireAuth, async (req: AuthenticatedRequest, res) 
   }
 });
 
+/**
+ * POST /api/payments/cancel-reservation
+ * Annule une réservation (status -> 'cancelled') côté serveur via service role.
+ * Bypass les soucis de RLS rencontrés depuis le client mobile.
+ * Vérifie que l'utilisateur est propriétaire ou admin/staff.
+ */
+router.post('/cancel-reservation', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { reservationId, type } = req.body;
+
+    if (!reservationId || !type || !['restaurant', 'beach'].includes(type)) {
+      res.status(400).json({ error: 'reservationId et type (restaurant|beach) requis' });
+      return;
+    }
+
+    const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+
+    const { data: reservation, error: fetchErr } = await supabase
+      .from(table)
+      .select('id, user_id, deposit_amount, stripe_payment_intent_id')
+      .eq('id', reservationId)
+      .single();
+
+    if (fetchErr || !reservation) {
+      res.status(404).json({ error: 'Réservation introuvable' });
+      return;
+    }
+
+    if (reservation.user_id !== req.user!.id && !['admin', 'staff'].includes(req.user!.role)) {
+      res.status(403).json({ error: 'Non autorisé' });
+      return;
+    }
+
+    if (type === 'restaurant' && reservation.stripe_payment_intent_id) {
+      try {
+        await getStripe().paymentIntents.cancel(reservation.stripe_payment_intent_id);
+      } catch (stripeErr) {
+        console.error('Stripe cancel failed (non-blocking):', stripeErr);
+      }
+    }
+
+    const { error: updateErr } = await supabase
+      .from(table)
+      .update({ status: 'cancelled' })
+      .eq('id', reservationId);
+
+    if (updateErr) {
+      res.status(500).json({ error: updateErr.message });
+      return;
+    }
+
+    res.json({ cancelled: true });
+  } catch (err: any) {
+    console.error('Erreur cancel-reservation:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'annulation' });
+  }
+});
+
+/**
+ * Capture une pré-autorisation Stripe (no-show) pour une résa restaurant.
+ * Marque la résa comme `no_show` et `deposit_paid: true`.
+ * Utilisée par la cron de fin de journée.
+ */
+export async function captureNoShow(reservationId: string): Promise<{ captured: boolean; reason?: string }> {
+  const { data: reservation, error } = await supabase
+    .from('restaurant_reservations')
+    .select('id, status, stripe_payment_intent_id')
+    .eq('id', reservationId)
+    .single();
+
+  if (error || !reservation) return { captured: false, reason: 'not_found' };
+  if (reservation.status !== 'confirmed') return { captured: false, reason: 'wrong_status' };
+  if (!reservation.stripe_payment_intent_id) return { captured: false, reason: 'no_intent' };
+
+  try {
+    await getStripe().paymentIntents.capture(reservation.stripe_payment_intent_id);
+  } catch (err: any) {
+    console.error(`[no-show capture] échec sur résa ${reservationId}:`, err.message);
+    return { captured: false, reason: err.message };
+  }
+
+  await supabase
+    .from('restaurant_reservations')
+    .update({ status: 'no_show', deposit_paid: true })
+    .eq('id', reservationId);
+
+  console.log(`[no-show capture] résa #${reservationId} débitée`);
+  return { captured: true };
+}
+
 export default router;
