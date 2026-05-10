@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { useAddons } from '@/features/beach/hooks/useAddons';
 import { useBeachBooking } from '@/features/beach/hooks/useBeachBooking';
 import { usePayment } from '@/shared/hooks/usePayment';
+import { usePhoneGate } from '@/shared/hooks/usePhoneGate';
 import { BeachMap } from '@/features/beach/components/BeachMap';
 import { DateSelector } from '@/features/beach/components/DateSelector';
 import { SunbedSheet } from '@/features/beach/components/SunbedSheet';
@@ -31,19 +32,23 @@ export default function BeachScreen() {
   const { sunbeds, zones, loading, availableCount, totalCount } = useSunbeds(booking.date);
   const { addons } = useAddons(booking.date);
   const { pay } = usePayment();
+  const { ensurePhone, phoneGate } = usePhoneGate();
   const [sheetVisible, setSheetVisible] = useState(false);
 
-  // Calculer le transat secondaire quand sunbed ou guestCount change
-  useEffect(() => {
-    booking.updateSecondary(sunbeds);
-  }, [booking.sunbed?.id, booking.guestCount, sunbeds]);
+  const selectedSet = new Set(booking.selectedSunbeds.map((sb) => sb.id));
 
   const handleSelectSunbed = (sunbed: any) => {
-    booking.selectSunbed(sunbed);
+    booking.toggleSunbed(sunbed);
+  };
+
+  const handleOpenConfirm = () => {
+    if (booking.selectedSunbeds.length === 0) return;
     setSheetVisible(true);
   };
 
   const handleBookWithPayment = async () => {
+    const phoneOk = await ensurePhone();
+    if (!phoneOk) return { success: false };
     const result = await booking.submitBooking();
     if (!result.success || !result.reservationId) return { success: false };
 
@@ -54,29 +59,27 @@ export default function BeachScreen() {
         amount: booking.depositAmount,
       });
       if (!payResult.success) {
-        // Paiement annulé/échoué → supprimer la réservation
         await supabase.from('beach_reservations').delete().eq('id', result.reservationId);
         return { success: false };
       }
     }
 
-    // Paiement réussi (ou pas de paiement requis) → confirmer la réservation
     await supabase.from('beach_reservations').update({ status: 'confirmed' }).eq('id', result.reservationId);
-
-    // Push de confirmation seulement après paiement réussi
     apiCall('/api/notifications/booking-confirmed', { type: 'beach', reservationId: result.reservationId }).catch(() => {});
 
     return result;
   };
 
-  const handleClose = () => {
+  const handleCloseSheet = () => {
     setSheetVisible(false);
-    // Reset au step 1 quand on ferme
     setTimeout(() => booking.goBack(), 300);
   };
 
   const totalAvailable = zones.reduce((sum, z) => sum + availableCount(z.id), 0);
   const totalSunbeds = zones.reduce((sum, z) => sum + totalCount(z.id), 0);
+
+  const selectedCount = booking.selectedSunbeds.length;
+  const showFloatingBar = selectedCount > 0 && !sheetVisible;
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -103,7 +106,6 @@ export default function BeachScreen() {
           )}
         </View>
 
-        {/* Sélecteur de date */}
         <DateSelector selectedDate={booking.date} onSelect={booking.setDate} />
       </View>
 
@@ -118,18 +120,42 @@ export default function BeachScreen() {
       ) : (
         <BeachMap
           sunbeds={sunbeds}
-          selectedId={booking.sunbed?.id ?? null}
-          secondarySelectedId={booking.secondarySunbed?.id ?? null}
+          selectedId={null}
+          selectedIds={selectedSet}
           onSelect={handleSelectSunbed}
         />
+      )}
+
+      {/* Barre flottante de sélection */}
+      {showFloatingBar && (
+        <View style={[styles.floatingBar, { backgroundColor: theme.background, borderTopColor: theme.cardBorder, paddingBottom: insets.bottom + 12 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.floatingCount, { color: theme.text }]}>
+              {selectedCount} {selectedCount > 1 ? (i18n.t('sunbeds') ?? 'transats') : i18n.t('sunbed')}
+            </Text>
+            <Text style={[styles.floatingTotal, { color: theme.textSecondary }]}>
+              {i18n.t('total')} : <Text style={{ color: colors.brand, fontWeight: '700' }}>{booking.basePrice}€</Text>
+            </Text>
+          </View>
+          <TouchableOpacity onPress={booking.clearSunbeds} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={[styles.clearText, { color: theme.textSecondary }]}>{i18n.t('clear') ?? 'Vider'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleOpenConfirm}
+            style={[styles.confirmBtn, { backgroundColor: colors.brand }]}
+          >
+            <Ionicons name="arrow-forward" size={18} color={colors.white} />
+            <Text style={styles.confirmText}>{i18n.t('reserve')}</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Bottom Sheet de réservation */}
       <SunbedSheet
         visible={sheetVisible}
-        onClose={handleClose}
-        sunbed={booking.sunbed}
-        secondarySunbed={booking.secondarySunbed}
+        onClose={handleCloseSheet}
+        sunbeds={booking.selectedSunbeds}
+        lineItems={booking.lineItems}
         date={booking.date}
         addons={addons}
         selectedAddons={booking.selectedAddons}
@@ -147,21 +173,22 @@ export default function BeachScreen() {
         depositAmount={booking.depositAmount}
         guestCount={booking.guestCount}
         onSetGuestCount={booking.setGuestCount}
+        onRemoveSunbed={(id) => {
+          const target = booking.selectedSunbeds.find((sb) => sb.id === id);
+          if (target) booking.toggleSunbed(target);
+        }}
         seasonLabel={booking.seasonLabel}
         seasonInclusions={booking.seasonInclusions}
         categoryLabel={booking.categoryLabel}
       />
+      {phoneGate}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  header: {
-    zIndex: 10,
-  },
+  screen: { flex: 1 },
+  header: { zIndex: 10 },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -169,10 +196,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     paddingHorizontal: 20,
   },
-  backText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
+  backText: { fontSize: 16, fontWeight: '500' },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -180,22 +204,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 4,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    fontSize: 13,
-    marginTop: 2,
-  },
+  title: { fontSize: 28, fontWeight: '800', letterSpacing: 0.5 },
+  subtitle: { fontSize: 13, marginTop: 2 },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
   },
-  loadingText: {
-    fontSize: 14,
+  loadingText: { fontSize: 14 },
+  floatingBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
+  floatingCount: { fontSize: 14, fontWeight: '700' },
+  floatingTotal: { fontSize: 12, marginTop: 2 },
+  clearBtn: { paddingHorizontal: 8 },
+  clearText: { fontSize: 13, fontWeight: '600' },
+  confirmBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  confirmText: { color: colors.white, fontSize: 14, fontWeight: '700' },
 });

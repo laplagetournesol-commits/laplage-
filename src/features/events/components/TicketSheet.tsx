@@ -10,6 +10,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePurchaseTicket } from '../hooks/useTickets';
 import { usePayment } from '@/shared/hooks/usePayment';
+import { usePhoneGate } from '@/shared/hooks/usePhoneGate';
 import type { Event, TicketType } from '@/shared/types';
 import { i18n } from '@/shared/i18n';
 
@@ -25,6 +26,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
   const { user } = useAuth();
   const { purchase, submitting } = usePurchaseTicket();
   const { pay } = usePayment();
+  const { ensurePhone, phoneGate } = usePhoneGate();
   const [selectedType, setSelectedType] = useState<TicketType>('standard');
 
   const hasVip = event.vip_price != null && event.vip_price > 0;
@@ -42,6 +44,9 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
       router.push('/(auth)/login');
       return;
     }
+
+    const phoneOk = await ensurePhone();
+    if (!phoneOk) return;
 
     const result = await purchase(event, selectedType);
     if (!result.success || !result.ticket) return;
@@ -64,6 +69,7 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
   };
 
   return (
+    <>
     <BottomSheet visible={visible} onClose={onClose} title={i18n.t('chooseTicket')}>
       <View style={styles.content}>
         {/* Event summary */}
@@ -171,6 +177,8 @@ export function TicketSheet({ visible, onClose, event, onPurchased }: TicketShee
         )}
       </View>
     </BottomSheet>
+    {phoneGate}
+    </>
   );
 }
 

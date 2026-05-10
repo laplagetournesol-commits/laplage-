@@ -26,6 +26,10 @@ export const translations = {
     resetPasswordSent: 'Un email de réinitialisation a été envoyé',
     checkEmail: 'Vérifiez votre boîte email pour confirmer votre compte',
     fullName: 'Nom complet',
+    phoneLabel: 'Téléphone (WhatsApp)',
+    phoneRequiredTitle: 'Numéro requis',
+    phoneRequiredBody: 'Pour confirmer votre réservation par WhatsApp et email, merci de renseigner votre numéro au format international (ex : +33612345678).',
+    phoneInvalidE164: 'Format invalide. Utilisez le format international, ex : +33612345678',
 
     // Onboarding
     onboarding1Title: 'Bienvenue aux Tournesols',
@@ -833,6 +837,10 @@ export const translations = {
     resetPasswordSent: 'Se ha enviado un correo de restablecimiento',
     checkEmail: 'Revisa tu correo para confirmar tu cuenta',
     fullName: 'Nombre completo',
+    phoneLabel: 'Teléfono (WhatsApp)',
+    phoneRequiredTitle: 'Número requerido',
+    phoneRequiredBody: 'Para confirmar tu reserva por WhatsApp y correo, indícanos tu número en formato internacional (ej: +34612345678).',
+    phoneInvalidE164: 'Formato inválido. Usa el formato internacional, ej: +34612345678',
 
     // Onboarding
     onboarding1Title: 'Bienvenido a Les Tournesols',
@@ -1349,6 +1357,10 @@ export const translations = {
     resetPasswordSent: 'A password reset email has been sent',
     checkEmail: 'Check your email to confirm your account',
     fullName: 'Full name',
+    phoneLabel: 'Phone (WhatsApp)',
+    phoneRequiredTitle: 'Phone number required',
+    phoneRequiredBody: 'To confirm your booking via WhatsApp and email, please enter your number in international format (e.g. +33612345678).',
+    phoneInvalidE164: 'Invalid format. Use international format, e.g. +33612345678',
 
     // Onboarding
     onboarding1Title: 'Welcome to Les Tournesols',

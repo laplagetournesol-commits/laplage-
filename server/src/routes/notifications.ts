@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 import { sendPushToTokens, sendPushToUser, sendPushToUsers, sendPushToAll } from '../lib/push';
+import { sendWhatsAppConfirmation } from '../lib/whatsapp';
 import { sendReminders } from '../cron/reminders';
 
 const router = Router();
@@ -56,6 +57,33 @@ async function sendConfirmationEmail(
     });
   } catch (err) {
     console.error('Erreur envoi email confirmation:', err);
+  }
+}
+
+async function sendWhatsAppToUser(
+  userId: string,
+  type: 'beach' | 'restaurant',
+  reservationId: string,
+): Promise<void> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, phone')
+    .eq('id', userId)
+    .single();
+
+  if (!profile?.phone) return;
+
+  const firstName = profile.full_name?.trim().split(/\s+/)[0] ?? null;
+
+  const result = await sendWhatsAppConfirmation({
+    toPhoneE164: profile.phone,
+    firstName,
+    reservationType: type,
+    reservationId,
+  });
+
+  if (!result.ok) {
+    console.error('Erreur envoi WhatsApp:', result.error);
   }
 }
 
@@ -355,6 +383,10 @@ router.post('/booking-confirmed', requireAuth, async (req: AuthenticatedRequest,
 
     sendConfirmationEmail(userId, type, reservationId).catch((err) => {
       console.error('Email confirmation échoué:', err);
+    });
+
+    sendWhatsAppToUser(userId, type, reservationId).catch((err) => {
+      console.error('WhatsApp confirmation échoué:', err);
     });
 
     sendAdminNotificationEmail(userId, type, reservationId).catch((err) => {

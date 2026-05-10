@@ -51,23 +51,25 @@ router.post(
 
           console.log(`Paiement confirmé: ${type} #${reservationId}`);
 
-          // Récupérer l'email du user pour confirmation
+          // Récupérer email + téléphone du user pour confirmation paiement
           if (userId) {
             const { data: profile } = await supabase
               .from('profiles')
-              .select('email, first_name')
+              .select('email, full_name, phone')
               .eq('id', userId)
               .single();
 
+            const firstName = profile?.full_name?.trim().split(/\s+/)[0] ?? '';
+
             if (profile?.email) {
-              // Envoyer email de confirmation
+              // Email spécifique au paiement de l'acompte
               await getResend().emails.send({
                 from: fromEmail,
                 to: profile.email,
-                subject: 'Confirmation de réservation - La Plage Tournesol',
+                subject: 'Acompte reçu - La Plage Tournesol',
                 html: `
-                  <h2>Réservation confirmée !</h2>
-                  <p>Bonjour ${profile.first_name ?? ''},</p>
+                  <h2>Acompte bien reçu</h2>
+                  <p>Bonjour ${firstName},</p>
                   <p>Votre acompte pour votre réservation <strong>${type}</strong> a bien été reçu.</p>
                   <p>Numéro de réservation : <strong>${reservationId}</strong></p>
                   <p>Merci et à bientôt à La Plage Tournesol !</p>
@@ -75,11 +77,11 @@ router.post(
               });
             }
 
-            // Envoyer push de confirmation
+            // Push spécifique au paiement de l'acompte
             await sendPushToUser(
               userId,
-              'Réservation confirmée',
-              `Votre acompte pour votre réservation ${type} a été reçu.`,
+              'Acompte reçu',
+              `Votre acompte pour votre réservation ${type} a bien été reçu.`,
             );
           }
           break;

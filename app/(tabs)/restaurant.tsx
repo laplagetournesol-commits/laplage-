@@ -23,6 +23,7 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { ReservationQRCode } from '@/shared/ui/ReservationQRCode';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePayment } from '@/shared/hooks/usePayment';
+import { usePhoneGate } from '@/shared/hooks/usePhoneGate';
 import { useRestaurantCapacity } from '@/features/restaurant/hooks/useRestaurantCapacity';
 import { apiCall } from '@/shared/lib/api';
 import { supabase } from '@/shared/lib/supabase';
@@ -35,18 +36,31 @@ export default function RestaurantScreen() {
   const { user } = useAuth();
   const booking = useRestaurantBooking();
   const { pay } = usePayment();
+  const { ensurePhone, phoneGate } = usePhoneGate();
   const { zones, loading } = useRestaurantZones(booking.date, booking.time);
   const capacity = useRestaurantCapacity(booking.date, booking.time);
   const [showConfirm, setShowConfirm] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [qrSnapshot, setQrSnapshot] = useState<{
+    date: string;
+    time: string;
+    zoneType: string | undefined;
+    guestCount: number;
+    depositAmount: number;
+    requireDeposit: boolean;
+  } | null>(null);
 
-  const formattedDate = new Date(booking.date + 'T00:00:00').toLocaleDateString(i18n.locale, {
-    weekday: 'long', day: 'numeric', month: 'long',
-  });
+  const formatDateLong = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString(i18n.locale, {
+      weekday: 'long', day: 'numeric', month: 'long',
+    });
+  const formattedDate = formatDateLong(booking.date);
 
   const handleBook = async () => {
     if (!user) { router.push('/(auth)/login'); return; }
+    const phoneOk = await ensurePhone();
+    if (!phoneOk) return;
     const result = await booking.submitBooking();
     if (!result.success || !result.reservationId) return;
 
@@ -72,13 +86,22 @@ export default function RestaurantScreen() {
     apiCall('/api/notifications/booking-confirmed', { type: 'restaurant', reservationId: result.reservationId }).catch(() => {});
 
     setShowConfirm(false);
+    const snapshot = {
+      date: booking.date,
+      time: booking.time,
+      zoneType: booking.zone?.zone_type,
+      guestCount: booking.guestCount,
+      depositAmount: booking.depositAmount,
+      requireDeposit: booking.requireDeposit,
+    };
     if (result.qrCode) {
+      setQrSnapshot(snapshot);
       setQrCode(result.qrCode);
       setTimeout(() => setShowQR(true), 400);
     } else {
       Alert.alert(
         i18n.t('bookingConfirmed'),
-        `${i18n.t('tableReservedAlert').replace('{{zone}}', booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')).replace('{{date}}', formattedDate).replace('{{time}}', booking.time.replace(':', 'h'))}`,
+        `${i18n.t('tableReservedAlert').replace('{{zone}}', snapshot.zoneType === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')).replace('{{date}}', formatDateLong(snapshot.date)).replace('{{time}}', snapshot.time.replace(':', 'h'))}`,
         [{ text: i18n.t('tablePerfect') }]
       );
     }
@@ -307,23 +330,24 @@ export default function RestaurantScreen() {
       </BottomSheet>
 
       {/* QR Code */}
-      {qrCode && (
+      {qrCode && qrSnapshot && (
         <ReservationQRCode
           visible={showQR}
-          onClose={() => { setShowQR(false); setQrCode(null); }}
+          onClose={() => { setShowQR(false); setQrCode(null); setQrSnapshot(null); }}
           qrCode={qrCode}
           type="restaurant"
-          title={`${i18n.t('tabRestaurant')} — ${booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}`}
-          subtitle={booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}
+          title={`${i18n.t('tabRestaurant')} — ${qrSnapshot.zoneType === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}`}
+          subtitle={qrSnapshot.zoneType === 'terrasse' ? i18n.t('terrace') : i18n.t('interior')}
           details={[
-            { label: i18n.t('date'), value: formattedDate, icon: 'calendar-outline' },
-            { label: i18n.t('time'), value: booking.time.replace(':', 'h'), icon: 'time-outline' },
-            { label: i18n.t('zone'), value: booking.zone?.zone_type === 'terrasse' ? i18n.t('terrace') : i18n.t('interior'), icon: booking.zone?.zone_type === 'terrasse' ? 'sunny-outline' : 'home-outline' },
-            { label: i18n.t('guests'), value: `${booking.guestCount}`, icon: 'people-outline' },
+            { label: i18n.t('date'), value: formatDateLong(qrSnapshot.date), icon: 'calendar-outline' },
+            { label: i18n.t('time'), value: qrSnapshot.time.replace(':', 'h'), icon: 'time-outline' },
+            { label: i18n.t('zone'), value: qrSnapshot.zoneType === 'terrasse' ? i18n.t('terrace') : i18n.t('interior'), icon: qrSnapshot.zoneType === 'terrasse' ? 'sunny-outline' : 'home-outline' },
+            { label: i18n.t('guests'), value: `${qrSnapshot.guestCount}`, icon: 'people-outline' },
           ]}
-          deposit={booking.requireDeposit ? `${booking.depositAmount}€` : undefined}
+          deposit={qrSnapshot.requireDeposit ? `${qrSnapshot.depositAmount}€` : undefined}
         />
       )}
+      {phoneGate}
     </View>
   );
 }
