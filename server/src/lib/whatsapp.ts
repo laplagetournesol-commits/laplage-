@@ -38,36 +38,33 @@ function isE164(phone: string): boolean {
   return /^\+[1-9]\d{1,14}$/.test(phone);
 }
 
-export async function sendWhatsAppConfirmation(
-  params: WhatsAppConfirmationParams,
+/**
+ * Envoi générique : un template + ses variables, vers un numéro WhatsApp.
+ */
+export async function sendWhatsAppTemplate(
+  toPhoneE164: string,
+  variables: Record<string, string>,
+  contentSidOverride?: string,
 ): Promise<{ ok: true; sid: string } | { ok: false; error: string }> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromRaw = process.env.TWILIO_WHATSAPP_FROM;
-  const contentSid = process.env.TWILIO_TEMPLATE_SID_RESERVATION;
+  const contentSid = contentSidOverride ?? process.env.TWILIO_TEMPLATE_SID_RESERVATION;
 
   if (!accountSid || !authToken || !fromRaw || !contentSid) {
     return { ok: false, error: 'Twilio non configuré (vars d\'env manquantes)' };
   }
 
-  if (!isE164(params.toPhoneE164)) {
-    return { ok: false, error: `Numéro invalide (E.164 attendu): ${params.toPhoneE164}` };
+  if (!isE164(toPhoneE164)) {
+    return { ok: false, error: `Numéro invalide (E.164 attendu): ${toPhoneE164}` };
   }
 
   const from = fromRaw.startsWith('whatsapp:') ? fromRaw : `whatsapp:${fromRaw}`;
-  const to = `whatsapp:${params.toPhoneE164}`;
-
-  const contentVariables = JSON.stringify({
-    '1': params.firstName?.trim() || 'client',
-    '2': typeLabels[params.reservationType],
-    '3': params.reservationId,
-  });
-
   const body = new URLSearchParams({
     From: from,
-    To: to,
+    To: `whatsapp:${toPhoneE164}`,
     ContentSid: contentSid,
-    ContentVariables: contentVariables,
+    ContentVariables: JSON.stringify(variables),
   });
 
   const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
@@ -92,4 +89,34 @@ export async function sendWhatsAppConfirmation(
   } catch (err: any) {
     return { ok: false, error: err?.message ?? 'Erreur réseau Twilio' };
   }
+}
+
+/**
+ * Confirmation WhatsApp envoyée au CLIENT après réservation.
+ */
+export async function sendWhatsAppConfirmation(params: WhatsAppConfirmationParams) {
+  return sendWhatsAppTemplate(params.toPhoneE164, {
+    '1': params.firstName?.trim() || 'client',
+    '2': typeLabels[params.reservationType],
+    '3': params.reservationId,
+  });
+}
+
+/**
+ * Notification WhatsApp envoyée à l'ADMIN à chaque nouvelle réservation.
+ * Réutilise le template client (sandbox-friendly) en hijackant les variables :
+ *   {{1}} = "admin" → produit "Bonjour admin, ..."
+ *   {{2}} = description compacte de la réservation
+ *   {{3}} = reservationId
+ */
+export async function sendWhatsAppAdminNotification(params: {
+  toPhoneE164: string;
+  description: string;
+  reservationId: string;
+}) {
+  return sendWhatsAppTemplate(params.toPhoneE164, {
+    '1': 'admin',
+    '2': params.description,
+    '3': params.reservationId,
+  });
 }

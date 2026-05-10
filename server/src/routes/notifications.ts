@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 import { sendPushToTokens, sendPushToUser, sendPushToUsers, sendPushToAll } from '../lib/push';
-import { sendWhatsAppConfirmation } from '../lib/whatsapp';
+import { sendWhatsAppConfirmation, sendWhatsAppAdminNotification } from '../lib/whatsapp';
 import { sendReminders } from '../cron/reminders';
 
 const router = Router();
@@ -148,6 +148,61 @@ async function sendAdminNotificationEmail(
     });
   } catch (err) {
     console.error('Erreur envoi email admin:', err);
+  }
+}
+
+async function sendWhatsAppToAdmins(
+  bookerUserId: string,
+  type: 'beach' | 'restaurant',
+  reservationId: string,
+): Promise<void> {
+  const { data: admins } = await supabase
+    .from('profiles')
+    .select('id, phone')
+    .eq('role', 'admin');
+
+  const adminPhones = (admins ?? [])
+    .filter((a) => a.id !== bookerUserId && a.phone)
+    .map((a) => a.phone as string);
+
+  if (adminPhones.length === 0) return;
+
+  const { data: bookerProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', bookerUserId)
+    .single();
+
+  const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+  const { data: resa } = await supabase
+    .from(table)
+    .select('date, time, time_slot, guest_count')
+    .eq('id', reservationId)
+    .single();
+
+  const clientName = bookerProfile?.full_name?.trim() || 'Client';
+  const typeLabel = type === 'beach' ? 'Transat' : 'Restaurant';
+  const formattedDate = resa?.date
+    ? new Date(`${resa.date}T00:00:00`).toLocaleDateString('fr-FR', {
+        weekday: 'short', day: 'numeric', month: 'short',
+      })
+    : '';
+  const service = type === 'restaurant'
+    ? (resa?.time ? ` ${resa.time}` : resa?.time_slot === 'dinner' ? ' (dîner)' : resa?.time_slot === 'lunch' ? ' (déjeuner)' : '')
+    : '';
+  const guests = resa?.guest_count ? `${resa.guest_count} pers.` : '';
+
+  const description = `${typeLabel} ${clientName} ${guests} ${formattedDate}${service}`.replace(/\s+/g, ' ').trim();
+
+  for (const phone of adminPhones) {
+    const result = await sendWhatsAppAdminNotification({
+      toPhoneE164: phone,
+      description,
+      reservationId,
+    });
+    if (!result.ok) {
+      console.error(`Erreur WhatsApp admin (${phone}):`, result.error);
+    }
   }
 }
 
@@ -391,6 +446,10 @@ router.post('/booking-confirmed', requireAuth, async (req: AuthenticatedRequest,
 
     sendAdminNotificationEmail(userId, type, reservationId).catch((err) => {
       console.error('Email admin échoué:', err);
+    });
+
+    sendWhatsAppToAdmins(userId, type, reservationId).catch((err) => {
+      console.error('WhatsApp admin échoué:', err);
     });
 
     notifyAdminsOfNewReservation(userId, type, reservationId).catch((err) => {
