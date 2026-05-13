@@ -233,12 +233,23 @@ export function SunbedSheet({
 
               {/* Add-on inline pour les Beds : pas d'étape "Options" intermédiaire */}
               {hasBed && addons.filter((a) => /cava/i.test(a.name)).map((addon) => {
-                const selected = selectedAddons.some((sa) => sa.addon.id === addon.id);
+                const bedCount = sunbeds.filter((sb) => sb.is_double).length;
+                const selectedEntry = selectedAddons.find((sa) => sa.addon.id === addon.id);
+                const selected = !!selectedEntry;
+                const totalAddonPrice = addon.price * bedCount;
                 return (
                   <TouchableOpacity
                     key={addon.id}
                     activeOpacity={0.7}
-                    onPress={() => onToggleAddon(addon)}
+                    onPress={() => {
+                      if (selected) {
+                        onToggleAddon(addon);
+                      } else {
+                        onToggleAddon(addon);
+                        // Une option par Bed : ajuste la quantité au nombre de Beds sélectionnés
+                        if (bedCount > 1) onUpdateQuantity(addon.id, bedCount);
+                      }
+                    }}
                     style={[
                       styles.bedAddonRow,
                       {
@@ -255,9 +266,10 @@ export function SunbedSheet({
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={[styles.bedAddonName, { color: theme.text }]}>
                         {addon.icon ? `${addon.icon}  ` : ''}{/cava/i.test(addon.name) ? i18n.t('cavaFruitsOption') : addon.name}
+                        {bedCount > 1 ? ` × ${bedCount}` : ''}
                       </Text>
                     </View>
-                    <Text style={[styles.bedAddonPrice, { color: colors.brand }]}>+{addon.price}€</Text>
+                    <Text style={[styles.bedAddonPrice, { color: colors.brand }]}>+{totalAddonPrice}€</Text>
                   </TouchableOpacity>
                 );
               })}

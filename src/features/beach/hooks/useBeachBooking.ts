@@ -76,19 +76,12 @@ export function useBeachBooking() {
   const toggleSunbed = useCallback((sunbed: SunbedWithZone) => {
     setState((s) => {
       const exists = s.selectedSunbeds.some((sb) => sb.id === sunbed.id);
-      if (exists) {
-        return { ...s, selectedSunbeds: s.selectedSunbeds.filter((sb) => sb.id !== sunbed.id) };
-      }
-      // Bed = exclusif (1 Bed = 1 réservation, 2 pers fixes, 80€) :
-      // ne se mélange pas avec d'autres transats ou d'autres Beds
-      if (sunbed.is_double) {
-        return { ...s, selectedSunbeds: [sunbed], guestCount: 2 };
-      }
-      // Si un Bed est déjà sélectionné, on ignore l'ajout d'un transat classique
-      if (s.selectedSunbeds.some((sb) => sb.is_double)) {
-        return s;
-      }
-      return { ...s, selectedSunbeds: [...s.selectedSunbeds, sunbed] };
+      const next = exists
+        ? s.selectedSunbeds.filter((sb) => sb.id !== sunbed.id)
+        : [...s.selectedSunbeds, sunbed];
+      // Personnes calculées automatiquement : 2 par Bed, 1 par transat/chaise longue
+      const autoGuests = next.reduce((sum, sb) => sum + (sb.is_double ? 2 : 1), 0);
+      return { ...s, selectedSunbeds: next, guestCount: autoGuests || 1 };
     });
   }, []);
 
