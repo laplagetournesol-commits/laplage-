@@ -16,6 +16,7 @@ import type { Sunbed, BeachZone } from '@/shared/types';
 import { i18n } from '@/shared/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MAP_VERSION = 2;
 // Sur web desktop, limiter la largeur pour ne pas avoir une carte géante
 const MAP_WIDTH = Platform.OS === 'web' ? Math.min(SCREEN_WIDTH, 500) : SCREEN_WIDTH;
 const MAP_HEIGHT = MAP_WIDTH * 1.5;
@@ -31,12 +32,13 @@ interface SunbedWithZone extends Sunbed {
 interface BeachMapProps {
   sunbeds: SunbedWithZone[];
   selectedId: string | null;
+  selectedIds?: Set<string>;
   secondarySelectedId?: string | null;
   onSelect: (sunbed: SunbedWithZone) => void;
   onReservedPress?: (sunbed: SunbedWithZone) => void;
 }
 
-export function BeachMap({ sunbeds, selectedId, secondarySelectedId, onSelect, onReservedPress }: BeachMapProps) {
+export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId, onSelect, onReservedPress }: BeachMapProps) {
   const { theme } = useSunMode();
   const scrollRef = useRef<ScrollView>(null);
   const [useRemote, setUseRemote] = useState(true);
@@ -88,7 +90,7 @@ export function BeachMap({ sunbeds, selectedId, secondarySelectedId, onSelect, o
 
           {/* Zones cliquables transparentes sur la photo */}
           {sunbeds.map((sunbed) => {
-            const isSelected = sunbed.id === selectedId;
+            const isSelected = sunbed.id === selectedId || (selectedIds?.has(sunbed.id) ?? false);
             const isPaired = sunbed.id === secondarySelectedId;
             const isReserved = sunbed.isReserved;
 
@@ -113,11 +115,14 @@ export function BeachMap({ sunbeds, selectedId, secondarySelectedId, onSelect, o
                 <View
                   style={[
                     styles.markerInner,
+                    sunbed.is_double && styles.markerBed,
                     (isSelected || isPaired) && styles.markerSelected,
                     isReserved && styles.markerReserved,
                   ]}
                 >
-                  {/* Label masqué côté client, visible uniquement dans la réservation */}
+                  {sunbed.is_double && (
+                    <Text style={styles.bedLabel}>BED</Text>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -203,6 +208,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(247, 217, 78, 0.5)',
     borderColor: colors.sunYellow,
     borderWidth: 1.5,
+  },
+  markerBed: {
+    backgroundColor: 'rgba(180, 100, 30, 0.45)',
+    borderColor: 'rgba(180, 100, 30, 0.9)',
+    borderWidth: 2,
+  },
+  bedLabel: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   markerReserved: {
     backgroundColor: 'rgba(220, 38, 38, 0.4)',

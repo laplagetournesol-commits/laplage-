@@ -30,7 +30,12 @@ export default function BeachScreen() {
   const { fromMood } = useLocalSearchParams<{ fromMood?: string }>();
   const booking = useBeachBooking();
   const { sunbeds, zones, loading, availableCount, totalCount } = useSunbeds(booking.date);
-  const { addons } = useAddons(booking.date);
+  const { addons: allAddons } = useAddons(booking.date);
+  const hasBedSelected = booking.selectedSunbeds.some((sb) => sb.is_double);
+  // L'add-on "Cava + plateau de fruits" est réservé aux Beds
+  const addons = hasBedSelected
+    ? allAddons
+    : allAddons.filter((a) => !/cava/i.test(a.name));
   const { pay } = usePayment();
   const { ensurePhone, phoneGate } = usePhoneGate();
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -80,6 +85,13 @@ export default function BeachScreen() {
 
   const selectedCount = booking.selectedSunbeds.length;
   const showFloatingBar = selectedCount > 0 && !sheetVisible;
+  const selHasBed = booking.selectedSunbeds.some((sb) => sb.is_double);
+  const selAllCL = booking.selectedSunbeds.length > 0 && booking.selectedSunbeds.every((sb) => sb.zone.zone_type === 'chaise_longue');
+  const floatingNoun = selHasBed
+    ? (selectedCount > 1 ? i18n.t('beds') : i18n.t('bed'))
+    : selAllCL
+      ? (selectedCount > 1 ? i18n.t('chaisesLongues') : i18n.t('chaiseLongue'))
+      : (selectedCount > 1 ? (i18n.t('sunbeds') ?? 'transats') : i18n.t('sunbed'));
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -131,7 +143,7 @@ export default function BeachScreen() {
         <View style={[styles.floatingBar, { backgroundColor: theme.background, borderTopColor: theme.cardBorder, paddingBottom: insets.bottom + 12 }]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.floatingCount, { color: theme.text }]}>
-              {selectedCount} {selectedCount > 1 ? (i18n.t('sunbeds') ?? 'transats') : i18n.t('sunbed')}
+              {selectedCount} {floatingNoun}
             </Text>
             <Text style={[styles.floatingTotal, { color: theme.textSecondary }]}>
               {i18n.t('total')} : <Text style={{ color: colors.brand, fontWeight: '700' }}>{booking.basePrice}€</Text>

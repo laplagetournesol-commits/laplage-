@@ -19,6 +19,7 @@ import { colors } from '@/shared/theme/colors';
 import { DateSelector } from '@/features/beach/components/DateSelector';
 import { BeachMap } from '@/features/beach/components/BeachMap';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
+import { TimeSelector } from '@/features/restaurant/components/TimeSelector';
 import { supabase } from '@/shared/lib/supabase';
 import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone } from '@/shared/types';
@@ -35,7 +36,8 @@ export default function AdminBookingScreen() {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestCount, setGuestCount] = useState(1);
-  const [timeSlot, setTimeSlot] = useState<'lunch' | 'dinner'>('lunch');
+  const [time, setTime] = useState('12:00');
+  const timeSlot: 'lunch' | 'dinner' = parseInt(time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
   // Restaurant : sélection unique
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Plage : sélection multiple de transats
@@ -50,7 +52,7 @@ export default function AdminBookingScreen() {
   useEffect(() => {
     setSelectedId(null);
     setSelectedSunbedIds(new Set());
-  }, [date, type, timeSlot]);
+  }, [date, type, time]);
 
   const handleSelectSunbed = (sunbed: Sunbed & { zone: BeachZone } & { isReserved: boolean }) => {
     if (sunbed.isReserved) return;
@@ -107,6 +109,10 @@ export default function AdminBookingScreen() {
               .from('beach_reservations')
               .update({ status: 'completed' })
               .eq('id', res.id);
+            await supabase
+              .from('beach_reservation_sunbeds')
+              .update({ status: 'completed' })
+              .eq('reservation_id', res.id);
             Alert.alert('Réservation libérée', `Tous les transats associés sont libres.`);
           },
         },
@@ -185,6 +191,7 @@ export default function AdminBookingScreen() {
           user_id: user.id,
           table_id: null,
           date,
+          time,
           time_slot: timeSlot,
           status: 'confirmed',
           deposit_amount: 0,
@@ -323,40 +330,9 @@ export default function AdminBookingScreen() {
         {/* Date */}
         <DateSelector selectedDate={date} onSelect={setDate} />
 
-        {/* Créneau restaurant */}
+        {/* Heure de réservation restaurant */}
         {type === 'restaurant' && (
-          <View style={[styles.row, { marginTop: 8 }]}>
-            <TouchableOpacity
-              onPress={() => setTimeSlot('lunch')}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: timeSlot === 'lunch' ? colors.sage : theme.card,
-                  borderColor: timeSlot === 'lunch' ? colors.sage : theme.cardBorder,
-                },
-              ]}
-            >
-              <Ionicons name="sunny" size={16} color={timeSlot === 'lunch' ? colors.white : theme.textSecondary} />
-              <Text style={[styles.chipText, { color: timeSlot === 'lunch' ? colors.white : theme.textSecondary }]}>
-                Déjeuner
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setTimeSlot('dinner')}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: timeSlot === 'dinner' ? colors.deepSea : theme.card,
-                  borderColor: timeSlot === 'dinner' ? colors.deepSea : theme.cardBorder,
-                },
-              ]}
-            >
-              <Ionicons name="moon" size={16} color={timeSlot === 'dinner' ? colors.white : theme.textSecondary} />
-              <Text style={[styles.chipText, { color: timeSlot === 'dinner' ? colors.white : theme.textSecondary }]}>
-                Dîner
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TimeSelector selectedTime={time} selectedDate={date} onSelect={setTime} />
         )}
       </View>
 
@@ -407,7 +383,7 @@ export default function AdminBookingScreen() {
           )}
           {type === 'restaurant' && (
             <Text style={[styles.selectedLabel, { color: theme.text }]}>
-              {guestCount} pers. — {timeSlot === 'lunch' ? 'Déjeuner' : 'Dîner'}
+              {guestCount} pers. — {time.replace(':', 'h')}
             </Text>
           )}
           <TouchableOpacity
