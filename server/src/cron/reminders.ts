@@ -1,5 +1,53 @@
 import { supabase } from '../lib/supabase';
 import { sendPushToUser } from '../lib/push';
+import { sendWhatsAppReminder } from '../lib/whatsapp';
+
+async function sendReminderWhatsApp(
+  userId: string,
+  reservationType: 'beach' | 'restaurant' | 'event',
+  timing: string,
+  reservationId?: string,
+) {
+  try {
+    // Si la résa a un guest_phone (résa "pour un ami"), envoyer au guest.
+    let toPhone: string | null = null;
+    let firstName: string | null = null;
+
+    if (reservationId && reservationType !== 'event') {
+      const table = reservationType === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+      const { data: reservation } = await supabase
+        .from(table)
+        .select('guest_name, guest_phone')
+        .eq('id', reservationId)
+        .single();
+      if (reservation?.guest_phone) {
+        toPhone = reservation.guest_phone;
+        firstName = reservation.guest_name?.trim().split(/\s+/)[0] ?? null;
+      }
+    }
+
+    if (!toPhone) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, phone')
+        .eq('id', userId)
+        .single();
+      if (!profile?.phone) return;
+      toPhone = profile.phone;
+      firstName = profile.full_name?.trim().split(/\s+/)[0] ?? null;
+    }
+
+    const result = await sendWhatsAppReminder({
+      toPhoneE164: toPhone,
+      firstName,
+      reservationType,
+      timing,
+    });
+    if (!result.ok) console.error(`[Reminder WA ${reservationType}]`, result.error);
+  } catch (err) {
+    console.error(`[Reminder WA ${reservationType}] exception:`, err);
+  }
+}
 
 /**
  * Vérifie si un rappel a déjà été envoyé (anti-doublon persisté en base).
@@ -54,6 +102,7 @@ export async function sendRemindersJ1(): Promise<{ beach: number; restaurant: nu
         'Votre transat vous attend demain à La Plage Tournesol !',
         { type: 'beach_reminder', reservationId: r.id },
       );
+      await sendReminderWhatsApp(r.user_id, 'beach', 'demain', r.id);
       await markSent(r.id, 'beach_j1');
       beach++;
     }
@@ -76,6 +125,7 @@ export async function sendRemindersJ1(): Promise<{ beach: number; restaurant: nu
         `Votre table est réservée demain${heure ? ` à ${heure}` : ''}. À bientôt !`,
         { type: 'restaurant_reminder', reservationId: r.id },
       );
+      await sendReminderWhatsApp(r.user_id, 'restaurant', heure ? `demain à ${heure}` : 'demain', r.id);
       await markSent(r.id, 'restaurant_j1');
       restaurant++;
     }
@@ -98,6 +148,7 @@ export async function sendRemindersJ1(): Promise<{ beach: number; restaurant: nu
         `${event.title} c'est demain ! On vous attend.`,
         { type: 'event_reminder', eventId: t.id },
       );
+      await sendReminderWhatsApp(t.user_id, 'event', 'demain');
       await markSent(t.id, 'event_j1');
       events++;
     }
@@ -148,6 +199,7 @@ export async function sendRemindersH2(): Promise<{ beach: number; restaurant: nu
         'Votre transat vous attend dans 2 heures à La Plage Tournesol !',
         { type: 'beach_reminder_h2', reservationId: r.id },
       );
+      await sendReminderWhatsApp(r.user_id, 'beach', 'dans 2 heures', r.id);
       await markSent(r.id, 'beach_h2');
       beach++;
     }
@@ -172,6 +224,7 @@ export async function sendRemindersH2(): Promise<{ beach: number; restaurant: nu
         `Votre table est dans 2 heures${heure ? ` (${heure})` : ''}. On vous attend !`,
         { type: 'restaurant_reminder_h2', reservationId: r.id },
       );
+      await sendReminderWhatsApp(r.user_id, 'restaurant', heure ? `dans 2 heures (${heure})` : 'dans 2 heures', r.id);
       await markSent(r.id, 'restaurant_h2');
       restaurant++;
     }
@@ -196,6 +249,7 @@ export async function sendRemindersH2(): Promise<{ beach: number; restaurant: nu
         `${event.title} commence dans 2 heures !`,
         { type: 'event_reminder_h2', eventId: t.id },
       );
+      await sendReminderWhatsApp(t.user_id, 'event', 'dans 2 heures');
       await markSent(t.id, 'event_h2');
       events++;
     }
@@ -215,9 +269,12 @@ export async function sendReminders() {
  * Démarre les crons de rappels.
  * - J-1 : tous les jours à 10h (heure Espagne)
  * - H-2 : toutes les 30 minutes (vérifie les réservations dans ~2h)
+ * - No-show : 23h30 chaque soir, capture l'empreinte CB des restos
+ *   confirmés mais sans check-in.
  */
 export function startRemindersCron() {
   const CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
+  let lastNoShowRun: string | null = null; // YYYY-MM-DD du dernier run
 
   const check = async () => {
     const now = new Date(
@@ -249,10 +306,23 @@ export function startRemindersCron() {
         console.error('[Cron] Erreur rappels H-2:', err);
       }
     }
+
+    // Capture no-show à 23h30 (une seule fois par jour)
+    const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    if (hour === 23 && now.getMinutes() >= 30 && lastNoShowRun !== todayKey) {
+      console.log('[Cron] Capture des no-shows restaurant...');
+      try {
+        const { captureRestaurantNoShows } = await import('./no-show-capture');
+        await captureRestaurantNoShows();
+        lastNoShowRun = todayKey;
+      } catch (err) {
+        console.error('[Cron] Erreur no-show capture:', err);
+      }
+    }
   };
 
   check();
   setInterval(check, CHECK_INTERVAL);
 
-  console.log('[Cron] Rappels programmés (J-1 à 10h + H-2 toutes les 30min)');
+  console.log('[Cron] Rappels programmés (J-1 10h + H-2 30min + no-show 23h30)');
 }

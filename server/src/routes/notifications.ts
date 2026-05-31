@@ -65,18 +65,37 @@ async function sendWhatsAppToUser(
   type: 'beach' | 'restaurant',
   reservationId: string,
 ): Promise<void> {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, phone')
-    .eq('id', userId)
+  // Si la résa a été faite "pour un ami" (admin booking), envoyer au guest
+  // plutôt qu'au booker. Sinon, fallback sur le profil du booker.
+  const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+  const { data: reservation } = await supabase
+    .from(table)
+    .select('guest_name, guest_phone')
+    .eq('id', reservationId)
     .single();
 
-  if (!profile?.phone) return;
+  let toPhone: string | null = null;
+  let firstName: string | null = null;
 
-  const firstName = profile.full_name?.trim().split(/\s+/)[0] ?? null;
+  if (reservation?.guest_phone) {
+    toPhone = reservation.guest_phone;
+    firstName = reservation.guest_name?.trim().split(/\s+/)[0] ?? null;
+  } else {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, phone')
+      .eq('id', userId)
+      .single();
+    if (profile?.phone) {
+      toPhone = profile.phone;
+      firstName = profile.full_name?.trim().split(/\s+/)[0] ?? null;
+    }
+  }
+
+  if (!toPhone) return;
 
   const result = await sendWhatsAppConfirmation({
-    toPhoneE164: profile.phone,
+    toPhoneE164: toPhone,
     firstName,
     reservationType: type,
     reservationId,
