@@ -313,4 +313,150 @@ router.post('/refund', requireAdmin, async (req: AuthenticatedRequest, res) => {
   }
 });
 
+/**
+ * POST /api/reservations/modify-beach
+ * Modifie une réservation Plage existante (date et/ou transats).
+ * - Vérifie la règle 24h
+ * - Vérifie que les nouveaux transats sont libres
+ * - Compute le diff de prix
+ * - Si nouveau > ancien : crée un PaymentIntent pour la différence (renvoie clientSecret)
+ * - Si nouveau < ancien : refund partiel Stripe immédiat
+ * - Met à jour la résa (date + liens transats + total_price + deposit_amount)
+ */
+router.post('/reservations/modify-beach', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { reservationId, newDate, newSunbedIds } = req.body as {
+      reservationId: string;
+      newDate: string;
+      newSunbedIds: string[];
+    };
+
+    if (!reservationId || !newDate || !Array.isArray(newSunbedIds) || newSunbedIds.length === 0) {
+      res.status(400).json({ error: 'reservationId, newDate, newSunbedIds requis' });
+      return;
+    }
+
+    // Charger la résa
+    const { data: resa, error: resaErr } = await supabase
+      .from('beach_reservations')
+      .select('id, user_id, date, total_price, deposit_amount, deposit_paid, stripe_payment_intent_id, status')
+      .eq('id', reservationId)
+      .single();
+
+    if (resaErr || !resa) {
+      res.status(404).json({ error: 'Réservation introuvable' });
+      return;
+    }
+
+    if (resa.user_id !== req.user!.id && !['admin', 'staff'].includes(req.user!.role)) {
+      res.status(403).json({ error: 'Non autorisé' });
+      return;
+    }
+
+    if (resa.status === 'cancelled' || resa.status === 'completed' || resa.status === 'checked_in' || resa.status === 'no_show') {
+      res.status(400).json({ error: 'Cette réservation ne peut plus être modifiée' });
+      return;
+    }
+
+    // Règle 24h : pas de modif si <24h avant la date
+    const now = new Date();
+    const resaDate = new Date(`${resa.date}T10:00:00`);
+    if (resaDate.getTime() - now.getTime() < 24 * 3600 * 1000) {
+      res.status(400).json({ error: 'Modification impossible à moins de 24h de la réservation' });
+      return;
+    }
+
+    // Vérifier que les nouveaux transats existent + récupérer leurs prix
+    const { data: sunbeds, error: sbErr } = await supabase
+      .from('sunbeds')
+      .select('id, is_double, zone:beach_zones(base_price)')
+      .in('id', newSunbedIds);
+
+    if (sbErr || !sunbeds || sunbeds.length !== newSunbedIds.length) {
+      res.status(400).json({ error: 'Un ou plusieurs transats invalides' });
+      return;
+    }
+
+    // Vérifier dispo des nouveaux transats sur la nouvelle date
+    // (sauf si un transat est déjà attribué à cette même résa)
+    const { data: conflicts } = await supabase
+      .from('beach_reservation_sunbeds')
+      .select('sunbed_id, reservation_id')
+      .eq('date', newDate)
+      .in('status', ['pending', 'confirmed', 'checked_in'])
+      .in('sunbed_id', newSunbedIds);
+
+    if (conflicts && conflicts.length > 0) {
+      const blocking = conflicts.filter((c) => c.reservation_id !== reservationId);
+      if (blocking.length > 0) {
+        res.status(409).json({ error: 'Un ou plusieurs transats ne sont plus disponibles à cette date' });
+        return;
+      }
+    }
+
+    // Calcul nouveau prix : BED 70€, sinon base_price
+    const newTotal = sunbeds.reduce((sum: number, sb: any) => {
+      if (sb.is_double) return sum + 70;
+      return sum + Number(sb.zone?.base_price ?? 25);
+    }, 0);
+
+    const oldTotal = Number(resa.total_price);
+    const diff = newTotal - oldTotal;
+
+    let extraClientSecret: string | null = null;
+    let refundedAmount = 0;
+
+    if (diff > 0 && resa.deposit_paid) {
+      // Créer un PaymentIntent pour la différence
+      const stripe = getStripe();
+      const pi = await stripe.paymentIntents.create({
+        amount: Math.round(diff * 100),
+        currency: 'eur',
+        capture_method: 'automatic',
+        metadata: {
+          type: 'beach_modification_extra',
+          reservationId,
+          userId: req.user!.id,
+        },
+      });
+      extraClientSecret = pi.client_secret;
+    } else if (diff < 0 && resa.deposit_paid && resa.stripe_payment_intent_id) {
+      // Refund partiel
+      const stripe = getStripe();
+      await stripe.refunds.create({
+        payment_intent: resa.stripe_payment_intent_id,
+        amount: Math.round(-diff * 100),
+      });
+      refundedAmount = -diff;
+    }
+
+    // Mettre à jour la résa : date + total
+    await supabase
+      .from('beach_reservations')
+      .update({ date: newDate, total_price: newTotal, deposit_amount: newTotal })
+      .eq('id', reservationId);
+
+    // Supprimer les anciens liens et insérer les nouveaux
+    await supabase.from('beach_reservation_sunbeds').delete().eq('reservation_id', reservationId);
+    const linkRows = newSunbedIds.map((id) => ({
+      reservation_id: reservationId,
+      sunbed_id: id,
+      date: newDate,
+      status: resa.status,
+    }));
+    await supabase.from('beach_reservation_sunbeds').insert(linkRows);
+
+    res.json({
+      success: true,
+      newTotal,
+      diff,
+      extraClientSecret,
+      refundedAmount,
+    });
+  } catch (err: any) {
+    console.error('Erreur modify-beach:', err);
+    res.status(500).json({ error: err?.message ?? 'Erreur lors de la modification' });
+  }
+});
+
 export default router;
