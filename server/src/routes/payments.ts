@@ -358,10 +358,11 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
       return;
     }
 
-    // Règle 24h : pas de modif si <24h avant la date
+    // Règle 24h : pas de modif si <24h avant la date — sauf pour admin/staff
+    const isStaff = ['admin', 'staff'].includes(req.user!.role);
     const now = new Date();
     const resaDate = new Date(`${resa.date}T10:00:00`);
-    if (resaDate.getTime() - now.getTime() < 24 * 3600 * 1000) {
+    if (!isStaff && resaDate.getTime() - now.getTime() < 24 * 3600 * 1000) {
       res.status(400).json({ error: 'Modification impossible à moins de 24h de la réservation' });
       return;
     }
@@ -406,8 +407,8 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
     let extraClientSecret: string | null = null;
     let refundedAmount = 0;
 
-    if (diff > 0 && resa.deposit_paid) {
-      // Créer un PaymentIntent pour la différence
+    if (diff > 0 && resa.deposit_paid && resa.stripe_payment_intent_id) {
+      // Créer un PaymentIntent pour la différence (uniquement si paiement initial Stripe)
       const stripe = getStripe();
       const pi = await stripe.paymentIntents.create({
         amount: Math.round(diff * 100),

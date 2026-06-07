@@ -197,6 +197,16 @@ export default function ReservationsScreen() {
       buttons.push({ text: i18n.t('statusCheckedIn'), onPress: () => updateStatus(r.id, 'checked_in') });
     }
 
+    // Bouton "Modifier" : seulement pour les résas plage futures non check-in
+    if (tab === 'beach' && r.status !== 'cancelled' && r.status !== 'completed' && r.status !== 'checked_in' && r.status !== 'no_show') {
+      buttons.push({
+        text: i18n.t('modify'),
+        onPress: () => {
+          router.push({ pathname: '/(tabs)/beach', params: { modify: r.id } });
+        },
+      });
+    }
+
     if (r.status !== 'cancelled' && r.status !== 'completed') {
       buttons.push({
         text: i18n.t('alertCancelReservation'),
