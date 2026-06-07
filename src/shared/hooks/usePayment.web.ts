@@ -32,33 +32,22 @@ export function usePayment() {
       }
       showDebug('✅ Stripe.js chargé, ouverture du modal...');
 
-      // 3. Afficher le modal de paiement et attendre la carte
-      const cardElement = await showPaymentModal(stripe);
-      if (!cardElement) {
+      // 3. Afficher le modal et faire le paiement (confirmCardPayment exécuté
+      //    AVANT démontage de la modal — sinon Stripe perd son point de mount)
+      const result = await showPaymentModal(stripe, clientSecret);
+      if (result.status === 'cancelled') {
         showDebug('ℹ️ Paiement annulé par l\'utilisateur');
-        return { success: false }; // Annulé par l'utilisateur
+        return { success: false };
       }
-      showDebug('⏳ Confirmation du paiement...');
-
-      // 4. Confirmer le paiement
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: cardElement },
-      });
-
-      // Cleanup
-      cardElement.destroy();
-
-      if (error) {
-        showDebug(`❌ Stripe: ${error.message}`);
+      if (result.status === 'error') {
+        showDebug(`❌ Stripe: ${result.message}`);
         return { success: false };
       }
 
-      showDebug(`✅ Paiement: ${paymentIntent?.status}`);
-
-      if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'requires_capture') {
+      showDebug(`✅ Paiement: ${result.paymentIntentStatus}`);
+      if (result.paymentIntentStatus === 'succeeded' || result.paymentIntentStatus === 'requires_capture') {
         return { success: true };
       }
-
       return { success: false };
     } catch (err: any) {
       showDebug(`❌ Erreur: ${err.message}`);
@@ -78,7 +67,12 @@ function showDebug(msg: string) {
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
 }
 
-function showPaymentModal(stripe: any): Promise<any | null> {
+type PaymentModalResult =
+  | { status: 'cancelled' }
+  | { status: 'error'; message: string }
+  | { status: 'ok'; paymentIntentStatus: string | undefined };
+
+function showPaymentModal(stripe: any, clientSecret: string): Promise<PaymentModalResult> {
   return new Promise((resolve) => {
     const elements = stripe.elements();
     const cardElement = elements.create('card', {
@@ -107,35 +101,72 @@ function showPaymentModal(stripe: any): Promise<any | null> {
     const cardDiv = document.createElement('div');
     cardDiv.style.cssText = 'border:1px solid #ddd;border-radius:10px;padding:14px;margin-bottom:20px;min-height:44px;';
 
+    const errorMsg = document.createElement('div');
+    errorMsg.style.cssText = 'color:#c0392b;font-size:13px;margin-bottom:12px;display:none;font-family:-apple-system,sans-serif;';
+
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:12px;';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Annuler';
     cancelBtn.style.cssText = 'flex:1;padding:14px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-size:15px;font-family:-apple-system,sans-serif;';
-    cancelBtn.onclick = () => {
-      cardElement.destroy();
-      overlay.remove();
-      resolve(null);
-    };
 
     const payBtn = document.createElement('button');
     payBtn.textContent = 'Payer';
     payBtn.style.cssText = 'flex:1;padding:14px;border:none;border-radius:10px;background:#C4943D;color:#fff;cursor:pointer;font-size:15px;font-weight:700;font-family:-apple-system,sans-serif;';
-    payBtn.onclick = () => {
+
+    const cleanup = () => {
+      try { cardElement.destroy(); } catch {}
       overlay.remove();
-      resolve(cardElement);
+    };
+
+    cancelBtn.onclick = () => {
+      cleanup();
+      resolve({ status: 'cancelled' });
+    };
+
+    payBtn.onclick = async () => {
+      payBtn.disabled = true;
+      cancelBtn.disabled = true;
+      payBtn.textContent = 'Paiement en cours…';
+      payBtn.style.opacity = '0.7';
+      errorMsg.style.display = 'none';
+
+      try {
+        // IMPORTANT : cardElement DOIT rester monté pendant confirmCardPayment
+        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: cardElement },
+        });
+
+        if (error) {
+          // Erreur de carte récupérable (refus, 3DS échoué…) → reste sur la modal
+          errorMsg.textContent = error.message ?? 'Paiement refusé.';
+          errorMsg.style.display = 'block';
+          payBtn.disabled = false;
+          cancelBtn.disabled = false;
+          payBtn.textContent = 'Réessayer';
+          payBtn.style.opacity = '1';
+          return;
+        }
+
+        cleanup();
+        resolve({ status: 'ok', paymentIntentStatus: paymentIntent?.status });
+      } catch (err: any) {
+        cleanup();
+        resolve({ status: 'error', message: err?.message ?? 'Erreur inattendue' });
+      }
     };
 
     modal.appendChild(title);
     modal.appendChild(cardDiv);
+    modal.appendChild(errorMsg);
     btnRow.appendChild(cancelBtn);
     btnRow.appendChild(payBtn);
     modal.appendChild(btnRow);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    // Mount Stripe card element
+    // Mount Stripe card element APRÈS insertion dans le DOM
     cardElement.mount(cardDiv);
   });
 }

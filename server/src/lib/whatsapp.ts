@@ -133,21 +133,25 @@ export async function sendWhatsAppConfirmation(params: WhatsAppConfirmationParam
 
 /**
  * Notification WhatsApp envoyée à l'ADMIN à chaque nouvelle réservation.
- * Réutilise le template client (sandbox-friendly) en hijackant les variables :
- *   {{1}} = "admin" → produit "Bonjour admin, ..."
- *   {{2}} = description compacte de la réservation
- *   {{3}} = reservationId
+ * Utilise le template dédié `admin_new_reservation_tournesol` :
+ *   {{1}} = description compacte de la réservation
+ *   {{2}} = reservationId
  */
 export async function sendWhatsAppAdminNotification(params: {
   toPhoneE164: string;
   description: string;
   reservationId: string;
 }) {
-  return sendWhatsAppTemplate(params.toPhoneE164, {
-    '1': 'admin',
-    '2': params.description,
-    '3': params.reservationId,
-  });
+  const sid = process.env.TWILIO_TEMPLATE_SID_ADMIN_NOTIF;
+  if (!sid) return { ok: false as const, error: 'TWILIO_TEMPLATE_SID_ADMIN_NOTIF absent' };
+  return sendWhatsAppTemplate(
+    params.toPhoneE164,
+    {
+      '1': params.description,
+      '2': params.reservationId,
+    },
+    sid,
+  );
 }
 
 const reminderTypeLabels: Record<'beach' | 'restaurant' | 'event', string> = {
