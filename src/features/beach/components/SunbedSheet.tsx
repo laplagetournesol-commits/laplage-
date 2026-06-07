@@ -205,22 +205,10 @@ export function SunbedSheet({
               <View style={styles.compactRow}>
                 <View style={styles.guestRowCompact}>
                   <Text style={[styles.guestLabelCompact, { color: theme.text }]}>{i18n.t('persons')}</Text>
+                  {/* Compteur en lecture seule : nombre = somme des transats sélectionnés.
+                      Pour 1 personne de plus, le client clique 1 transat de plus. */}
                   <View style={styles.guestCounter}>
-                    <TouchableOpacity
-                      onPress={() => !hasBed && onSetGuestCount(guestCount - 1)}
-                      disabled={hasBed}
-                      style={[styles.guestBtn, { borderColor: theme.cardBorder, opacity: hasBed ? 0.4 : 1 }]}
-                    >
-                      <Ionicons name="remove" size={16} color={theme.text} />
-                    </TouchableOpacity>
                     <Text style={[styles.guestNum, { color: theme.text }]}>{guestCount}</Text>
-                    <TouchableOpacity
-                      onPress={() => !hasBed && onSetGuestCount(guestCount + 1)}
-                      disabled={hasBed}
-                      style={[styles.guestBtn, { borderColor: theme.cardBorder, opacity: hasBed ? 0.4 : 1 }]}
-                    >
-                      <Ionicons name="add" size={16} color={theme.text} />
-                    </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.priceCompact}>

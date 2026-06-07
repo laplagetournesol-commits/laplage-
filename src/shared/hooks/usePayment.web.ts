@@ -10,6 +10,13 @@ export function usePayment() {
     amount: number;
   }): Promise<{ success: boolean }> => {
     try {
+      // 0. Détection des in-app browsers (WhatsApp, Instagram, FB Messenger…)
+      //    qui bloquent souvent les iframes Stripe et empêchent la saisie de carte.
+      if (isInAppWebView()) {
+        showInAppWebViewWarning();
+        return { success: false };
+      }
+
       showDebug('⏳ Création du paiement...');
 
       // 1. Créer le PaymentIntent côté serveur
@@ -56,6 +63,42 @@ export function usePayment() {
   };
 
   return { pay };
+}
+
+function isInAppWebView(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // WhatsApp, Instagram, Facebook (FBAN/FBAV/FB_IAB), Messenger, TikTok
+  return /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|MessengerLite|TikTok/i.test(ua);
+}
+
+function showInAppWebViewWarning() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.15);font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+
+  modal.innerHTML = `
+    <div style="font-size:40px;text-align:center;margin-bottom:12px;">⚠️</div>
+    <h3 style="margin:0 0 12px;font-size:18px;color:#1a5276;text-align:center;">Ouvre cette page dans Safari</h3>
+    <p style="margin:0 0 16px;font-size:15px;color:#444;line-height:1.5;">
+      Le paiement par carte ne fonctionne pas dans le navigateur intégré à WhatsApp / Instagram.
+    </p>
+    <p style="margin:0 0 20px;font-size:14px;color:#666;line-height:1.5;">
+      <strong>Comment faire :</strong><br/>
+      1. Tape sur les <strong>•••</strong> en haut à droite<br/>
+      2. Choisis <strong>« Ouvrir dans Safari »</strong> (ou « dans le navigateur »)<br/>
+      3. Refais ta réservation depuis Safari
+    </p>
+    <button id="iaw-close" style="width:100%;padding:14px;border:none;border-radius:10px;background:#C4943D;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">J'ai compris</button>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const closeBtn = modal.querySelector('#iaw-close') as HTMLButtonElement | null;
+  if (closeBtn) closeBtn.onclick = () => overlay.remove();
 }
 
 function showDebug(msg: string) {
