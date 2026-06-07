@@ -16,18 +16,21 @@ export function useSunbeds(date: string) {
     setLoading(true);
 
     // Récupérer zones + transats en parallèle
-    const [zonesRes, sunbedsRes, reservationsRes] = await Promise.all([
+    const [zonesRes, sunbedsRes, reservedRes] = await Promise.all([
       supabase.from('beach_zones').select('*').eq('is_active', true).order('sort_order'),
       supabase.from('sunbeds').select('*').eq('is_active', true),
-      supabase.from('beach_reservations').select('sunbed_id, secondary_sunbed_id').eq('date', date).in('status', ['confirmed', 'checked_in']),
+      supabase
+        .from('beach_reservation_sunbeds')
+        .select('sunbed_id')
+        .eq('date', date)
+        .in('status', ['confirmed', 'checked_in']),
     ]);
 
     const zonesData = (zonesRes.data ?? []) as BeachZone[];
     const sunbedsData = (sunbedsRes.data ?? []) as Sunbed[];
     const reservedIds = new Set<string>();
-    for (const r of (reservationsRes.data ?? []) as { sunbed_id: string; secondary_sunbed_id: string | null }[]) {
+    for (const r of (reservedRes.data ?? []) as { sunbed_id: string }[]) {
       reservedIds.add(r.sunbed_id);
-      if (r.secondary_sunbed_id) reservedIds.add(r.secondary_sunbed_id);
     }
 
     const zoneMap = new Map(zonesData.map((z) => [z.id, z]));
@@ -47,19 +50,18 @@ export function useSunbeds(date: string) {
     fetchData();
   }, [fetchData]);
 
-  // Realtime : écouter les nouvelles réservations
+  // Realtime : écouter les changements sur la table de liaison
   useEffect(() => {
     const channel = supabase
-      .channel('beach-reservations-realtime')
+      .channel('beach-reservation-sunbeds-realtime')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'beach_reservations',
+          table: 'beach_reservation_sunbeds',
         },
         () => {
-          // Rafraîchir les données quand une réservation change
           fetchData();
         }
       )

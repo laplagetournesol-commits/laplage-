@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Image,
@@ -9,20 +9,20 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import type { Sunbed, BeachZone } from '@/shared/types';
 import { i18n } from '@/shared/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MAP_VERSION = 2;
-// Sur web desktop, limiter la largeur pour ne pas avoir une carte géante
-const MAP_WIDTH = Platform.OS === 'web' ? Math.min(SCREEN_WIDTH, 500) : SCREEN_WIDTH;
-const MAP_HEIGHT = MAP_WIDTH * 1.5;
+const MAP_VERSION = 6;
+
+// "new transat.png" : 1118×816 (landscape)
+const MAP_WIDTH = SCREEN_WIDTH;
+const MAP_HEIGHT = MAP_WIDTH * (816 / 1118);
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const REMOTE_MAP_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/transat.png`;
+const REMOTE_MAP_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/transat.png?v=${MAP_VERSION}`;
 
 interface SunbedWithZone extends Sunbed {
   zone: BeachZone;
@@ -38,9 +38,15 @@ interface BeachMapProps {
   onReservedPress?: (sunbed: SunbedWithZone) => void;
 }
 
-export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId, onSelect, onReservedPress }: BeachMapProps) {
+export function BeachMap({
+  sunbeds,
+  selectedId,
+  selectedIds,
+  secondarySelectedId,
+  onSelect,
+  onReservedPress,
+}: BeachMapProps) {
   const { theme } = useSunMode();
-  const scrollRef = useRef<ScrollView>(null);
   const [useRemote, setUseRemote] = useState(true);
 
   const mapSource = useRemote
@@ -49,11 +55,16 @@ export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId
 
   return (
     <View style={styles.container}>
-      {/* Légende discrète */}
+      {/* Légende */}
       <View style={[styles.legend, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: 'rgba(34, 180, 60, 0.5)', borderWidth: 2, borderColor: 'rgba(34, 180, 60, 0.8)' }]} />
+            <View
+              style={[
+                styles.legendDot,
+                { backgroundColor: 'rgba(34, 180, 60, 0.5)', borderWidth: 2, borderColor: 'rgba(34, 180, 60, 0.8)' },
+              ]}
+            />
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('available')}</Text>
           </View>
           <View style={styles.legendItem}>
@@ -67,20 +78,19 @@ export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId
         </View>
       </View>
 
-      {/* Carte zoomable */}
+      {/* Carte zoomable (pinch-to-zoom iOS) */}
       <ScrollView
-        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        maximumZoomScale={Platform.OS === 'web' ? 1 : 4}
+        maximumZoomScale={4}
         minimumZoomScale={1}
+        bouncesZoom
+        pinchGestureEnabled
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        bouncesZoom
         centerContent
       >
-        <View style={styles.mapContainer}>
-          {/* Photo chargée depuis Supabase Storage (fallback local) */}
+        <View style={[styles.mapContainer, { width: MAP_WIDTH, height: MAP_HEIGHT }]}>
           <Image
             source={mapSource}
             style={styles.mapImage}
@@ -88,7 +98,6 @@ export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId
             onError={() => setUseRemote(false)}
           />
 
-          {/* Zones cliquables transparentes sur la photo */}
           {sunbeds.map((sunbed) => {
             const isSelected = sunbed.id === selectedId || (selectedIds?.has(sunbed.id) ?? false);
             const isPaired = sunbed.id === secondarySelectedId;
@@ -99,7 +108,10 @@ export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId
                 key={sunbed.id}
                 activeOpacity={isReserved && !onReservedPress ? 1 : 0.6}
                 onPress={() => {
-                  if (isReserved && onReservedPress) { onReservedPress(sunbed); return; }
+                  if (isReserved && onReservedPress) {
+                    onReservedPress(sunbed);
+                    return;
+                  }
                   if (!isReserved && !isPaired) onSelect(sunbed);
                 }}
                 style={[
@@ -120,33 +132,19 @@ export function BeachMap({ sunbeds, selectedId, selectedIds, secondarySelectedId
                     isReserved && styles.markerReserved,
                   ]}
                 >
-                  {sunbed.is_double && (
-                    <Text style={styles.bedLabel}>BED</Text>
-                  )}
+                  {sunbed.is_double && <Text style={styles.bedLabel}>BED</Text>}
                 </View>
               </TouchableOpacity>
             );
           })}
         </View>
       </ScrollView>
-
-      {/* Bannière prix supprimée */}
-
-      {/* Hint zoom */}
-      <View style={[styles.zoomHint, { backgroundColor: theme.card + 'DD' }]}>
-        <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
-        <Text style={[styles.zoomHintText, { color: theme.textSecondary }]}>
-          {i18n.t('zoomHint')}
-        </Text>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   legend: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -172,16 +170,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
   },
-  scrollView: {
-    flex: 1,
-  },
+  scrollView: { flex: 1 },
   scrollContent: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   mapContainer: {
-    width: MAP_WIDTH,
-    height: MAP_HEIGHT,
     position: 'relative',
   },
   mapImage: {
@@ -227,57 +221,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(220, 38, 38, 0.4)',
     borderColor: 'rgba(220, 38, 38, 0.8)',
     borderWidth: 1.5,
-  },
-  markerLabel: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: '900',
-    textShadowColor: 'rgba(0,0,0,0.9)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  priceLegend: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-  },
-  priceLegendItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  priceLegendIcon: {
-    fontSize: 14,
-  },
-  priceLegendLabel: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    flex: 1,
-  },
-  priceLegendPrice: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  zoomHint: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  zoomHintText: {
-    fontSize: 10,
-    fontWeight: '500',
   },
 });

@@ -42,7 +42,7 @@ export function useScanReservation() {
       // 1. Try beach reservation
       const { data: beach } = await supabase
         .from('beach_reservations')
-        .select('*, sunbed:sunbeds(label, zone:beach_zones(name, zone_type)), profile:profiles(full_name, email, vip_level)')
+        .select('*, sunbed:sunbeds!sunbed_id(label, zone:beach_zones(name, zone_type)), profile:profiles(full_name, email, vip_level)')
         .eq('qr_code', qrCode)
         .single();
 
@@ -53,6 +53,21 @@ export function useScanReservation() {
           .select('quantity, addon:addons(name)')
           .eq('reservation_id', beach.id);
 
+        // Fetch all sunbeds linked to this reservation (multi-transat)
+        const { data: linkedSunbeds } = await supabase
+          .from('beach_reservation_sunbeds')
+          .select('sunbed:sunbeds(label, zone:beach_zones(name))')
+          .eq('reservation_id', beach.id);
+
+        const labels = (linkedSunbeds ?? [])
+          .map((r: any) => r.sunbed?.label)
+          .filter(Boolean);
+        const zoneNames = (linkedSunbeds ?? [])
+          .map((r: any) => r.sunbed?.zone?.name)
+          .filter(Boolean);
+        const fallbackLabel = (beach as any).sunbed?.label ?? '';
+        const fallbackZone = (beach as any).sunbed?.zone?.name ?? '';
+
         setReservation({
           type: 'beach',
           id: beach.id,
@@ -62,8 +77,8 @@ export function useScanReservation() {
           clientName: (beach as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (beach as any).profile?.email ?? '',
           clientVipLevel: (beach as any).profile?.vip_level ?? 'standard',
-          locationLabel: (beach as any).sunbed?.label ?? '',
-          zoneName: (beach as any).sunbed?.zone?.name ?? '',
+          locationLabel: labels.length > 0 ? labels.join(', ') : fallbackLabel,
+          zoneName: zoneNames.length > 0 ? Array.from(new Set(zoneNames)).join(', ') : fallbackZone,
           guestCount: beach.guest_count,
           totalPrice: beach.total_price,
           depositAmount: beach.deposit_amount,

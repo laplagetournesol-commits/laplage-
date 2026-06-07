@@ -14,6 +14,7 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { supabase } from '@/shared/lib/supabase';
+import { formatLocalDate } from '@/shared/lib/date';
 
 interface DashboardStats {
   beachToday: number;
@@ -31,16 +32,18 @@ function StatCard({
   value,
   subValue,
   color,
+  onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   subValue?: string;
   color: string;
+  onPress?: () => void;
 }) {
   const { theme } = useSunMode();
-  return (
-    <Card style={styles.statCard}>
+  const card = (
+    <Card style={styles.statCardInner}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
         <Ionicons name={icon} size={20} color={color} />
       </View>
@@ -51,6 +54,16 @@ function StatCard({
       )}
     </Card>
   );
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+      disabled={!onPress}
+      style={styles.statCardWrap}
+    >
+      {card}
+    </TouchableOpacity>
+  );
 }
 
 export default function DashboardScreen() {
@@ -58,7 +71,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
 
   const fetchStats = async () => {
     const [beachRes, restoRes, ticketsRes] = await Promise.all([
@@ -166,12 +179,14 @@ export default function DashboardScreen() {
             value={`${stats?.beachToday ?? 0}`}
             subValue={stats ? `${stats.beachCheckedIn} check-in` : undefined}
             color={colors.terracotta}
+            onPress={() => router.push('/(admin)/reservations?tab=beach&filter=today')}
           />
           <StatCard
             icon="restaurant"
             label="Déjeuner"
             value={`${stats?.restaurantLunch ?? 0}`}
             color={colors.deepSea}
+            onPress={() => router.push('/(admin)/reservations?tab=restaurant&filter=today&service=lunch')}
           />
           <StatCard
             icon="moon"
@@ -179,6 +194,7 @@ export default function DashboardScreen() {
             value={`${stats?.restaurantDinner ?? 0}`}
             subValue={stats ? `${stats.restaurantCheckedIn} check-in` : undefined}
             color={colors.deepSea}
+            onPress={() => router.push('/(admin)/reservations?tab=restaurant&filter=today&service=dinner')}
           />
           <StatCard
             icon="ticket"
@@ -186,6 +202,7 @@ export default function DashboardScreen() {
             value={`${stats?.eventTicketsToday ?? 0}`}
             subValue={stats ? `${stats.eventCheckedIn} scannés` : undefined}
             color={colors.accentRed}
+            onPress={() => router.push('/(admin)/scanner')}
           />
         </View>
 
@@ -309,8 +326,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  statCard: {
-    width: '47%',
+  statCardWrap: { width: '47%' },
+  statCardInner: {
     alignItems: 'center',
     paddingVertical: 16,
     gap: 6,

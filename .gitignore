@@ -52,3 +52,7 @@ photos plage/
 logo/
 DOC/
 .vercel
+
+# macOS AppleDouble metadata
+._*
+.DS_Store

@@ -81,7 +81,14 @@ function QuickAction({
       <View style={[styles.quickActionIcon, { backgroundColor: color + '20' }]}>
         <Ionicons name={icon} size={22} color={color} />
       </View>
-      <Text style={[styles.quickActionLabel, { color: theme.text }]}>{label}</Text>
+      <Text
+        style={[styles.quickActionLabel, { color: theme.text }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -247,6 +254,12 @@ export default function HomeScreen() {
             label={i18n.t('moodAI')}
             onPress={() => router.push('/mood')}
             color={colors.sage}
+          />
+          <QuickAction
+            icon="restaurant-outline"
+            label={i18n.t('menu') ?? 'Menu'}
+            onPress={() => router.push('/menu')}
+            color={colors.sunYellow}
           />
         </View>
       </View>
@@ -504,10 +517,12 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    rowGap: 12,
   },
   quickAction: {
-    flex: 1,
+    width: '31%',
     alignItems: 'center',
     paddingVertical: 16,
     borderRadius: 16,

@@ -231,7 +231,7 @@ export default function RestaurantScreen() {
             <Ionicons name="card-outline" size={18} color={colors.warmWood} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.preAuthText, { color: colors.warmWood }]}>
-                {i18n.t('cardDeposit')} : 30€ × {booking.guestCount} = {booking.depositAmount}€
+                {i18n.t('cardDeposit')} : 20€ × {booking.guestCount} {i18n.t('persons')} = {booking.depositAmount}€
               </Text>
               <Text style={[styles.preAuthSubtext, { color: colors.warmWood }]}>
                 {i18n.t('cardDepositDesc')}

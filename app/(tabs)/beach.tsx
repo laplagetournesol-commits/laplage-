@@ -23,6 +23,7 @@ import { BeachMap } from '@/features/beach/components/BeachMap';
 import { DateSelector } from '@/features/beach/components/DateSelector';
 import { SunbedSheet } from '@/features/beach/components/SunbedSheet';
 import { Badge } from '@/shared/ui/Badge';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function BeachScreen() {
   const { theme } = useSunMode();
@@ -38,6 +39,7 @@ export default function BeachScreen() {
     : allAddons.filter((a) => !/cava/i.test(a.name));
   const { pay } = usePayment();
   const { ensurePhone, phoneGate } = usePhoneGate();
+  const { user } = useAuth();
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const selectedSet = new Set(booking.selectedSunbeds.map((sb) => sb.id));
@@ -46,8 +48,15 @@ export default function BeachScreen() {
     booking.toggleSunbed(sunbed);
   };
 
-  const handleOpenConfirm = () => {
+  const handleOpenConfirm = async () => {
     if (booking.selectedSunbeds.length === 0) return;
+    // Demander le téléphone AVANT d'ouvrir le sheet — sinon le phoneGate
+    // est rendu derrière le BottomSheet et invisible pour l'utilisateur.
+    // Si pas connecté, on laisse SunbedSheet gérer la redirection login.
+    if (user) {
+      const phoneOk = await ensurePhone();
+      if (!phoneOk) return;
+    }
     setSheetVisible(true);
   };
 

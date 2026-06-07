@@ -19,6 +19,7 @@ import { Card } from '@/shared/ui/Card';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { formatLocalDate } from '@/shared/lib/date';
+import { i18n } from '@/shared/i18n';
 
 type TabType = 'beach' | 'restaurant';
 
@@ -33,24 +34,26 @@ interface ReservationRow {
   guestName?: string | null;
   guestPhone?: string | null;
   guestEmail?: string | null;
+  byBeach: boolean;
+  paid: boolean;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
-  confirmed: { label: 'Confirmé', variant: 'success' },
-  checked_in: { label: 'Check-in', variant: 'warning' },
-  completed: { label: 'Terminé', variant: 'default' },
-  cancelled: { label: 'Annulé', variant: 'error' },
-  no_show: { label: 'No-show', variant: 'error' },
-  pending: { label: 'Attente', variant: 'default' },
+const STATUS_CONFIG: Record<string, { labelKey: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
+  confirmed: { labelKey: 'statusConfirmed', variant: 'success' },
+  checked_in: { labelKey: 'statusCheckedIn', variant: 'warning' },
+  completed: { labelKey: 'statusCompleted', variant: 'default' },
+  cancelled: { labelKey: 'statusCancelled', variant: 'error' },
+  no_show: { labelKey: 'statusNoShow', variant: 'error' },
+  pending: { labelKey: 'statusPending', variant: 'default' },
 };
 
 type DateFilter = 'today' | 'tomorrow' | 'week' | 'all';
 
-const DATE_FILTERS: { key: DateFilter; label: string }[] = [
-  { key: 'today', label: "Aujourd'hui" },
-  { key: 'tomorrow', label: 'Demain' },
-  { key: 'week', label: '7 jours' },
-  { key: 'all', label: 'Tout' },
+const DATE_FILTERS: { key: DateFilter; labelKey: string }[] = [
+  { key: 'today', labelKey: 'today' },
+  { key: 'tomorrow', labelKey: 'dateTomorrow' },
+  { key: 'week', labelKey: 'dateWeek' },
+  { key: 'all', labelKey: 'all' },
 ];
 
 function getDateRange(filter: DateFilter): { from?: string; to?: string } {
@@ -99,7 +102,7 @@ export default function ReservationsScreen() {
     if (tab === 'beach') {
       let q = supabase
         .from('beach_reservations')
-        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, profile:profiles(full_name), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
+        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'pending']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -116,18 +119,20 @@ export default function ReservationsScreen() {
             status: r.status,
             date: r.date,
             guestCount: r.guest_count,
-            clientName: r.guest_name || r.profile?.full_name || 'Inconnu',
-            locationLabel: labels.length > 0 ? `Transat${labels.length > 1 ? 's' : ''} ${labels.join(', ')}` : 'Transat ?',
+            clientName: r.guest_name || r.profile?.full_name || i18n.t('clientUnknown'),
+            locationLabel: labels.length > 0 ? `${labels.length > 1 ? i18n.t('sunbeds') : i18n.t('sunbed')} ${labels.join(', ')}` : `${i18n.t('sunbed')} ?`,
             guestName: r.guest_name,
             guestPhone: r.guest_phone,
             guestEmail: r.guest_email,
+            byBeach: !!r.guest_phone,
+            paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
           };
         }),
       );
     } else {
       let q = supabase
         .from('restaurant_reservations')
-        .select('id, status, date, guest_count, time_slot, guest_name, guest_phone, guest_email, profile:profiles(full_name), table:restaurant_tables(label)')
+        .select('id, status, date, guest_count, time_slot, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name), table:restaurant_tables(label)')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'pending']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -140,12 +145,14 @@ export default function ReservationsScreen() {
           status: r.status,
           date: r.date,
           guestCount: r.guest_count,
-          clientName: r.guest_name || r.profile?.full_name || 'Inconnu',
-          locationLabel: r.table?.label ? `Table ${r.table.label}` : 'Sans table assignée',
+          clientName: r.guest_name || r.profile?.full_name || i18n.t('clientUnknown'),
+          locationLabel: r.table?.label ? `${i18n.t('table')} ${r.table.label}` : i18n.t('noTableAssigned'),
           timeSlot: r.time_slot,
           guestName: r.guest_name,
           guestPhone: r.guest_phone,
           guestEmail: r.guest_email,
+          byBeach: !!r.guest_phone,
+          paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
         })),
       );
     }
@@ -167,7 +174,7 @@ export default function ReservationsScreen() {
     const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
     const { error } = await supabase.from(table).update({ status }).eq('id', id);
     if (error) {
-      Alert.alert('Erreur', error.message);
+      Alert.alert(i18n.t('error'), error.message);
     } else {
       await fetchReservations();
     }
@@ -177,31 +184,31 @@ export default function ReservationsScreen() {
     const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
     const { error } = await supabase.from(table).delete().eq('id', id);
     if (error) {
-      Alert.alert('Erreur', error.message);
+      Alert.alert(i18n.t('error'), error.message);
     } else {
       await fetchReservations();
     }
   };
 
   const handleCardPress = (r: ReservationRow) => {
-    const buttons: any[] = [{ text: 'Fermer', style: 'cancel' }];
+    const buttons: any[] = [{ text: i18n.t('close'), style: 'cancel' }];
 
     if (r.status !== 'checked_in' && r.status !== 'completed' && r.status !== 'cancelled') {
-      buttons.push({ text: 'Check-in', onPress: () => updateStatus(r.id, 'checked_in') });
+      buttons.push({ text: i18n.t('statusCheckedIn'), onPress: () => updateStatus(r.id, 'checked_in') });
     }
 
     if (r.status !== 'cancelled' && r.status !== 'completed') {
       buttons.push({
-        text: 'Annuler la réservation',
+        text: i18n.t('alertCancelReservation'),
         style: 'destructive',
         onPress: () => {
           Alert.alert(
-            'Confirmer l\'annulation',
-            `Annuler la réservation de ${r.clientName} ? L'empreinte CB sera libérée.`,
+            i18n.t('alertConfirmCancellation'),
+            i18n.t('alertCancelMessage').replace('{{name}}', r.clientName),
             [
-              { text: 'Non', style: 'cancel' },
+              { text: i18n.t('no'), style: 'cancel' },
               {
-                text: 'Oui, annuler',
+                text: i18n.t('alertYesCancel'),
                 style: 'destructive',
                 onPress: async () => {
                   if (tab === 'restaurant') {
@@ -217,16 +224,16 @@ export default function ReservationsScreen() {
     }
 
     buttons.push({
-      text: 'Supprimer définitivement',
+      text: i18n.t('alertDeletePermanent'),
       style: 'destructive',
       onPress: () => {
         Alert.alert(
-          'Supprimer la réservation ?',
-          `La réservation de ${r.clientName} sera supprimée définitivement de la base de données.`,
+          i18n.t('alertConfirmDelete'),
+          i18n.t('alertDeleteMessage').replace('{{name}}', r.clientName),
           [
-            { text: 'Non', style: 'cancel' },
+            { text: i18n.t('no'), style: 'cancel' },
             {
-              text: 'Oui, supprimer',
+              text: i18n.t('alertYesDelete'),
               style: 'destructive',
               onPress: () => deleteReservation(r.id),
             },
@@ -241,7 +248,7 @@ export default function ReservationsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
-        title: 'Réservations',
+        title: i18n.t('adminReservations'),
         headerShown: true,
         headerLeft: () => (
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -269,7 +276,7 @@ export default function ReservationsScreen() {
               { backgroundColor: dateFilter === f.key ? colors.brand : theme.card, borderColor: dateFilter === f.key ? colors.brand : theme.cardBorder },
             ]}
           >
-            <Text style={[styles.dateFilterText, { color: dateFilter === f.key ? colors.white : theme.textSecondary }]}>{f.label}</Text>
+            <Text style={[styles.dateFilterText, { color: dateFilter === f.key ? colors.white : theme.textSecondary }]}>{i18n.t(f.labelKey)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -303,8 +310,8 @@ export default function ReservationsScreen() {
         <View style={styles.serviceRow}>
           {[
             { key: null, label: 'Tous' },
-            { key: 'lunch' as const, label: 'Déjeuner' },
-            { key: 'dinner' as const, label: 'Dîner' },
+            { key: 'lunch' as const, label: i18n.t('mealLunch') },
+            { key: 'dinner' as const, label: i18n.t('mealDinner') },
           ].map((s) => (
             <TouchableOpacity
               key={s.key ?? 'all'}
@@ -359,7 +366,7 @@ export default function ReservationsScreen() {
                       <Text style={[styles.resClient, { color: theme.text }]}>{r.clientName}</Text>
                       <Text style={[styles.resLocation, { color: theme.textSecondary }]}>
                         {r.locationLabel} — {r.guestCount} pers.
-                        {r.timeSlot ? ` — ${r.timeSlot === 'lunch' ? 'Déjeuner' : 'Dîner'}` : ''}
+                        {r.timeSlot ? ` — ${r.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
                       </Text>
                       {(r.guestPhone || r.guestEmail) && (
                         <Text style={[styles.resLocation, { color: theme.textSecondary }]}>
@@ -367,11 +374,17 @@ export default function ReservationsScreen() {
                         </Text>
                       )}
                       <Text style={[styles.resDate, { color: theme.textSecondary }]}>
-                        {new Date(r.date + 'T00:00:00').toLocaleDateString('fr', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        {new Date(r.date + 'T00:00:00').toLocaleDateString(i18n.locale, { weekday: 'short', day: 'numeric', month: 'short' })}
                       </Text>
                     </View>
                     <View style={styles.resRight}>
-                      <Badge label={status.label} variant={status.variant} size="sm" />
+                      <Badge label={i18n.t(status.labelKey)} variant={status.variant} size="sm" />
+                      {r.byBeach && (
+                        <Badge label={i18n.t('badgeByBeach')} variant="vip" size="sm" />
+                      )}
+                      {r.paid && (
+                        <Badge label={i18n.t('badgePaid')} variant="success" size="sm" />
+                      )}
                       {canCheckIn && (
                         <TouchableOpacity
                           style={styles.checkInBtn}
@@ -421,6 +434,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1,
   },
   dateFilterText: { fontSize: 12, fontWeight: '600' },
-  resRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resRight: { flexDirection: 'column', alignItems: 'flex-end', gap: 4 },
   checkInBtn: { padding: 2 },
 });

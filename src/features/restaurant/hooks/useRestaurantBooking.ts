@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { formatLocalDate } from '@/shared/lib/date';
+import { i18n } from '@/shared/i18n';
 import type { RestaurantZone } from '@/shared/types';
 
 export type RestaurantBookingStep = 'select' | 'confirm';
@@ -74,7 +75,7 @@ export function useRestaurantBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  const depositAmount = requireDeposit ? 25 * state.guestCount : 0;
+  const depositAmount = requireDeposit ? 20 * state.guestCount : 0;
 
   // Déduire le time_slot pour la BDD (lunch/dinner)
   const timeSlotForDB = parseInt(state.time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
@@ -86,7 +87,7 @@ export function useRestaurantBooking() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Vous devez être connecté pour réserver');
+      if (!user) throw new Error(i18n.t('errorMustBeLoggedInBooking'));
 
       // Vérifier la capacité max
       const maxKey = timeSlotForDB === 'lunch' ? 'max_covers_lunch' : 'max_covers_dinner';

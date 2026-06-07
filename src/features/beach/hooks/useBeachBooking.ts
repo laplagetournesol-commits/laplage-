@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { i18n } from '@/shared/i18n';
 import { getSeasonalPrice, getSeasonalInclusions, zoneToPricingCategory, pricingCategoryLabel } from '@/shared/lib/seasonalPricing';
 import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone, Addon } from '@/shared/types';
@@ -122,9 +123,9 @@ export function useBeachBooking() {
     setState((s) => ({ ...s, specialRequests: text }));
   }, []);
 
-  // Prix unitaire d'un transat (Bed = 80€ flat, sinon saisonnier ou base_price)
+  // Prix unitaire d'un transat (Bed = 70€ flat, sinon saisonnier ou base_price)
   const priceOf = useCallback((sunbed: SunbedWithZone): number => {
-    if (sunbed.is_double) return 80;
+    if (sunbed.is_double) return 70;
     return priceMap.get(sunbed.zone_id)?.price ?? sunbed.zone.base_price;
   }, [priceMap]);
 
@@ -161,7 +162,7 @@ export function useBeachBooking() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Vous devez être connecté pour réserver');
+      if (!user) throw new Error(i18n.t('errorMustBeLoggedInBooking'));
 
       const firstId = state.selectedSunbeds[0].id;
 
