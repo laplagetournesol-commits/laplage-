@@ -73,8 +73,50 @@ function patchIndexHtml() {
     seoBlock,
   );
 
+  // 3. Contenu HTML crawlable injecté DANS #root (remplacé par React au mount).
+  //    Googlebot lit ce contenu en static HTML (premier passage).
+  //    Les utilisateurs voient le SPA dès que React monte (~100-300ms).
+  const seoBody = `
+    <div id="seo-content" style="max-width:900px;margin:0 auto;padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#2c3e50;line-height:1.6;">
+      <header style="text-align:center;margin-bottom:32px;">
+        <h1 style="font-size:28px;color:#C4943D;margin:0 0 12px;">La Plage Tournesol — Beach Club &amp; Restaurant à Estepona</h1>
+        <p style="font-size:16px;color:#555;">Location de transats, BEDs, restaurant méditerranéen et soirées DJ sur la plage d'Estepona, Costa del Sol.</p>
+      </header>
+      <main>
+        <section>
+          <h2>Réservation de transats à Estepona</h2>
+          <p>Réservez votre transat, chaise longue ou BED (transat double avec bouteille de cava en option) depuis notre application. Six rangées disponibles, de la première ligne face à la mer jusqu'aux chaises longues près du club.</p>
+          <ul>
+            <li>Chaise longue : 12 €</li>
+            <li>Transat standard / parasol / 1ère ligne : 25 €</li>
+            <li>BED (transat double) : 70 € — option bouteille de cava : 80 €</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Restaurant de plage à Estepona</h2>
+          <p>Cuisine méditerranéenne et de la mer, service le midi et le soir. Réservation en ligne avec empreinte CB de 20 € par personne. Vue mer et terrasse.</p>
+        </section>
+        <section>
+          <h2>Soirées DJ &amp; pool parties</h2>
+          <p>Programme régulier d'événements : DJ sets, pool parties et soirées thématiques en haute saison. Billetterie et programme dans l'application.</p>
+        </section>
+        <section>
+          <h2>Informations pratiques</h2>
+          <address style="font-style:normal;">
+            <strong>La Plage Tournesol</strong><br/>
+            Avenida del Litoral<br/>
+            29680 Estepona, Málaga, Espagne
+          </address>
+          <p>Ouvert tous les jours en saison. Réservation conseillée le week-end et en haute saison.</p>
+        </section>
+        <p style="text-align:center;margin-top:32px;color:#888;font-size:14px;">Chargement de l'application…</p>
+      </main>
+    </div>`;
+
+  html = html.replace('<div id="root"></div>', `<div id="root">${seoBody}</div>`);
+
   fs.writeFileSync(indexPath, html);
-  console.log('[post-build] index.html patched (CSS + SEO)');
+  console.log('[post-build] index.html patched (CSS + SEO + crawlable content)');
 }
 
 function renameVendorDir() {
