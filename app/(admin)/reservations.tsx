@@ -223,6 +223,36 @@ export default function ReservationsScreen() {
       });
     }
 
+    // Bouton "Rembourser" : seulement si la résa a un dépôt payé
+    if (r.paid && r.status !== 'cancelled') {
+      buttons.push({
+        text: i18n.t('alertRefund'),
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            i18n.t('alertConfirmRefund'),
+            i18n.t('alertRefundMessage').replace('{{name}}', r.clientName),
+            [
+              { text: i18n.t('no'), style: 'cancel' },
+              {
+                text: i18n.t('alertYesRefund'),
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await apiCall('/api/payments/refund', { reservationId: r.id, type: tab });
+                    Alert.alert(i18n.t('alertRefundDoneTitle'), i18n.t('alertRefundDoneMessage'));
+                    await fetchReservations();
+                  } catch (err: any) {
+                    Alert.alert(i18n.t('error'), err?.message ?? 'Erreur');
+                  }
+                },
+              },
+            ],
+          );
+        },
+      });
+    }
+
     buttons.push({
       text: i18n.t('alertDeletePermanent'),
       style: 'destructive',

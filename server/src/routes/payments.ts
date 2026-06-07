@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 
 const router = Router();
@@ -240,5 +240,77 @@ export async function captureNoShow(reservationId: string): Promise<{ captured: 
   console.log(`[no-show capture] résa #${reservationId} débitée`);
   return { captured: true };
 }
+
+/**
+ * POST /api/payments/refund
+ * Rembourse une réservation (admin uniquement).
+ * - Si l'empreinte CB resto est encore en pre-auth → annule le hold (rien n'a été débité)
+ * - Si le paiement a déjà été capturé → refund Stripe
+ * - Marque la résa en `cancelled` + `deposit_paid: false`
+ */
+router.post('/refund', requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { reservationId, type } = req.body;
+
+    if (!reservationId || !type || !['beach', 'restaurant', 'event'].includes(type)) {
+      res.status(400).json({ error: 'reservationId et type (beach|restaurant|event) requis' });
+      return;
+    }
+
+    const table = RESERVATION_TABLES[type];
+
+    const { data: reservation, error: fetchErr } = await supabase
+      .from(table)
+      .select('id, user_id, deposit_paid, stripe_payment_intent_id')
+      .eq('id', reservationId)
+      .single();
+
+    if (fetchErr || !reservation) {
+      res.status(404).json({ error: 'Réservation introuvable' });
+      return;
+    }
+
+    if (!reservation.stripe_payment_intent_id) {
+      // Pas de paiement → juste cancel la résa
+      await supabase.from(table).update({ status: 'cancelled' }).eq('id', reservationId);
+      res.json({ refunded: false, reason: 'no_payment', cancelled: true });
+      return;
+    }
+
+    const stripe = getStripe();
+    const intent = await stripe.paymentIntents.retrieve(reservation.stripe_payment_intent_id);
+
+    let action: 'refunded' | 'hold_cancelled' | 'noop';
+
+    if (intent.status === 'requires_capture') {
+      // Resto pre-auth pas encore capturé → on annule le hold
+      await stripe.paymentIntents.cancel(reservation.stripe_payment_intent_id);
+      action = 'hold_cancelled';
+    } else if (intent.status === 'succeeded') {
+      // Paiement capturé → vrai refund
+      await stripe.refunds.create({
+        payment_intent: reservation.stripe_payment_intent_id,
+      });
+      action = 'refunded';
+    } else if (intent.status === 'canceled') {
+      // Déjà annulé en amont
+      action = 'noop';
+    } else {
+      res.status(400).json({ error: `Status Stripe inattendu: ${intent.status}` });
+      return;
+    }
+
+    await supabase
+      .from(table)
+      .update({ status: 'cancelled', deposit_paid: false })
+      .eq('id', reservationId);
+
+    console.log(`[refund] résa ${type}#${reservationId} → ${action} (admin ${req.user!.id})`);
+    res.json({ success: true, action });
+  } catch (err: any) {
+    console.error('Erreur refund:', err);
+    res.status(500).json({ error: err?.message ?? 'Erreur lors du remboursement' });
+  }
+});
 
 export default router;
