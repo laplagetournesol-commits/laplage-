@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +29,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function BeachScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
-  const { fromMood } = useLocalSearchParams<{ fromMood?: string }>();
+  const { fromMood, modify } = useLocalSearchParams<{ fromMood?: string; modify?: string }>();
   const booking = useBeachBooking();
   const { sunbeds, zones, loading, availableCount, totalCount } = useSunbeds(booking.date);
   const { addons: allAddons } = useAddons(booking.date);
@@ -43,6 +44,13 @@ export default function BeachScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const selectedSet = new Set(booking.selectedSunbeds.map((sb) => sb.id));
+
+  // Mode modification : si on arrive avec ?modify=ID, on charge la résa existante
+  useEffect(() => {
+    if (modify && !booking.isModifying) {
+      booking.loadForModification(modify);
+    }
+  }, [modify]);
 
   const handleSelectSunbed = (sunbed: any) => {
     booking.toggleSunbed(sunbed);
@@ -63,6 +71,35 @@ export default function BeachScreen() {
   const handleBookWithPayment = async () => {
     const phoneOk = await ensurePhone();
     if (!phoneOk) return { success: false };
+
+    // === Mode MODIFICATION ===
+    if (booking.isModifying) {
+      const mod = await booking.submitModification();
+      if (!mod.success || !mod.reservationId) return { success: false };
+
+      // S'il y a une différence à régler, ouvrir Stripe pour le complément
+      if (mod.extraClientSecret && (mod.diff ?? 0) > 0) {
+        const payResult = await pay({
+          type: 'beach',
+          reservationId: mod.reservationId,
+          amount: mod.diff ?? 0,
+        });
+        if (!payResult.success) {
+          Alert.alert(i18n.t('error'), i18n.t('modifyExtraPaymentFailed'));
+          return { success: false };
+        }
+      }
+
+      const msg = (mod.diff ?? 0) > 0
+        ? i18n.t('modifySuccessExtra').replace('{{amount}}', String(mod.diff))
+        : (mod.refundedAmount ?? 0) > 0
+          ? i18n.t('modifySuccessRefund').replace('{{amount}}', String(mod.refundedAmount))
+          : i18n.t('modifySuccessNoDiff');
+      Alert.alert(i18n.t('modifySuccessTitle'), msg);
+      return { success: true, reservationId: mod.reservationId };
+    }
+
+    // === Mode CRÉATION (flow normal) ===
     const result = await booking.submitBooking();
     if (!result.success || !result.reservationId) return { success: false };
 

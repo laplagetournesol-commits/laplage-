@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import { i18n } from '@/shared/i18n';
 import { getSeasonalPrice, getSeasonalInclusions, zoneToPricingCategory, pricingCategoryLabel } from '@/shared/lib/seasonalPricing';
 import { formatLocalDate } from '@/shared/lib/date';
@@ -43,6 +44,8 @@ export function useBeachBooking() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [priceMap, setPriceMap] = useState<Map<string, SunbedPriceEntry>>(new Map());
+  const [modifyingReservationId, setModifyingReservationId] = useState<string | null>(null);
+  const [originalTotal, setOriginalTotal] = useState<number>(0);
 
   // Charger les prix saisonniers pour chaque transat sélectionné (par zone)
   useEffect(() => {
@@ -155,6 +158,80 @@ export function useBeachBooking() {
     [state.selectedSunbeds, priceOf],
   );
 
+  /**
+   * Charge une réservation existante pour la modifier. Pré-remplit la date
+   * et les transats sélectionnés.
+   */
+  const loadForModification = useCallback(async (reservationId: string) => {
+    setSubmitting(true);
+    try {
+      const { data: resa, error: resaErr } = await supabase
+        .from('beach_reservations')
+        .select('id, date, total_price, sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(*, zone:beach_zones(*)))')
+        .eq('id', reservationId)
+        .single();
+      if (resaErr || !resa) throw new Error(resaErr?.message ?? 'Résa introuvable');
+
+      const sunbeds = (resa.sunbeds as any[])
+        .map((row) => row.sunbed)
+        .filter(Boolean) as SunbedWithZone[];
+
+      setState((s) => ({
+        ...s,
+        step: 'select',
+        date: resa.date,
+        selectedSunbeds: sunbeds,
+        guestCount: sunbeds.reduce((sum, sb) => sum + (sb.is_double ? 2 : 1), 0) || 1,
+        selectedAddons: [],
+        specialRequests: '',
+      }));
+      setModifyingReservationId(reservationId);
+      setOriginalTotal(Number(resa.total_price ?? 0));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }, []);
+
+  /**
+   * Soumet une modification de réservation. Renvoie { clientSecret } si un
+   * paiement complémentaire est nécessaire (différence à régler), sinon
+   * juste { success: true }.
+   */
+  const submitModification = useCallback(async () => {
+    if (!modifyingReservationId || state.selectedSunbeds.length === 0) {
+      return { success: false };
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await apiCall<{
+        success: boolean;
+        newTotal: number;
+        diff: number;
+        extraClientSecret: string | null;
+        refundedAmount: number;
+      }>('/api/reservations/modify-beach', {
+        reservationId: modifyingReservationId,
+        newDate: state.date,
+        newSunbedIds: state.selectedSunbeds.map((sb) => sb.id),
+      });
+      setSubmitting(false);
+      return {
+        success: true,
+        reservationId: modifyingReservationId,
+        diff: result.diff,
+        extraClientSecret: result.extraClientSecret,
+        refundedAmount: result.refundedAmount,
+      };
+    } catch (err: any) {
+      setError(err.message);
+      setSubmitting(false);
+      return { success: false };
+    }
+  }, [modifyingReservationId, state]);
+
   const submitBooking = useCallback(async () => {
     if (state.selectedSunbeds.length === 0) return { success: false };
     setSubmitting(true);
@@ -261,6 +338,11 @@ export function useBeachBooking() {
     goBack,
     submitBooking,
     reset,
+    modifyingReservationId,
+    isModifying: !!modifyingReservationId,
+    originalTotal,
+    loadForModification,
+    submitModification,
   };
 }
 
