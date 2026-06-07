@@ -1,7 +1,7 @@
 {
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!_expo|assets|favicon\\.ico|privacy\\.html|terms\\.html|support\\.html).*)", "destination": "/index.html" }
+    { "source": "/((?!_expo|assets|favicon\\.ico|privacy\\.html|terms\\.html|support\\.html|robots\\.txt|sitemap\\.xml).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
