@@ -31,19 +31,45 @@ function patchIndexHtml() {
 
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
-    '@type': ['LocalBusiness', 'Restaurant'],
+    '@type': ['LocalBusiness', 'Restaurant', 'BeachResort'],
     name: 'La Plage Tournesol',
-    description: 'Beach club et restaurant de plage à Estepona, Costa del Sol. Location de transats, restaurant, soirées DJ et pool parties.',
+    alternateName: ['Plage Tournesol', 'Tournesol Beach Club'],
+    description: 'Beach club et restaurant de plage à Estepona, Costa del Sol. Location de transats, BEDs, chaises longues, restaurant méditerranéen, soirées DJ et pool parties. Réservation en ligne avec paiement sécurisé.',
     url: SITE_URL,
     image: OG_IMAGE,
     priceRange: '€€',
-    servesCuisine: ['Mediterranean', 'Seafood'],
+    servesCuisine: ['Mediterranean', 'Seafood', 'Tapas'],
+    paymentAccepted: ['Cash', 'Credit Card', 'Stripe'],
+    currenciesAccepted: 'EUR',
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Avenida del Litoral',
       addressLocality: 'Estepona',
       addressRegion: 'Málaga',
+      postalCode: '29680',
       addressCountry: 'ES',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 36.4231,
+      longitude: -5.1438,
+    },
+    openingHoursSpecification: [{
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+      opens: '10:00',
+      closes: '23:00',
+    }],
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Locations plage',
+      itemListElement: [
+        { '@type': 'Offer', name: 'Chaise longue', price: '12', priceCurrency: 'EUR' },
+        { '@type': 'Offer', name: 'Transat parasol', price: '25', priceCurrency: 'EUR' },
+        { '@type': 'Offer', name: 'Transat 1ère ligne face à la mer', price: '25', priceCurrency: 'EUR' },
+        { '@type': 'Offer', name: 'BED (transat double)', price: '70', priceCurrency: 'EUR' },
+        { '@type': 'Offer', name: 'BED + bouteille de cava', price: '80', priceCurrency: 'EUR' },
+      ],
     },
   });
 
@@ -73,47 +99,111 @@ function patchIndexHtml() {
     seoBlock,
   );
 
-  // 3. Contenu HTML crawlable injecté DANS #root (remplacé par React au mount).
-  //    Googlebot lit ce contenu en static HTML (premier passage).
-  //    Les utilisateurs voient le SPA dès que React monte (~100-300ms).
-  const seoBody = `
-    <div id="seo-content" style="max-width:900px;margin:0 auto;padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#2c3e50;line-height:1.6;">
-      <header style="text-align:center;margin-bottom:32px;">
-        <h1 style="font-size:28px;color:#C4943D;margin:0 0 12px;">La Plage Tournesol — Beach Club &amp; Restaurant à Estepona</h1>
-        <p style="font-size:16px;color:#555;">Location de transats, BEDs, restaurant méditerranéen et soirées DJ sur la plage d'Estepona, Costa del Sol.</p>
-      </header>
-      <main>
-        <section>
-          <h2>Réservation de transats à Estepona</h2>
-          <p>Réservez votre transat, chaise longue ou BED (transat double avec bouteille de cava en option) depuis notre application. Six rangées disponibles, de la première ligne face à la mer jusqu'aux chaises longues près du club.</p>
-          <ul>
-            <li>Chaise longue : 12 €</li>
-            <li>Transat standard / parasol / 1ère ligne : 25 €</li>
-            <li>BED (transat double) : 70 € — option bouteille de cava : 80 €</li>
-          </ul>
+  // 3. Landing page complète injectée DANS #root (remplacée par React au mount).
+  //    Googlebot indexe ce contenu en HTML statique au premier passage.
+  //    Les utilisateurs voient cette page comme écran de chargement (~100-300ms)
+  //    avant que React prenne le relais.
+  const landingCss = `
+    .lp-wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2c3e50;line-height:1.65;background:linear-gradient(180deg,#fdf8f0 0%,#fff 600px);min-height:100vh;}
+    .lp-container{max-width:980px;margin:0 auto;padding:32px 20px 64px;}
+    .lp-hero{text-align:center;padding:48px 0 32px;border-bottom:1px solid #f0e4c8;margin-bottom:48px;}
+    .lp-hero h1{font-size:34px;color:#C4943D;margin:0 0 16px;letter-spacing:-0.5px;line-height:1.2;}
+    .lp-hero .lp-tagline{font-size:17px;color:#666;max-width:620px;margin:0 auto 24px;}
+    .lp-cta{display:inline-block;background:#C4943D;color:#fff;padding:14px 32px;border-radius:999px;text-decoration:none;font-weight:700;font-size:16px;box-shadow:0 4px 16px rgba(196,148,61,0.25);}
+    .lp-cta:hover{background:#a87a30;}
+    .lp-section{margin-bottom:48px;}
+    .lp-section h2{font-size:24px;color:#1a5276;margin:0 0 16px;border-left:4px solid #C4943D;padding-left:14px;}
+    .lp-section p{margin:0 0 14px;font-size:16px;}
+    .lp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:20px 0;}
+    .lp-card{background:#fff;border:1px solid #f0e4c8;border-radius:12px;padding:18px;}
+    .lp-card h3{margin:0 0 8px;font-size:17px;color:#C4943D;}
+    .lp-card .lp-price{font-size:20px;font-weight:700;color:#1a5276;margin:6px 0;}
+    .lp-card .lp-detail{font-size:13px;color:#777;}
+    .lp-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;background:#fff;border-radius:12px;padding:24px;border:1px solid #f0e4c8;}
+    .lp-info-grid h3{margin:0 0 8px;font-size:15px;color:#1a5276;text-transform:uppercase;letter-spacing:0.5px;}
+    .lp-info-grid address{font-style:normal;font-size:15px;}
+    .lp-faq{margin-top:24px;}
+    .lp-faq dt{font-weight:700;color:#1a5276;margin-top:14px;}
+    .lp-faq dd{margin:6px 0 0;padding-left:0;color:#444;}
+    .lp-loading{text-align:center;color:#999;font-size:13px;margin-top:48px;padding:20px;border-top:1px solid #f0e4c8;}
+    @media (max-width:600px){.lp-hero h1{font-size:26px;}.lp-section h2{font-size:20px;}}
+  `;
+
+  const landing = `
+    <div id="seo-content" class="lp-wrap">
+      <style>${landingCss.replace(/\s+/g,' ').trim()}</style>
+      <div class="lp-container">
+        <header class="lp-hero">
+          <h1>La Plage Tournesol</h1>
+          <p class="lp-tagline">Beach club et restaurant à <strong>Estepona</strong>, sur la <strong>Costa del Sol</strong>. Transats face à la mer, BEDs, cuisine méditerranéenne, soirées DJ et pool parties — réservation en ligne, paiement sécurisé.</p>
+          <a class="lp-cta" href="#reserver" id="lp-reserver">Réserver un transat ou une table</a>
+        </header>
+
+        <section class="lp-section">
+          <h2>Location de transats et BEDs sur la plage d'Estepona</h2>
+          <p>Choisissez votre emplacement sur notre plage privée d'Estepona parmi six rangées : de la <em>première ligne face à la mer</em> aux chaises longues près du club. Le plan interactif vous montre en temps réel les transats disponibles. Réservez en quelques secondes et payez l'empreinte de carte bancaire en ligne via Stripe.</p>
+          <div class="lp-grid">
+            <div class="lp-card"><h3>Chaise longue</h3><div class="lp-price">12 €</div><div class="lp-detail">Près du club, à l'ombre des palmiers</div></div>
+            <div class="lp-card"><h3>Transat parasol</h3><div class="lp-price">25 €</div><div class="lp-detail">Avec parasol pour deux personnes</div></div>
+            <div class="lp-card"><h3>Transat 1ère ligne</h3><div class="lp-price">25 €</div><div class="lp-detail">Vue mer imprenable, face aux vagues</div></div>
+            <div class="lp-card"><h3>BED double</h3><div class="lp-price">70 €</div><div class="lp-detail">Pour 2 personnes — emplacement central</div></div>
+            <div class="lp-card"><h3>BED + cava</h3><div class="lp-price">80 €</div><div class="lp-detail">BED double avec une bouteille de cava incluse</div></div>
+          </div>
         </section>
-        <section>
-          <h2>Restaurant de plage à Estepona</h2>
-          <p>Cuisine méditerranéenne et de la mer, service le midi et le soir. Réservation en ligne avec empreinte CB de 20 € par personne. Vue mer et terrasse.</p>
+
+        <section class="lp-section">
+          <h2>Restaurant de plage : cuisine méditerranéenne</h2>
+          <p>Notre restaurant propose une carte méditerranéenne et de la mer : poissons frais grillés, paellas, tapas, salades, fruits frais. Service du midi (12h–16h) et du soir (19h–23h30, vendredi et samedi). Réservez votre table en ligne — une empreinte de carte bancaire de <strong>20&nbsp;€ par personne</strong> est demandée et n'est débitée qu'en cas de no-show. Vue mer panoramique et terrasse en plein air.</p>
         </section>
-        <section>
-          <h2>Soirées DJ &amp; pool parties</h2>
-          <p>Programme régulier d'événements : DJ sets, pool parties et soirées thématiques en haute saison. Billetterie et programme dans l'application.</p>
+
+        <section class="lp-section">
+          <h2>Soirées DJ et pool parties à Estepona</h2>
+          <p>Programme régulier d'événements en saison : DJ sets sur la plage, pool parties, soirées thématiques. La billetterie et le programme à jour sont disponibles dans notre application. Idéal pour un anniversaire, un EVJF/EVG ou un événement privatisé sur la Costa del Sol.</p>
         </section>
-        <section>
+
+        <section class="lp-section" id="contact">
           <h2>Informations pratiques</h2>
-          <address style="font-style:normal;">
-            <strong>La Plage Tournesol</strong><br/>
-            Avenida del Litoral<br/>
-            29680 Estepona, Málaga, Espagne
-          </address>
-          <p>Ouvert tous les jours en saison. Réservation conseillée le week-end et en haute saison.</p>
+          <div class="lp-info-grid">
+            <div>
+              <h3>Adresse</h3>
+              <address><strong>La Plage Tournesol</strong><br/>Avenida del Litoral<br/>29680 Estepona<br/>Málaga, Espagne</address>
+            </div>
+            <div>
+              <h3>Horaires</h3>
+              <p>Tous les jours en saison<br/>10h00 – 23h00<br/><small>Restaurant service jusqu'à 23h30 ven/sam</small></p>
+            </div>
+            <div>
+              <h3>Paiement</h3>
+              <p>Carte bancaire (Stripe)<br/>Apple Pay, Google Pay<br/>Espèces sur place</p>
+            </div>
+            <div>
+              <h3>Langues parlées</h3>
+              <p>Français, Español, English</p>
+            </div>
+          </div>
         </section>
-        <p style="text-align:center;margin-top:32px;color:#888;font-size:14px;">Chargement de l'application…</p>
-      </main>
+
+        <section class="lp-section">
+          <h2>Questions fréquentes</h2>
+          <dl class="lp-faq">
+            <dt>Comment réserver un transat à La Plage Tournesol ?</dt>
+            <dd>Choisissez votre date, sélectionnez votre emplacement sur le plan interactif et payez en ligne via carte bancaire. Vous recevez immédiatement la confirmation par e-mail et WhatsApp avec un QR code à présenter à l'arrivée.</dd>
+            <dt>Puis-je modifier ou annuler ma réservation ?</dt>
+            <dd>Oui, vous pouvez modifier la date ou les transats jusqu'à 24h avant votre venue depuis votre espace « Mes Réservations ». La différence de prix est ajustée automatiquement.</dd>
+            <dt>Quels sont les tarifs des transats à Estepona ?</dt>
+            <dd>Chaise longue 12 €, transat parasol ou première ligne 25 €, BED double 70 €, BED avec bouteille de cava 80 €. Les prix sont par jour et incluent l'accès à la plage.</dd>
+            <dt>Le restaurant accepte-t-il les groupes ?</dt>
+            <dd>Oui, nous accueillons les groupes sur réservation. Pour les groupes de plus de 10 personnes, contactez-nous directement pour organiser votre événement.</dd>
+            <dt>Y a-t-il un parking ?</dt>
+            <dd>Plusieurs parkings publics sont disponibles à proximité immédiate, le long de l'Avenida del Litoral à Estepona.</dd>
+          </dl>
+        </section>
+
+        <p class="lp-loading">Chargement de votre application de réservation…</p>
+      </div>
     </div>`;
 
-  html = html.replace('<div id="root"></div>', `<div id="root">${seoBody}</div>`);
+  html = html.replace('<div id="root"></div>', `<div id="root">${landing}</div>`);
 
   fs.writeFileSync(indexPath, html);
   console.log('[post-build] index.html patched (CSS + SEO + crawlable content)');
