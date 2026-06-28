@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Image,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
+import { supabase } from '@/shared/lib/supabase';
 import type { Sunbed, BeachZone } from '@/shared/types';
 import { i18n } from '@/shared/i18n';
 
@@ -48,6 +49,21 @@ export function BeachMap({
 }: BeachMapProps) {
   const { theme } = useSunMode();
   const [useRemote, setUseRemote] = useState(true);
+
+  // Rotation du plan, configurable en base (restaurant_settings / beach_map_rotation).
+  // 0 / 90 / 180 / 270. Permet de tourner la carte sans rebuild.
+  const [rotation, setRotation] = useState(0);
+  useEffect(() => {
+    supabase
+      .from('restaurant_settings')
+      .select('value')
+      .eq('key', 'beach_map_rotation')
+      .maybeSingle()
+      .then(({ data }) => {
+        const v = Number(data?.value);
+        if (!Number.isNaN(v)) setRotation(((v % 360) + 360) % 360);
+      });
+  }, []);
 
   const mapSource = useRemote
     ? { uri: REMOTE_MAP_URL }
@@ -90,7 +106,7 @@ export function BeachMap({
         showsVerticalScrollIndicator={false}
         centerContent
       >
-        <View style={[styles.mapContainer, { width: MAP_WIDTH, height: MAP_HEIGHT }]}>
+        <View style={[styles.mapContainer, { width: MAP_WIDTH, height: MAP_HEIGHT, transform: [{ rotate: `${rotation}deg` }] }]}>
           <Image
             source={mapSource}
             style={styles.mapImage}
@@ -133,7 +149,7 @@ export function BeachMap({
                   ]}
                 >
                   <Text
-                    style={styles.numLabel}
+                    style={[styles.numLabel, rotation ? { transform: [{ rotate: `${-rotation}deg` }] } : null]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.4}
@@ -142,7 +158,12 @@ export function BeachMap({
                     {sunbed.label}
                   </Text>
                   {sunbed.is_double && (
-                    <Text style={styles.bedLabel} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
+                    <Text
+                      style={[styles.bedLabel, rotation ? { transform: [{ rotate: `${-rotation}deg` }] } : null]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      allowFontScaling={false}
+                    >
                       BED
                     </Text>
                   )}
