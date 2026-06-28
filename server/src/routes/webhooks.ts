@@ -44,6 +44,16 @@ router.post(
             })
             .eq('id', reservationId);
 
+          // Confirmer côté serveur (fiable même si l'app se ferme avant de
+          // basculer le statut côté client). On ne confirme QUE si la résa est
+          // encore "pending" : ça évite qu'une capture de no-show (qui émet
+          // aussi payment_intent.succeeded) repasse un "no_show" en "confirmed".
+          await supabase
+            .from(table)
+            .update({ status: 'confirmed' })
+            .eq('id', reservationId)
+            .eq('status', 'pending');
+
           if (error) {
             console.error('Erreur mise à jour réservation:', error);
             break;
@@ -100,6 +110,13 @@ router.post(
                 stripe_payment_intent_id: pi.id,
               })
               .eq('id', meta.reservationId);
+
+            // Confirmer côté serveur uniquement si encore "pending".
+            await supabase
+              .from(meta.table)
+              .update({ status: 'confirmed' })
+              .eq('id', meta.reservationId)
+              .eq('status', 'pending');
 
             console.log(`Pré-autorisation confirmée: ${meta.type} #${meta.reservationId}`);
 

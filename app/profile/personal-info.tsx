@@ -7,6 +7,7 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
+import { PhoneInput } from '@/shared/ui/PhoneInput';
 import { Button } from '@/shared/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/shared/lib/supabase';
@@ -66,13 +67,10 @@ export default function PersonalInfoScreen() {
             onChangeText={setFullName}
             autoCapitalize="words"
           />
-          <Input
+          <PhoneInput
             label={i18n.t('phoneLabel')}
-            icon="call-outline"
             value={phone}
             onChangeText={setPhone}
-            keyboardType="phone-pad"
-            placeholder="+33 6 12 34 56 78"
           />
         </View>
 

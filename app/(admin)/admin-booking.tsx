@@ -21,6 +21,7 @@ import { BeachMap } from '@/features/beach/components/BeachMap';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { TimeSelector } from '@/features/restaurant/components/TimeSelector';
 import { supabase } from '@/shared/lib/supabase';
+import { PhoneInput } from '@/shared/ui/PhoneInput';
 import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone } from '@/shared/types';
 
@@ -306,14 +307,10 @@ export default function AdminBookingScreen() {
           </View>
         </View>
 
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder, marginTop: 8 }]}
-          placeholder="Téléphone"
-          placeholderTextColor={theme.textSecondary}
+        <PhoneInput
           value={guestPhone}
           onChangeText={setGuestPhone}
-          keyboardType="phone-pad"
-          autoComplete="tel"
+          containerStyle={{ marginTop: 8, marginBottom: 0 }}
         />
 
         <TextInput

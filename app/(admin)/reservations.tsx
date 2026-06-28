@@ -8,6 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Linking,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,8 +94,14 @@ export default function ReservationsScreen() {
     params.service === 'lunch' ? 'lunch' : params.service === 'dinner' ? 'dinner' : null,
   );
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const callPhone = (phone: string) => {
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    Linking.openURL(`tel:${cleaned}`).catch(() => {});
+  };
 
   const fetchReservations = async () => {
     setLoading(true);
@@ -102,8 +110,8 @@ export default function ReservationsScreen() {
     if (tab === 'beach') {
       let q = supabase
         .from('beach_reservations')
-        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
-        .in('status', ['confirmed', 'checked_in', 'no_show', 'pending']);
+        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name, phone), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
+        .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
       const { data } = await q.order('date', { ascending: true }).order('created_at', { ascending: false });
@@ -122,7 +130,7 @@ export default function ReservationsScreen() {
             clientName: r.guest_name || r.profile?.full_name || i18n.t('clientUnknown'),
             locationLabel: labels.length > 0 ? `${labels.length > 1 ? i18n.t('sunbeds') : i18n.t('sunbed')} ${labels.join(', ')}` : `${i18n.t('sunbed')} ?`,
             guestName: r.guest_name,
-            guestPhone: r.guest_phone,
+            guestPhone: r.guest_phone || r.profile?.phone || null,
             guestEmail: r.guest_email,
             byBeach: !!r.guest_phone,
             paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
@@ -132,8 +140,8 @@ export default function ReservationsScreen() {
     } else {
       let q = supabase
         .from('restaurant_reservations')
-        .select('id, status, date, guest_count, time_slot, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name), table:restaurant_tables(label)')
-        .in('status', ['confirmed', 'checked_in', 'no_show', 'pending']);
+        .select('id, status, date, guest_count, time_slot, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name, phone), table:restaurant_tables(label)')
+        .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
       if (serviceFilter) q = q.eq('time_slot', serviceFilter);
@@ -149,7 +157,7 @@ export default function ReservationsScreen() {
           locationLabel: r.table?.label ? `${i18n.t('table')} ${r.table.label}` : i18n.t('noTableAssigned'),
           timeSlot: r.time_slot,
           guestName: r.guest_name,
-          guestPhone: r.guest_phone,
+          guestPhone: r.guest_phone || r.profile?.phone || null,
           guestEmail: r.guest_email,
           byBeach: !!r.guest_phone,
           paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
@@ -285,6 +293,15 @@ export default function ReservationsScreen() {
     Alert.alert(r.clientName, `${r.locationLabel} — ${r.guestCount} pers.`, buttons);
   };
 
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? reservations.filter((r) =>
+        [r.clientName, r.guestName, r.guestPhone, r.guestEmail]
+          .filter(Boolean)
+          .some((v) => (v as string).toLowerCase().includes(q)),
+      )
+    : reservations;
+
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{
@@ -372,11 +389,31 @@ export default function ReservationsScreen() {
         </View>
       )}
 
+      {/* Recherche par nom */}
+      <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+        <Ionicons name="search" size={18} color={theme.textSecondary} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder={i18n.t('searchByName')}
+          placeholderTextColor={theme.textSecondary}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
-      ) : reservations.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="calendar-outline" size={48} color={theme.cardBorder} />
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
@@ -392,10 +429,10 @@ export default function ReservationsScreen() {
           }
         >
           <Text style={[styles.countLabel, { color: theme.textSecondary }]}>
-            {reservations.length} réservation{reservations.length > 1 ? 's' : ''}
+            {filtered.length} réservation{filtered.length > 1 ? 's' : ''}
           </Text>
 
-          {reservations.map((r) => {
+          {filtered.map((r) => {
             const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.pending;
             const canCheckIn = r.status !== 'checked_in' && r.status !== 'completed' && r.status !== 'cancelled';
             return (
@@ -409,9 +446,23 @@ export default function ReservationsScreen() {
                         {r.timeSlot ? ` — ${r.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
                       </Text>
                       {(r.guestPhone || r.guestEmail) && (
-                        <Text style={[styles.resLocation, { color: theme.textSecondary }]}>
-                          {[r.guestPhone, r.guestEmail].filter(Boolean).join(' — ')}
-                        </Text>
+                        <View style={styles.contactRow}>
+                          {r.guestPhone && (
+                            <TouchableOpacity
+                              onPress={() => callPhone(r.guestPhone!)}
+                              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                              style={styles.phoneChip}
+                            >
+                              <Ionicons name="call" size={12} color={colors.sage} />
+                              <Text style={[styles.phoneText, { color: colors.sage }]}>{r.guestPhone}</Text>
+                            </TouchableOpacity>
+                          )}
+                          {r.guestEmail && (
+                            <Text style={[styles.resLocation, { color: theme.textSecondary }]} numberOfLines={1}>
+                              {r.guestPhone ? '— ' : ''}{r.guestEmail}
+                            </Text>
+                          )}
+                        </View>
                       )}
                       <Text style={[styles.resDate, { color: theme.textSecondary }]}>
                         {new Date(r.date + 'T00:00:00').toLocaleDateString(i18n.locale, { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -476,4 +527,13 @@ const styles = StyleSheet.create({
   dateFilterText: { fontSize: 12, fontWeight: '600' },
   resRight: { flexDirection: 'column', alignItems: 'flex-end', gap: 4 },
   checkInBtn: { padding: 2 },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 20, marginBottom: 4, paddingHorizontal: 12,
+    height: 40, borderRadius: 12, borderWidth: 1,
+  },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' },
+  phoneChip: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  phoneText: { fontSize: 12, fontWeight: '600' },
 });

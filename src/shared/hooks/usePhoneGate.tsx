@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Modal } from '@/shared/ui/Modal';
-import { Input } from '@/shared/ui/Input';
+import { PhoneInput } from '@/shared/ui/PhoneInput';
 import { Button } from '@/shared/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/shared/lib/supabase';
@@ -89,15 +89,10 @@ export function usePhoneGate() {
         <Text style={[styles.body, { color: theme.textSecondary }]}>
           {i18n.t('phoneRequiredBody')}
         </Text>
-        <Input
+        <PhoneInput
           label={i18n.t('phoneLabel')}
-          placeholder="+33612345678"
           value={phone}
           onChangeText={setPhone}
-          keyboardType="phone-pad"
-          autoCapitalize="none"
-          autoCorrect={false}
-          icon="logo-whatsapp"
           error={error ?? undefined}
         />
         <Button

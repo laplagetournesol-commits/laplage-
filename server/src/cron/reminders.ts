@@ -37,6 +37,8 @@ async function sendReminderWhatsApp(
       firstName = profile.full_name?.trim().split(/\s+/)[0] ?? null;
     }
 
+    if (!toPhone) return;
+
     const result = await sendWhatsAppReminder({
       toPhoneE164: toPhone,
       firstName,
