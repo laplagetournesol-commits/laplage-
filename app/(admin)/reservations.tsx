@@ -18,6 +18,7 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { Badge } from '@/shared/ui/Badge';
 import { Card } from '@/shared/ui/Card';
+import { Modal } from '@/shared/ui/Modal';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { formatLocalDate } from '@/shared/lib/date';
@@ -94,6 +95,7 @@ export default function ReservationsScreen() {
     params.service === 'lunch' ? 'lunch' : params.service === 'dinner' ? 'dinner' : null,
   );
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
+  const [detail, setDetail] = useState<ReservationRow | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -183,9 +185,14 @@ export default function ReservationsScreen() {
     const { error } = await supabase.from(table).update({ status }).eq('id', id);
     if (error) {
       Alert.alert(i18n.t('error'), error.message);
-    } else {
-      await fetchReservations();
+      return;
     }
+    // Synchroniser les liens transats (sinon ils restent désynchronisés et
+    // faussent la disponibilité — source des doubles-réservations).
+    if (tab === 'beach') {
+      await supabase.from('beach_reservation_sunbeds').update({ status }).eq('reservation_id', id);
+    }
+    await fetchReservations();
   };
 
   const deleteReservation = async (id: string) => {
@@ -436,7 +443,7 @@ export default function ReservationsScreen() {
             const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.pending;
             const canCheckIn = r.status !== 'checked_in' && r.status !== 'completed' && r.status !== 'cancelled';
             return (
-              <TouchableOpacity key={r.id} onPress={() => handleCardPress(r)} activeOpacity={canCheckIn ? 0.7 : 1}>
+              <TouchableOpacity key={r.id} onPress={() => setDetail(r)} activeOpacity={0.7}>
                 <Card style={styles.resCard}>
                   <View style={styles.resRow}>
                     <View style={{ flex: 1 }}>
@@ -493,6 +500,65 @@ export default function ReservationsScreen() {
           })}
         </ScrollView>
       )}
+
+      {/* Fiche de réservation détaillée */}
+      <Modal visible={!!detail} onClose={() => setDetail(null)} title={detail?.clientName}>
+        {detail && (
+          <View style={{ gap: 10 }}>
+            <View style={styles.badgeRow}>
+              <Badge label={i18n.t((STATUS_CONFIG[detail.status] ?? STATUS_CONFIG.pending).labelKey)} variant={(STATUS_CONFIG[detail.status] ?? STATUS_CONFIG.pending).variant} size="sm" />
+              {detail.paid && <Badge label={i18n.t('badgePaid')} variant="success" size="sm" />}
+              {detail.byBeach && <Badge label={i18n.t('badgeByBeach')} variant="vip" size="sm" />}
+            </View>
+
+            <View style={styles.detailRow}>
+              <Ionicons name={tab === 'beach' ? 'umbrella-outline' : 'restaurant-outline'} size={18} color={theme.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.text }]}>{detail.locationLabel}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="people-outline" size={18} color={theme.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.text }]}>{detail.guestCount} pers.</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={18} color={theme.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.text }]}>
+                {new Date(detail.date + 'T00:00:00').toLocaleDateString(i18n.locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+                {detail.timeSlot ? ` — ${detail.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
+              </Text>
+            </View>
+            {detail.guestPhone && (
+              <TouchableOpacity style={styles.detailRow} onPress={() => callPhone(detail.guestPhone!)}>
+                <Ionicons name="call-outline" size={18} color={colors.sage} />
+                <Text style={[styles.detailText, { color: colors.sage, fontWeight: '600' }]}>{detail.guestPhone}</Text>
+              </TouchableOpacity>
+            )}
+            {detail.guestEmail && (
+              <View style={styles.detailRow}>
+                <Ionicons name="mail-outline" size={18} color={theme.textSecondary} />
+                <Text style={[styles.detailText, { color: theme.text }]}>{detail.guestEmail}</Text>
+              </View>
+            )}
+
+            <View style={{ height: 8 }} />
+            {detail.guestPhone && (
+              <TouchableOpacity
+                style={[styles.detailBtn, { backgroundColor: colors.sage }]}
+                onPress={() => callPhone(detail.guestPhone!)}
+              >
+                <Ionicons name="call" size={18} color={colors.white} />
+                <Text style={styles.detailBtnText}>Appeler</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.detailBtn, { backgroundColor: colors.brand }]}
+              onPress={() => { const r = detail; setDetail(null); if (r) handleCardPress(r); }}
+            >
+              <Ionicons name="options" size={18} color={colors.white} />
+              <Text style={styles.detailBtnText}>Actions (check-in, modifier, annuler…)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -536,4 +602,9 @@ const styles = StyleSheet.create({
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' },
   phoneChip: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   phoneText: { fontSize: 12, fontWeight: '600' },
+  badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 4 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  detailText: { fontSize: 15, flex: 1 },
+  detailBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 12 },
+  detailBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

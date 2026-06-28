@@ -210,6 +210,16 @@ export default function DashboardScreen() {
         <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 28 }]}>Gestion</Text>
         <View style={styles.managementGrid}>
           <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.sunYellow + '20', borderColor: colors.sunYellow + '40' }]}
+            onPress={() => router.push('/(admin)/beach-plan')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.sunYellow + '30' }]}>
+              <Ionicons name="map" size={22} color={colors.terracotta} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Plan plage</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Qui est où (clic = nom)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.managementBtn, { backgroundColor: colors.terracotta + '12', borderColor: colors.terracotta + '30' }]}
             onPress={() => router.push('/(admin)/beach-management')}
           >

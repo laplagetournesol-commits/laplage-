@@ -54,6 +54,15 @@ router.post(
             .eq('id', reservationId)
             .eq('status', 'pending');
 
+          // Synchroniser les liens transats (plage) pour fiabiliser la dispo.
+          if (table === 'beach_reservations') {
+            await supabase
+              .from('beach_reservation_sunbeds')
+              .update({ status: 'confirmed' })
+              .eq('reservation_id', reservationId)
+              .eq('status', 'pending');
+          }
+
           if (error) {
             console.error('Erreur mise à jour réservation:', error);
             break;

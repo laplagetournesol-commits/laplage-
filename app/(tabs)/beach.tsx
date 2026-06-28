@@ -116,6 +116,9 @@ export default function BeachScreen() {
     }
 
     await supabase.from('beach_reservations').update({ status: 'confirmed' }).eq('id', result.reservationId);
+    // Synchroniser explicitement les liens transats (ne pas dépendre du trigger DB,
+    // sinon les transats restent "pending" => affichés libres => double-booking).
+    await supabase.from('beach_reservation_sunbeds').update({ status: 'confirmed' }).eq('reservation_id', result.reservationId);
     apiCall('/api/notifications/booking-confirmed', { type: 'beach', reservationId: result.reservationId }).catch(() => {});
 
     return result;

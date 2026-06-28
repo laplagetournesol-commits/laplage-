@@ -132,7 +132,20 @@ export function BeachMap({
                     isReserved && styles.markerReserved,
                   ]}
                 >
-                  {sunbed.is_double && <Text style={styles.bedLabel}>BED</Text>}
+                  <Text
+                    style={styles.numLabel}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.4}
+                    allowFontScaling={false}
+                  >
+                    {sunbed.label}
+                  </Text>
+                  {sunbed.is_double && (
+                    <Text style={styles.bedLabel} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
+                      BED
+                    </Text>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -208,9 +221,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(180, 100, 30, 0.9)',
     borderWidth: 2,
   },
-  bedLabel: {
+  numLabel: {
+    width: '100%',
+    textAlign: 'center',
     color: '#FFFFFF',
     fontSize: 9,
+    fontWeight: '800',
+    paddingHorizontal: 1,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  bedLabel: {
+    color: '#FFFFFF',
+    fontSize: 7,
     fontWeight: '900',
     letterSpacing: 0.5,
     textShadowColor: 'rgba(0,0,0,0.9)',
