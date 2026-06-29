@@ -237,5 +237,13 @@ function patchBundles() {
 
 patchIndexHtml();
 renameVendorDir();
+function writeGoogleVerification() {
+  // Fichier de validation Google Search Console (servi à la racine du site).
+  const name = 'googleda5be020b0070f57.html';
+  fs.writeFileSync(path.join(DIST, name), `google-site-verification: ${name}\n`);
+  console.log(`[post-build] ${name} (Google Search Console) écrit`);
+}
+
 patchBundles();
+writeGoogleVerification();
 console.log('[post-build] done');

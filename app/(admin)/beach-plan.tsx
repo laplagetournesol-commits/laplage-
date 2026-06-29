@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Linking, TouchableOpacity } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
@@ -8,20 +8,31 @@ import { BeachMap } from '@/features/beach/components/BeachMap';
 import { DateSelector } from '@/features/beach/components/DateSelector';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { supabase } from '@/shared/lib/supabase';
+import { Modal } from '@/shared/ui/Modal';
 import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone } from '@/shared/types';
+
+interface SunbedInfo {
+  label: string;
+  free: boolean;
+  name?: string;
+  phone?: string | null;
+  statusLabel?: string;
+  guestCount?: number;
+}
 
 export default function BeachPlanScreen() {
   const { theme } = useSunMode();
   const [date, setDate] = useState(() => formatLocalDate(new Date()));
   const { sunbeds, loading } = useSunbeds(date);
+  const [info, setInfo] = useState<SunbedInfo | null>(null);
 
   const callPhone = (phone: string) => {
     const cleaned = phone.replace(/[^\d+]/g, '');
     if (cleaned) Linking.openURL(`tel:${cleaned}`).catch(() => {});
   };
 
-  // Clic sur un transat réservé (rouge) -> qui l'occupe
+  // Clic sur un transat réservé (rouge) -> qui l'occupe (modale = marche aussi sur le web)
   const handleReservedPress = async (
     sunbed: Sunbed & { zone: BeachZone } & { isReserved: boolean },
   ) => {
@@ -34,7 +45,7 @@ export default function BeachPlanScreen() {
       .maybeSingle();
 
     if (!link) {
-      Alert.alert(`Transat ${sunbed.label}`, 'Aucune réservation active trouvée.');
+      setInfo({ label: sunbed.label, free: false, name: 'Aucune réservation active trouvée' });
       return;
     }
 
@@ -44,31 +55,19 @@ export default function BeachPlanScreen() {
       .eq('id', link.reservation_id)
       .maybeSingle();
 
-    if (!res) {
-      Alert.alert(`Transat ${sunbed.label}`, 'Réservation introuvable.');
-      return;
-    }
-
     const r = res as any;
-    const name = r.guest_name || r.profile?.full_name || r.special_requests || 'Client';
-    const phone = r.guest_phone || r.profile?.phone || null;
-    const statusLabel = r.status === 'checked_in' ? 'Check-in fait' : 'Confirmé';
-
-    const buttons: any[] = [{ text: 'Fermer', style: 'cancel' }];
-    if (phone) {
-      buttons.unshift({ text: `Appeler ${phone}`, onPress: () => callPhone(phone) });
-    }
-
-    Alert.alert(
-      `Transat ${sunbed.label}`,
-      `Réservé par : ${name}\nStatut : ${statusLabel}\n${r.guest_count ?? 1} pers.${phone ? `\nTél : ${phone}` : ''}`,
-      buttons,
-    );
+    setInfo({
+      label: sunbed.label,
+      free: false,
+      name: r?.guest_name || r?.profile?.full_name || r?.special_requests || 'Client',
+      phone: r?.guest_phone || r?.profile?.phone || null,
+      statusLabel: r?.status === 'checked_in' ? 'Check-in fait' : 'Confirmé',
+      guestCount: r?.guest_count ?? 1,
+    });
   };
 
-  // Clic sur un transat libre (lecture seule)
   const handleSelect = (sunbed: Sunbed & { zone: BeachZone }) => {
-    Alert.alert(`Transat ${sunbed.label}`, 'Libre ✅');
+    setInfo({ label: sunbed.label, free: true });
   };
 
   return (
@@ -105,6 +104,33 @@ export default function BeachPlanScreen() {
           onReservedPress={handleReservedPress}
         />
       )}
+
+      <Modal visible={!!info} onClose={() => setInfo(null)} title={info ? `Transat ${info.label}` : ''}>
+        {info && (
+          info.free ? (
+            <Text style={[styles.modalText, { color: theme.text }]}>Libre ✅</Text>
+          ) : (
+            <View style={{ gap: 10 }}>
+              <View style={styles.row}>
+                <Ionicons name="person-outline" size={18} color={theme.textSecondary} />
+                <Text style={[styles.modalText, { color: theme.text }]}>{info.name}</Text>
+              </View>
+              {info.statusLabel && (
+                <View style={styles.row}>
+                  <Ionicons name="checkmark-circle-outline" size={18} color={theme.textSecondary} />
+                  <Text style={[styles.modalText, { color: theme.text }]}>{info.statusLabel} · {info.guestCount} pers.</Text>
+                </View>
+              )}
+              {info.phone && (
+                <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.sage }]} onPress={() => callPhone(info.phone!)}>
+                  <Ionicons name="call" size={18} color={colors.white} />
+                  <Text style={styles.callText}>Appeler {info.phone}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )
+        )}
+      </Modal>
     </View>
   );
 }
@@ -114,4 +140,8 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hint: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8 },
   hintText: { fontSize: 12, flex: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  modalText: { fontSize: 16 },
+  callBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 12, marginTop: 6 },
+  callText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
