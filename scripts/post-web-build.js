@@ -203,14 +203,14 @@ function patchIndexHtml() {
       </div>
     </div>`;
 
-  // Le contenu SEO est placé À CÔTÉ de #root (pas dedans) : React vide #root
-  // au montage, donc s'il était dedans il disparaîtrait du rendu vu par Google
-  // (=> Soft 404). En frère, il reste dans le DOM rendu. Le body est en
-  // overflow:hidden + l'app remplit #root, donc l'utilisateur ne le voit pas.
-  html = html.replace('<div id="root"></div>', `<div id="root"></div>${landing}`);
+  // Le contenu SEO est injecté DANS #root : il sert d'écran de chargement
+  // crawlable, puis React le remplace par l'app au montage (boutons fonctionnels).
+  // NB: le mettre en frère de #root le laissait visible/figé par-dessus l'app
+  // (boutons morts) — à ne pas refaire.
+  html = html.replace('<div id="root"></div>', `<div id="root">${landing}</div>`);
 
   fs.writeFileSync(indexPath, html);
-  console.log('[post-build] index.html patched (CSS + SEO hors #root + crawlable content)');
+  console.log('[post-build] index.html patched (CSS + SEO dans #root + crawlable content)');
 }
 
 function renameVendorDir() {
