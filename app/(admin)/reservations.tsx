@@ -34,6 +34,9 @@ interface ReservationRow {
   clientName: string;
   locationLabel: string;
   timeSlot?: string;
+  time?: string | null;        // heure réservée (resto)
+  createdAt?: string | null;   // quand la résa a été faite
+  notes?: string | null;       // bloc-notes (allergies, attentions…)
   guestName?: string | null;
   guestPhone?: string | null;
   guestEmail?: string | null;
@@ -50,34 +53,35 @@ const STATUS_CONFIG: Record<string, { labelKey: string; variant: 'success' | 'wa
   pending: { labelKey: 'statusPending', variant: 'default' },
 };
 
-type DateFilter = 'today' | 'tomorrow' | 'week' | 'all';
+type DateFilter = 'yesterday' | 'today' | 'tomorrow' | 'week' | 'past' | 'all';
 
 const DATE_FILTERS: { key: DateFilter; labelKey: string }[] = [
+  { key: 'yesterday', labelKey: 'dateYesterday' },
   { key: 'today', labelKey: 'today' },
   { key: 'tomorrow', labelKey: 'dateTomorrow' },
   { key: 'week', labelKey: 'dateWeek' },
+  { key: 'past', labelKey: 'datePast' },
   { key: 'all', labelKey: 'all' },
 ];
 
 function getDateRange(filter: DateFilter): { from?: string; to?: string } {
   const today = new Date();
   const fmt = (d: Date) => formatLocalDate(d);
+  const shift = (n: number) => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
 
   switch (filter) {
+    case 'yesterday':
+      return { from: fmt(shift(-1)), to: fmt(shift(-1)) };
     case 'today':
       return { from: fmt(today), to: fmt(today) };
-    case 'tomorrow': {
-      const tmr = new Date(today);
-      tmr.setDate(tmr.getDate() + 1);
-      return { from: fmt(tmr), to: fmt(tmr) };
-    }
-    case 'week': {
-      const end = new Date(today);
-      end.setDate(end.getDate() + 7);
-      return { from: fmt(today), to: fmt(end) };
-    }
+    case 'tomorrow':
+      return { from: fmt(shift(1)), to: fmt(shift(1)) };
+    case 'week':
+      return { from: fmt(today), to: fmt(shift(7)) };
+    case 'past':
+      return { to: fmt(shift(-1)) }; // tout ce qui est avant aujourd'hui
     case 'all':
-      return { from: fmt(today) };
+      return {}; // toutes dates (passées + futures)
   }
 }
 
@@ -86,7 +90,7 @@ export default function ReservationsScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ tab?: string; filter?: string; service?: string }>();
   const initialTab: TabType = params.tab === 'restaurant' ? 'restaurant' : 'beach';
-  const initialFilter: DateFilter = (['today', 'tomorrow', 'week', 'all'].includes(params.filter ?? '')
+  const initialFilter: DateFilter = (['yesterday', 'today', 'tomorrow', 'week', 'past', 'all'].includes(params.filter ?? '')
     ? (params.filter as DateFilter)
     : 'all');
   const [tab, setTab] = useState<TabType>(initialTab);
@@ -105,6 +109,24 @@ export default function ReservationsScreen() {
     Linking.openURL(`tel:${cleaned}`).catch(() => {});
   };
 
+  // Bloc-notes de la fiche
+  const [noteText, setNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  useEffect(() => { setNoteText(detail?.notes ?? ''); }, [detail?.id]);
+
+  const saveNote = async () => {
+    if (!detail) return;
+    setSavingNote(true);
+    const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+    const value = noteText.trim() || null;
+    const { error } = await supabase.from(table).update({ notes: value }).eq('id', detail.id);
+    setSavingNote(false);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, notes: value } : x));
+    setDetail((d) => d ? { ...d, notes: value } : d);
+    Alert.alert(i18n.t('saved') ?? 'Enregistré', i18n.t('noteSaved') ?? 'Note enregistrée.');
+  };
+
   const fetchReservations = async () => {
     setLoading(true);
     const range = getDateRange(dateFilter);
@@ -112,7 +134,7 @@ export default function ReservationsScreen() {
     if (tab === 'beach') {
       let q = supabase
         .from('beach_reservations')
-        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name, phone), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
+        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, notes, created_at, profile:profiles(full_name, phone), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -134,6 +156,8 @@ export default function ReservationsScreen() {
             guestName: r.guest_name,
             guestPhone: r.guest_phone || r.profile?.phone || null,
             guestEmail: r.guest_email,
+            notes: r.notes,
+            createdAt: r.created_at,
             byBeach: !!r.guest_phone,
             paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
           };
@@ -142,7 +166,7 @@ export default function ReservationsScreen() {
     } else {
       let q = supabase
         .from('restaurant_reservations')
-        .select('id, status, date, guest_count, time_slot, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, profile:profiles(full_name, phone), table:restaurant_tables(label)')
+        .select('id, status, date, guest_count, time_slot, time, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, notes, created_at, profile:profiles(full_name, phone), table:restaurant_tables(label)')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -158,9 +182,12 @@ export default function ReservationsScreen() {
           clientName: r.guest_name || r.profile?.full_name || i18n.t('clientUnknown'),
           locationLabel: r.table?.label ? `${i18n.t('table')} ${r.table.label}` : i18n.t('noTableAssigned'),
           timeSlot: r.time_slot,
+          time: r.time,
           guestName: r.guest_name,
           guestPhone: r.guest_phone || r.profile?.phone || null,
           guestEmail: r.guest_email,
+          notes: r.notes,
+          createdAt: r.created_at,
           byBeach: !!r.guest_phone,
           paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
         })),
@@ -451,7 +478,14 @@ export default function ReservationsScreen() {
                       <Text style={[styles.resLocation, { color: theme.textSecondary }]}>
                         {r.locationLabel} — {r.guestCount} pers.
                         {r.timeSlot ? ` — ${r.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
+                        {r.time ? ` (${r.time.slice(0, 5)})` : ''}
                       </Text>
+                      {!!r.notes && (
+                        <View style={styles.contactRow}>
+                          <Ionicons name="document-text-outline" size={12} color={colors.terracotta} />
+                          <Text style={[styles.phoneText, { color: colors.terracotta }]} numberOfLines={1}>{r.notes}</Text>
+                        </View>
+                      )}
                       {(r.guestPhone || r.guestEmail) && (
                         <View style={styles.contactRow}>
                           {r.guestPhone && (
@@ -526,6 +560,22 @@ export default function ReservationsScreen() {
                 {detail.timeSlot ? ` — ${detail.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
               </Text>
             </View>
+            {tab === 'restaurant' && detail.time && (
+              <View style={styles.detailRow}>
+                <Ionicons name="time-outline" size={18} color={theme.textSecondary} />
+                <Text style={[styles.detailText, { color: theme.text }]}>
+                  Pour <Text style={{ fontWeight: '700' }}>{detail.time.slice(0, 5)}</Text>
+                </Text>
+              </View>
+            )}
+            {detail.createdAt && (
+              <View style={styles.detailRow}>
+                <Ionicons name="checkmark-done-outline" size={18} color={theme.textSecondary} />
+                <Text style={[styles.detailText, { color: theme.textSecondary, fontSize: 13 }]}>
+                  Réservé le {new Date(detail.createdAt).toLocaleString(i18n.locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            )}
             {detail.guestPhone && (
               <TouchableOpacity style={styles.detailRow} onPress={() => callPhone(detail.guestPhone!)}>
                 <Ionicons name="call-outline" size={18} color={colors.sage} />
@@ -538,6 +588,34 @@ export default function ReservationsScreen() {
                 <Text style={[styles.detailText, { color: theme.text }]}>{detail.guestEmail}</Text>
               </View>
             )}
+
+            {/* Bloc-notes (allergies, attentions particulières…) */}
+            <View style={styles.noteBlock}>
+              <View style={styles.detailRow}>
+                <Ionicons name="create-outline" size={18} color={theme.textSecondary} />
+                <Text style={[styles.detailText, { color: theme.textSecondary, fontSize: 13, fontWeight: '700' }]}>
+                  Notes (allergies, attentions…)
+                </Text>
+              </View>
+              <TextInput
+                style={[styles.noteInput, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+                value={noteText}
+                onChangeText={setNoteText}
+                placeholder="Ex : allergique aux fruits de mer, table calme…"
+                placeholderTextColor={theme.textSecondary}
+                multiline
+              />
+              {noteText.trim() !== (detail.notes ?? '').trim() && (
+                <TouchableOpacity
+                  style={[styles.detailBtn, { backgroundColor: colors.sage, marginTop: 6 }]}
+                  onPress={saveNote}
+                  disabled={savingNote}
+                >
+                  <Ionicons name="save-outline" size={18} color={colors.white} />
+                  <Text style={styles.detailBtnText}>{savingNote ? 'Enregistrement…' : 'Enregistrer la note'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <View style={{ height: 8 }} />
             {detail.guestPhone && (
@@ -607,4 +685,6 @@ const styles = StyleSheet.create({
   detailText: { fontSize: 15, flex: 1 },
   detailBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 12 },
   detailBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  noteBlock: { gap: 6, marginTop: 6 },
+  noteInput: { minHeight: 64, borderRadius: 10, borderWidth: 1, padding: 10, fontSize: 14, textAlignVertical: 'top' },
 });

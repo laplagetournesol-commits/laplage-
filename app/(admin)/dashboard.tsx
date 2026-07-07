@@ -220,6 +220,16 @@ export default function DashboardScreen() {
             <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Qui est où (clic = nom)</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: colors.brand + '12', borderColor: colors.brand + '30' }]}
+            onPress={() => router.push('/(admin)/monthly-report')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: colors.brand + '20' }]}>
+              <Ionicons name="bar-chart" size={22} color={colors.brand} />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Rapport mensuel</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Récap par mois</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.managementBtn, { backgroundColor: colors.terracotta + '12', borderColor: colors.terracotta + '30' }]}
             onPress={() => router.push('/(admin)/beach-management')}
           >
