@@ -153,7 +153,7 @@ function patchIndexHtml() {
 
         <section class="lp-section">
           <h2>Restaurant de plage : cuisine méditerranéenne</h2>
-          <p>Notre restaurant propose une carte méditerranéenne et de la mer : poissons frais grillés, paellas, tapas, salades, fruits frais. Service du midi (12h–16h) et du soir (19h–23h30, vendredi et samedi). Réservez votre table en ligne — une empreinte de carte bancaire de <strong>20&nbsp;€ par personne</strong> est demandée et n'est débitée qu'en cas de no-show. Vue mer panoramique et terrasse en plein air.</p>
+          <p>Notre restaurant propose une carte méditerranéenne et de la mer : poissons frais grillés, paellas, tapas, salades, fruits frais. Service tous les jours : midi (12h–17h) et soir (19h–21h30). Réservez votre table en ligne, <strong>gratuitement et sans empreinte bancaire</strong>. Vue mer panoramique et terrasse en plein air.</p>
         </section>
 
         <section class="lp-section">
