@@ -168,9 +168,13 @@ router.post('/cancel-reservation', requireAuth, async (req: AuthenticatedRequest
 
     const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
 
+    const selectCols = type === 'beach'
+      ? 'id, user_id, deposit_amount, stripe_payment_intent_id, date, start_time'
+      : 'id, user_id, deposit_amount, stripe_payment_intent_id, date';
+
     const { data: reservation, error: fetchErr } = await supabase
       .from(table)
-      .select('id, user_id, deposit_amount, stripe_payment_intent_id')
+      .select(selectCols)
       .eq('id', reservationId)
       .single();
 
@@ -179,22 +183,50 @@ router.post('/cancel-reservation', requireAuth, async (req: AuthenticatedRequest
       return;
     }
 
-    if (reservation.user_id !== req.user!.id && !['admin', 'staff'].includes(req.user!.role)) {
+    const resa = reservation as any;
+
+    if (resa.user_id !== req.user!.id && !['admin', 'staff'].includes(req.user!.role)) {
       res.status(403).json({ error: 'Non autorisé' });
       return;
     }
 
-    if (type === 'restaurant' && reservation.stripe_payment_intent_id) {
+    let refunded = false;
+
+    if (resa.stripe_payment_intent_id) {
       try {
-        await getStripe().paymentIntents.cancel(reservation.stripe_payment_intent_id);
+        const stripe = getStripe();
+        const intent = await stripe.paymentIntents.retrieve(resa.stripe_payment_intent_id);
+
+        if (type === 'restaurant') {
+          // Empreinte CB resto : encore en pré-autorisation → on libère le hold.
+          if (intent.status === 'requires_capture') {
+            await stripe.paymentIntents.cancel(resa.stripe_payment_intent_id);
+          }
+        } else {
+          // Plage : paiement encaissé d'avance. Politique : remboursé si annulation
+          // au moins 24h avant le créneau ; sinon le paiement est conservé.
+          const start = new Date(`${resa.date}T${resa.start_time || '10:00:00'}+02:00`); // Estepona (été)
+          const hoursBefore = (start.getTime() - Date.now()) / 3_600_000;
+          if (intent.status === 'requires_capture') {
+            await stripe.paymentIntents.cancel(resa.stripe_payment_intent_id);
+            refunded = true;
+          } else if (intent.status === 'succeeded' && hoursBefore >= 24) {
+            await stripe.refunds.create({
+              payment_intent: resa.stripe_payment_intent_id,
+              reason: 'requested_by_customer',
+            });
+            refunded = true;
+          }
+          console.log(`[cancel] plage #${reservationId} : ${hoursBefore.toFixed(1)}h avant → ${refunded ? 'REMBOURSÉ' : 'non remboursé (< 24h)'}`);
+        }
       } catch (stripeErr) {
-        console.error('Stripe cancel failed (non-blocking):', stripeErr);
+        console.error('Stripe cancel/refund failed (non-blocking):', stripeErr);
       }
     }
 
     const { error: updateErr } = await supabase
       .from(table)
-      .update({ status: 'cancelled' })
+      .update(refunded ? { status: 'cancelled', deposit_paid: false } : { status: 'cancelled' })
       .eq('id', reservationId);
 
     if (updateErr) {
@@ -202,7 +234,7 @@ router.post('/cancel-reservation', requireAuth, async (req: AuthenticatedRequest
       return;
     }
 
-    res.json({ cancelled: true });
+    res.json({ cancelled: true, refunded });
   } catch (err: any) {
     console.error('Erreur cancel-reservation:', err);
     res.status(500).json({ error: 'Erreur lors de l\'annulation' });

@@ -175,26 +175,6 @@ export default function MyReservationsScreen() {
     setRefreshing(false);
   };
 
-  const handleDelete = (reservation: Reservation) => {
-    Alert.alert(
-      i18n.t('delete') ?? 'Supprimer',
-      i18n.t('deleteConfirm') ?? 'Supprimer définitivement cette réservation ?',
-      [
-        { text: i18n.t('no'), style: 'cancel' },
-        {
-          text: i18n.t('yesDelete') ?? 'Oui, supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            const table = reservation.type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
-            const { error } = await supabase.from(table).delete().eq('id', reservation.id);
-            if (error) Alert.alert('Erreur', error.message);
-            else await fetchReservations();
-          },
-        },
-      ],
-    );
-  };
-
   const handleCancel = (reservation: Reservation) => {
     Alert.alert(
       i18n.t('cancelReservation'),
@@ -359,18 +339,8 @@ export default function MyReservationsScreen() {
                     </View>
                   )}
 
-                  {/* Bouton supprimer pour les résa annulées */}
-                  {r.status === 'cancelled' && (
-                    <TouchableOpacity
-                      style={[styles.deleteBtn, { borderColor: 'rgba(220,38,38,0.3)' }]}
-                      onPress={() => handleDelete(r)}
-                    >
-                      <Ionicons name="trash-outline" size={14} color="#dc2626" />
-                      <Text style={[styles.modifyBtnText, { color: '#dc2626' }]}>
-                        {i18n.t('delete') ?? 'Supprimer'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                  {/* Les résas annulées restent dans l'historique (pas de suppression
+                      côté client : préserve la preuve d'annulation / le remboursement). */}
                 </Card>
               );
             })
