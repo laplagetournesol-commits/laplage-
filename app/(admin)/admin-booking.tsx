@@ -21,6 +21,7 @@ import { BeachMap } from '@/features/beach/components/BeachMap';
 import { useSunbeds } from '@/features/beach/hooks/useBeachData';
 import { TimeSelector } from '@/features/restaurant/components/TimeSelector';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import { PhoneInput } from '@/shared/ui/PhoneInput';
 import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone } from '@/shared/types';
@@ -153,6 +154,8 @@ export default function AdminBookingScreen() {
         guest_email: email || null,
       };
 
+      let reservationId: string;
+
       if (type === 'beach') {
         // Une seule réservation avec N transats liés via la table de liaison
         const { data: newRes, error: resError } = await supabase
@@ -187,22 +190,32 @@ export default function AdminBookingScreen() {
           await supabase.from('beach_reservations').delete().eq('id', newRes.id);
           throw new Error(linkError.message);
         }
+        reservationId = newRes.id;
       } else {
-        const { error } = await supabase.from('restaurant_reservations').insert({
-          user_id: user.id,
-          table_id: null,
-          date,
-          time,
-          time_slot: timeSlot,
-          status: 'confirmed',
-          deposit_amount: 0,
-          deposit_paid: true,
-          guest_count: guestCount,
-          special_requests: 'Réservation admin',
-          ...guestFields,
-        });
+        const { data: newRes, error } = await supabase
+          .from('restaurant_reservations')
+          .insert({
+            user_id: user.id,
+            table_id: null,
+            date,
+            time,
+            time_slot: timeSlot,
+            status: 'confirmed',
+            deposit_amount: 0,
+            deposit_paid: true,
+            guest_count: guestCount,
+            special_requests: 'Réservation admin',
+            ...guestFields,
+          })
+          .select()
+          .single();
         if (error) throw new Error(error.message);
+        reservationId = newRes.id;
       }
+
+      // Prévenir l'invité (WhatsApp sur guest_phone + email sur guest_email).
+      // Fire-and-forget : ne pas bloquer/échouer la création si la notif échoue.
+      apiCall('/api/notifications/booking-confirmed', { type, reservationId }).catch(() => {});
 
       const summary = type === 'beach'
         ? `${sunbedIds.length} transat${sunbedIds.length > 1 ? 's' : ''} bloqué${sunbedIds.length > 1 ? 's' : ''} pour ${name}`

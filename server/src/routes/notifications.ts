@@ -17,16 +17,21 @@ async function sendConfirmationEmail(
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
 
-  const { data: authData } = await supabase.auth.admin.getUserById(userId);
-  const to = authData?.user?.email;
-  if (!to) return;
-
   const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
   const { data: resa } = await supabase
     .from(table)
-    .select('date, time, time_slot, guest_count')
+    .select('date, time, time_slot, guest_count, guest_email')
     .eq('id', reservationId)
     .single();
+
+  // Si la résa a été faite "pour un ami" (guest_email renseigné), envoyer la
+  // confirmation à l'invité. Sinon, à l'email du compte qui a réservé.
+  let to: string | null = (resa as any)?.guest_email ?? null;
+  if (!to) {
+    const { data: authData } = await supabase.auth.admin.getUserById(userId);
+    to = authData?.user?.email ?? null;
+  }
+  if (!to) return;
 
   const typeLabel = type === 'beach' ? 'Transat' : 'Restaurant';
   const formattedDate = resa?.date
