@@ -37,6 +37,7 @@ export default function AdminBookingScreen() {
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [notes, setNotes] = useState('');
   const [guestCount, setGuestCount] = useState(1);
   const [time, setTime] = useState('12:00');
   const timeSlot: 'lunch' | 'dinner' = parseInt(time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
@@ -152,6 +153,7 @@ export default function AdminBookingScreen() {
         guest_name: name,
         guest_phone: phone,
         guest_email: email || null,
+        notes: notes.trim() || null,
       };
 
       let reservationId: string;
@@ -335,6 +337,18 @@ export default function AdminBookingScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
+        />
+
+        <TextInput
+          style={[styles.input, {
+            color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder,
+            marginTop: 8, minHeight: 72, textAlignVertical: 'top', paddingTop: 12,
+          }]}
+          placeholder="Notes (allergies, demandes particulières…)"
+          placeholderTextColor={theme.textSecondary}
+          value={notes}
+          onChangeText={setNotes}
+          multiline
         />
 
         {/* Date */}
