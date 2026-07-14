@@ -86,6 +86,10 @@ export function PhoneInput({
     );
   }, [query]);
 
+  // Indicatif saisi à la main (filet de sécurité si le pays n'est pas dans la liste).
+  const manualDigits = query.replace(/\D/g, '');
+  const showManual = manualDigits.length > 0 && !COUNTRIES.some((c) => c.dial === manualDigits);
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={[styles.label, { color: theme.textSecondary }]}>{label}</Text>}
@@ -99,7 +103,7 @@ export function PhoneInput({
         ]}
       >
         <TouchableOpacity style={styles.countryBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
-          <Text style={styles.flag}>{flagEmoji(country.iso)}</Text>
+          <Text style={styles.flag}>{country.iso ? flagEmoji(country.iso) : '🌐'}</Text>
           <Text style={[styles.dial, { color: theme.text }]}>+{country.dial}</Text>
           <Ionicons name="chevron-down" size={14} color={theme.textSecondary} />
         </TouchableOpacity>
@@ -143,6 +147,21 @@ export function PhoneInput({
               data={filtered}
               keyExtractor={(c) => c.iso}
               keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={showManual ? (
+                <TouchableOpacity
+                  style={[styles.row, { borderBottomColor: theme.cardBorder }]}
+                  onPress={() => selectCountry({ iso: '', name: `Indicatif +${manualDigits}`, dial: manualDigits })}
+                >
+                  <Text style={styles.flag}>🌐</Text>
+                  <Text style={[styles.countryName, { color: theme.text }]}>Utiliser l'indicatif +{manualDigits}</Text>
+                  <Text style={[styles.rowDial, { color: theme.textSecondary }]}>+{manualDigits}</Text>
+                </TouchableOpacity>
+              ) : null}
+              ListEmptyComponent={!showManual ? (
+                <Text style={[styles.countryName, { color: theme.textSecondary, paddingVertical: 14 }]}>
+                  Aucun pays trouvé. Tapez un indicatif (ex. 965) pour le saisir manuellement.
+                </Text>
+              ) : null}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.row, { borderBottomColor: theme.cardBorder }]}
