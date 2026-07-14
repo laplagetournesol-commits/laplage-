@@ -25,7 +25,7 @@ function patchIndexHtml() {
 
   // 2. SEO injection
   const SITE_URL = 'https://laplagetournesols.com';
-  const OG_IMAGE = `${SITE_URL}/assets/og-image.jpg`;
+  const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
   const TITLE = 'La Plage Tournesol — Beach Club & Restaurant à Estepona';
   const DESC = 'Beach club et restaurant de plage à Estepona, Costa del Sol. Réservez votre transat, une table au restaurant ou vos billets pour nos soirées DJ en ligne. Paiement sécurisé.';
 
@@ -60,6 +60,8 @@ function patchIndexHtml() {
       opens: '10:00',
       closes: '23:00',
     }],
+    acceptsReservations: 'True',
+    hasMenu: `${SITE_URL}/menu`,
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
       name: 'Locations plage',
@@ -73,9 +75,26 @@ function patchIndexHtml() {
     },
   });
 
+  // FAQPage (les mêmes 5 Q/R que le bloc crawlable ci-dessous) → éligible rich results
+  const faqLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      ['Comment réserver un transat à La Plage Tournesol ?', 'Choisissez votre date, sélectionnez votre emplacement sur le plan interactif et payez en ligne via carte bancaire. Vous recevez immédiatement la confirmation par e-mail et WhatsApp avec un QR code à présenter à l\'arrivée.'],
+      ['Puis-je modifier ou annuler ma réservation ?', 'Oui, vous pouvez modifier la date ou les transats jusqu\'à 24h avant votre venue depuis votre espace « Mes Réservations ». La différence de prix est ajustée automatiquement.'],
+      ['Quels sont les tarifs des transats à Estepona ?', 'Chaise longue 12 €, transat parasol ou première ligne 25 €, BED double 70 €, BED avec bouteille de cava 80 €. Les prix sont par jour et incluent l\'accès à la plage.'],
+      ['Le restaurant accepte-t-il les groupes ?', 'Oui, nous accueillons les groupes sur réservation. Pour les groupes de plus de 10 personnes, contactez-nous directement pour organiser votre événement.'],
+      ['Y a-t-il un parking ?', 'Plusieurs parkings publics sont disponibles à proximité immédiate, le long de l\'Avenida del Litoral à Estepona.'],
+    ].map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+  });
+
   const seoBlock = `    <title>${TITLE}</title>
     <meta name="description" content="${DESC}" />
     <link rel="canonical" href="${SITE_URL}/" />
+    <link rel="alternate" hreflang="fr" href="${SITE_URL}/" />
+    <link rel="alternate" hreflang="es" href="${SITE_URL}/es" />
+    <link rel="alternate" hreflang="en" href="${SITE_URL}/en" />
+    <link rel="alternate" hreflang="x-default" href="${SITE_URL}/" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="${SITE_URL}/" />
     <meta property="og:title" content="${TITLE}" />
@@ -89,7 +108,8 @@ function patchIndexHtml() {
     <meta name="twitter:title" content="${TITLE}" />
     <meta name="twitter:description" content="${DESC}" />
     <meta name="twitter:image" content="${OG_IMAGE}" />
-    <script type="application/ld+json">${jsonLd}</script>`;
+    <script type="application/ld+json">${jsonLd}</script>
+    <script type="application/ld+json">${faqLd}</script>`;
 
   // lang="en" → "fr"
   html = html.replace('<html lang="en">', '<html lang="fr">');
@@ -250,4 +270,5 @@ function writeGoogleVerification() {
 
 patchBundles();
 writeGoogleVerification();
+require('./seo-pages')();
 console.log('[post-build] done');
