@@ -17,7 +17,10 @@ const pages = JSON.parse(fs.readFileSync(path.join(__dirname, 'seo-content.json'
 // Clusters hreflang (versions équivalentes d'une même page dans plusieurs langues).
 const CLUSTERS = [
   { fr: '/', es: '/es', en: '/en', 'x-default': '/' },
-  { es: '/es/hamacas-estepona', en: '/en/sunbeds-day-beds-estepona' },
+  { es: '/es/hamacas-estepona', en: '/en/sunbeds-day-beds-estepona', fr: '/fr/transats-estepona' },
+  { es: '/es/restaurante-playa-estepona', en: '/en/beach-restaurant-estepona', fr: '/fr/restaurant-plage-estepona' },
+  { es: '/es/eventos-fiestas-estepona', en: '/en/events', fr: '/fr/soirees-estepona' },
+  { es: '/es/reservar', en: '/en/book' },
 ];
 function alternatesFor(p) {
   const c = CLUSTERS.find((cl) => Object.values(cl).includes(p));
