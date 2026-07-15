@@ -23,6 +23,7 @@ import { TimeSelector } from '@/features/restaurant/components/TimeSelector';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { PhoneInput } from '@/shared/ui/PhoneInput';
+import { TableTagsInput, serializeTables } from '@/shared/ui/TableTagsInput';
 import { formatLocalDate } from '@/shared/lib/date';
 import type { Sunbed, BeachZone } from '@/shared/types';
 
@@ -38,6 +39,7 @@ export default function AdminBookingScreen() {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [notes, setNotes] = useState('');
+  const [tableNumbers, setTableNumbers] = useState<string[]>([]);
   const [guestCount, setGuestCount] = useState(1);
   const [time, setTime] = useState('12:00');
   const timeSlot: 'lunch' | 'dinner' = parseInt(time.split(':')[0]) < 18 ? 'lunch' : 'dinner';
@@ -199,6 +201,7 @@ export default function AdminBookingScreen() {
           .insert({
             user_id: user.id,
             table_id: null,
+            table_numbers: serializeTables(tableNumbers),
             date,
             time,
             time_slot: timeSlot,
@@ -354,9 +357,14 @@ export default function AdminBookingScreen() {
         {/* Date */}
         <DateSelector selectedDate={date} onSelect={setDate} />
 
-        {/* Heure de réservation restaurant */}
+        {/* Heure + tables (restaurant) */}
         {type === 'restaurant' && (
-          <TimeSelector selectedTime={time} selectedDate={date} onSelect={setTime} />
+          <>
+            <TimeSelector selectedTime={time} selectedDate={date} onSelect={setTime} />
+            <View style={{ marginTop: 12 }}>
+              <TableTagsInput tables={tableNumbers} onChange={setTableNumbers} label="Tables (plusieurs possibles si collées)" />
+            </View>
+          </>
         )}
       </View>
 

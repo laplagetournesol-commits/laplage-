@@ -19,6 +19,7 @@ import { colors } from '@/shared/theme/colors';
 import { Badge } from '@/shared/ui/Badge';
 import { Card } from '@/shared/ui/Card';
 import { Modal } from '@/shared/ui/Modal';
+import { TableTagsInput, parseTables, serializeTables } from '@/shared/ui/TableTagsInput';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { formatLocalDate } from '@/shared/lib/date';
@@ -37,6 +38,7 @@ interface ReservationRow {
   time?: string | null;        // heure réservée (resto)
   createdAt?: string | null;   // quand la résa a été faite
   notes?: string | null;       // bloc-notes (allergies, attentions…)
+  tableNumbers?: string | null; // tables assignées (resto), texte libre "55, 56, 57"
   guestName?: string | null;
   guestPhone?: string | null;
   guestEmail?: string | null;
@@ -114,6 +116,23 @@ export default function ReservationsScreen() {
   const [savingNote, setSavingNote] = useState(false);
   useEffect(() => { setNoteText(detail?.notes ?? ''); }, [detail?.id]);
 
+  // Tables assignées (resto) — éditable sur TOUTE résa (y compris celles des clients)
+  const [tableList, setTableList] = useState<string[]>([]);
+  const [savingTables, setSavingTables] = useState(false);
+  useEffect(() => { setTableList(parseTables(detail?.tableNumbers)); }, [detail?.id]);
+
+  const saveTables = async () => {
+    if (!detail) return;
+    setSavingTables(true);
+    const value = serializeTables(tableList);
+    const { error } = await supabase.from('restaurant_reservations').update({ table_numbers: value }).eq('id', detail.id);
+    setSavingTables(false);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    const newLabel = value ? `${i18n.t('table')} ${value}` : i18n.t('noTableAssigned');
+    setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, tableNumbers: value, locationLabel: newLabel } : x));
+    setDetail((d) => d ? { ...d, tableNumbers: value, locationLabel: newLabel } : d);
+  };
+
   const saveNote = async () => {
     if (!detail) return;
     setSavingNote(true);
@@ -166,7 +185,7 @@ export default function ReservationsScreen() {
     } else {
       let q = supabase
         .from('restaurant_reservations')
-        .select('id, status, date, guest_count, time_slot, time, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, notes, created_at, profile:profiles(full_name, phone), table:restaurant_tables(label)')
+        .select('id, status, date, guest_count, time_slot, time, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, notes, table_numbers, created_at, profile:profiles(full_name, phone), table:restaurant_tables(label)')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -180,13 +199,16 @@ export default function ReservationsScreen() {
           date: r.date,
           guestCount: r.guest_count,
           clientName: r.guest_name || r.profile?.full_name || i18n.t('clientUnknown'),
-          locationLabel: r.table?.label ? `${i18n.t('table')} ${r.table.label}` : i18n.t('noTableAssigned'),
+          locationLabel: r.table_numbers
+            ? `${i18n.t('table')} ${r.table_numbers}`
+            : (r.table?.label ? `${i18n.t('table')} ${r.table.label}` : i18n.t('noTableAssigned')),
           timeSlot: r.time_slot,
           time: r.time,
           guestName: r.guest_name,
           guestPhone: r.guest_phone || r.profile?.phone || null,
           guestEmail: r.guest_email,
           notes: r.notes,
+          tableNumbers: r.table_numbers,
           createdAt: r.created_at,
           byBeach: !!r.guest_phone,
           paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
@@ -586,6 +608,29 @@ export default function ReservationsScreen() {
               <View style={styles.detailRow}>
                 <Ionicons name="mail-outline" size={18} color={theme.textSecondary} />
                 <Text style={[styles.detailText, { color: theme.text }]}>{detail.guestEmail}</Text>
+              </View>
+            )}
+
+            {/* Tables (restaurant) — assignables sur toute résa, client comprise */}
+            {tab === 'restaurant' && (
+              <View style={styles.noteBlock}>
+                <View style={styles.detailRow}>
+                  <Ionicons name="restaurant-outline" size={18} color={theme.textSecondary} />
+                  <Text style={[styles.detailText, { color: theme.textSecondary, fontSize: 13, fontWeight: '700' }]}>
+                    Tables (plusieurs possibles si collées)
+                  </Text>
+                </View>
+                <TableTagsInput tables={tableList} onChange={setTableList} />
+                {serializeTables(tableList) !== (detail.tableNumbers ?? null) && (
+                  <TouchableOpacity
+                    style={[styles.detailBtn, { backgroundColor: colors.sage, marginTop: 8 }]}
+                    onPress={saveTables}
+                    disabled={savingTables}
+                  >
+                    <Ionicons name="save-outline" size={18} color={colors.white} />
+                    <Text style={styles.detailBtnText}>{savingTables ? 'Enregistrement…' : 'Enregistrer les tables'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
