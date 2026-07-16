@@ -29,16 +29,18 @@ export function useRestaurantBooking() {
   const [error, setError] = useState<string | null>(null);
   const [forcedDeposit, setForcedDeposit] = useState(false);
   const [depositStartsOn, setDepositStartsOn] = useState<string | null>(null);
+  const [closedDates, setClosedDates] = useState<string[]>([]);
 
   useEffect(() => {
     supabase
       .from('restaurant_settings')
       .select('key, value')
-      .in('key', ['require_deposit', 'deposit_starts_on'])
+      .in('key', ['require_deposit', 'deposit_starts_on', 'closed_dates'])
       .then(({ data }) => {
         for (const row of data ?? []) {
           if (row.key === 'require_deposit') setForcedDeposit(row.value as boolean);
           if (row.key === 'deposit_starts_on') setDepositStartsOn(row.value as string);
+          if (row.key === 'closed_dates') setClosedDates(row.value as string[]);
         }
       });
   }, []);
@@ -82,6 +84,10 @@ export function useRestaurantBooking() {
 
   const submitBooking = useCallback(async () => {
     if (!state.zone) return { success: false };
+    if (closedDates.includes(state.date)) {
+      setError(i18n.t('restaurantClosedThisDay'));
+      return { success: false };
+    }
     setSubmitting(true);
     setError(null);
 
@@ -157,7 +163,7 @@ export function useRestaurantBooking() {
       setSubmitting(false);
       return { success: false, reservationId: undefined, qrCode: undefined };
     }
-  }, [state, depositAmount, timeSlotForDB]);
+  }, [state, depositAmount, timeSlotForDB, closedDates]);
 
   const reset = useCallback(() => {
     setState({

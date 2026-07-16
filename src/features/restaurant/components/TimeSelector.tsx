@@ -22,6 +22,7 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
   const [dinnerSlots, setDinnerSlots] = useState<string[]>(DEFAULT_DINNER);
   const [dinnerDays, setDinnerDays] = useState<number[]>(DEFAULT_DINNER_DAYS);
   const [dinnerExtraDates, setDinnerExtraDates] = useState<string[]>([]);
+  const [closedDates, setClosedDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,11 +37,14 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
           if (row.key === 'dinner_slots') setDinnerSlots(row.value as string[]);
           if (row.key === 'dinner_days') setDinnerDays(row.value as number[]);
           if (row.key === 'dinner_extra_dates') setDinnerExtraDates(row.value as string[]);
+          if (row.key === 'closed_dates') setClosedDates(row.value as string[]);
         }
       }
       setLoading(false);
     })();
   }, []);
+
+  const isClosed = closedDates.includes(selectedDate);
 
   // Vérifier si le soir est ouvert : jour habituel OU date exceptionnelle
   const dayOfWeek = new Date(selectedDate + 'T00:00:00').getDay();
@@ -52,6 +56,16 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
     return (
       <View style={{ paddingVertical: 20, alignItems: 'center' }}>
         <ActivityIndicator color={theme.accent} />
+      </View>
+    );
+  }
+
+  if (isClosed) {
+    return (
+      <View style={[styles.closedBanner, { backgroundColor: theme.card }]}>
+        <Text style={[styles.closedText, { color: theme.textSecondary }]}>
+          {i18n.t('restaurantClosedThisDay')}
+        </Text>
       </View>
     );
   }

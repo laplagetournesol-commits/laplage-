@@ -28,6 +28,8 @@ export default function RestaurantManagementScreen() {
 
   const [dinnerDays, setDinnerDays] = useState<number[]>([5, 6, 0]);
   const [dinnerExtraDates, setDinnerExtraDates] = useState<string[]>([]);
+  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [newClosedDate, setNewClosedDate] = useState('');
   const [maxTerrasse, setMaxTerrasse] = useState('40');
   const [maxInterieur, setMaxInterieur] = useState('30');
   const [lunchSlots, setLunchSlots] = useState<string[]>([]);
@@ -46,6 +48,7 @@ export default function RestaurantManagementScreen() {
       for (const row of data) {
         if (row.key === 'dinner_days') setDinnerDays(row.value as number[]);
         if (row.key === 'dinner_extra_dates') setDinnerExtraDates(row.value as string[]);
+        if (row.key === 'closed_dates') setClosedDates(row.value as string[]);
         if (row.key === 'max_covers_terrasse') setMaxTerrasse(String(row.value));
         if (row.key === 'max_covers_interieur') setMaxInterieur(String(row.value));
         if (row.key === 'lunch_slots') setLunchSlots(row.value as string[]);
@@ -98,11 +101,32 @@ export default function RestaurantManagementScreen() {
     markChanged();
   };
 
+  const addClosedDate = () => {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(newClosedDate)) {
+      Alert.alert('Format incorrect', 'Entrez une date au format AAAA-MM-JJ (ex: 2026-07-17)');
+      return;
+    }
+    if (closedDates.includes(newClosedDate)) {
+      Alert.alert('Déjà ajouté', 'Cette date est déjà fermée');
+      return;
+    }
+    setClosedDates((prev) => [...prev, newClosedDate].sort());
+    setNewClosedDate('');
+    markChanged();
+  };
+
+  const removeClosedDate = (date: string) => {
+    setClosedDates((prev) => prev.filter((d) => d !== date));
+    markChanged();
+  };
+
   const saveAll = async () => {
     setSaving(true);
     const updates = [
       { key: 'dinner_days', value: dinnerDays },
       { key: 'dinner_extra_dates', value: dinnerExtraDates },
+      { key: 'closed_dates', value: closedDates },
       { key: 'max_covers_terrasse', value: parseInt(maxTerrasse, 10) || 0 },
       { key: 'max_covers_interieur', value: parseInt(maxInterieur, 10) || 0 },
       { key: 'lunch_slots', value: lunchSlots },
@@ -234,6 +258,51 @@ export default function RestaurantManagementScreen() {
           {dinnerExtraDates.length === 0 && (
             <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
               Aucune date exceptionnelle
+            </Text>
+          )}
+        </Card>
+
+        {/* ========== JOURS DE FERMETURE (ÉVÉNEMENT PRIVÉ) ========== */}
+        <Text style={[styles.subtitle, { color: theme.textSecondary, marginTop: 4 }]}>
+          Jours de fermeture (événement privé)
+        </Text>
+
+        <Card style={styles.card}>
+          <View style={styles.extraDateInput}>
+            <TextInput
+              style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder }]}
+              value={newClosedDate}
+              onChangeText={setNewClosedDate}
+              placeholder="2026-07-17"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+            />
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: colors.terracotta }]}
+              onPress={addClosedDate}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {closedDates.length > 0 && (
+            <View style={styles.extraDatesList}>
+              {closedDates.map((date) => (
+                <View key={date} style={[styles.extraDateChip, { backgroundColor: colors.terracotta + '15', borderColor: colors.terracotta + '30' }]}>
+                  <Text style={[styles.extraDateText, { color: colors.terracotta }]}>
+                    {formatDateFR(date)}
+                  </Text>
+                  <TouchableOpacity onPress={() => removeClosedDate(date)}>
+                    <Ionicons name="close-circle" size={18} color={colors.terracotta} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {closedDates.length === 0 && (
+            <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
+              Aucun jour de fermeture
             </Text>
           )}
         </Card>
