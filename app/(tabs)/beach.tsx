@@ -171,7 +171,14 @@ export default function BeachScreen() {
       </View>
 
       {/* Carte interactive */}
-      {loading ? (
+      {booking.isDateClosed ? (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="close-circle-outline" size={40} color={theme.textSecondary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 24 }]}>
+            {i18n.t('beachClosedThisDay')}
+          </Text>
+        </View>
+      ) : loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>

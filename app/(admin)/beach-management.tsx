@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { useAdminBeachZones } from '@/features/admin/hooks/useAdminBeachZones';
+import { supabase } from '@/shared/lib/supabase';
 
 export default function BeachManagementScreen() {
   const { theme } = useSunMode();
@@ -29,6 +30,28 @@ export default function BeachManagementScreen() {
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<{ zoneId: string; price: string } | null>(null);
   const [editingLabel, setEditingLabel] = useState<{ sunbedId: string; label: string } | null>(null);
+
+  // Jours de fermeture plage (persistés immédiatement dans restaurant_settings.beach_closed_dates)
+  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [newClosedDate, setNewClosedDate] = useState('');
+
+  useEffect(() => {
+    supabase.from('restaurant_settings').select('value').eq('key', 'beach_closed_dates').maybeSingle()
+      .then(({ data }) => { if (data?.value) setClosedDates(data.value as string[]); });
+  }, []);
+
+  const persistClosed = async (dates: string[]) => {
+    setClosedDates(dates);
+    const { error } = await supabase.from('restaurant_settings').update({ value: dates }).eq('key', 'beach_closed_dates');
+    if (error) Alert.alert('Erreur', error.message);
+  };
+  const addClosedDate = () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newClosedDate)) { Alert.alert('Format incorrect', 'Date au format AAAA-MM-JJ (ex: 2026-07-17)'); return; }
+    if (closedDates.includes(newClosedDate)) { Alert.alert('Déjà ajouté', 'Cette date est déjà fermée'); return; }
+    persistClosed([...closedDates, newClosedDate].sort());
+    setNewClosedDate('');
+  };
+  const removeClosedDate = (date: string) => persistClosed(closedDates.filter((d) => d !== date));
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -201,6 +224,41 @@ export default function BeachManagementScreen() {
             </Card>
           );
         })}
+
+        {/* ========== JOURS DE FERMETURE PLAGE ========== */}
+        <Text style={[styles.title, { color: theme.text, marginTop: 28 }]}>Jours de fermeture plage</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+          La plage sera fermée à la réservation ces jours-là (événement privé). Indépendant du restaurant.
+        </Text>
+        <Card style={styles.zoneCard}>
+          <View style={styles.closedRow}>
+            <TextInput
+              style={[styles.closedInput, { color: theme.text, borderColor: theme.cardBorder }]}
+              value={newClosedDate}
+              onChangeText={setNewClosedDate}
+              placeholder="2026-07-17"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType="numbers-and-punctuation"
+            />
+            <TouchableOpacity style={[styles.closedAddBtn, { backgroundColor: colors.terracotta }]} onPress={addClosedDate}>
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {closedDates.length > 0 ? (
+            <View style={styles.closedList}>
+              {closedDates.map((date) => (
+                <View key={date} style={[styles.closedChip, { backgroundColor: colors.terracotta + '15', borderColor: colors.terracotta + '30' }]}>
+                  <Text style={{ color: colors.terracotta, fontWeight: '700', fontSize: 14 }}>{date}</Text>
+                  <TouchableOpacity onPress={() => removeClosedDate(date)}>
+                    <Ionicons name="close-circle" size={18} color={colors.terracotta} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 10 }}>Aucun jour de fermeture</Text>
+          )}
+        </Card>
       </ScrollView>
 
       {/* Rename sunbed modal */}
@@ -280,6 +338,11 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 13, marginTop: 4, marginBottom: 20 },
+  closedRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  closedInput: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1.5, paddingHorizontal: 14, fontSize: 15 },
+  closedAddBtn: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  closedList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  closedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1 },
   zoneCard: { marginBottom: 14 },
   zoneHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   zoneDot: { width: 12, height: 12, borderRadius: 6 },

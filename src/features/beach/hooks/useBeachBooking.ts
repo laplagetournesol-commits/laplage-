@@ -46,6 +46,19 @@ export function useBeachBooking() {
   const [priceMap, setPriceMap] = useState<Map<string, SunbedPriceEntry>>(new Map());
   const [modifyingReservationId, setModifyingReservationId] = useState<string | null>(null);
   const [originalTotal, setOriginalTotal] = useState<number>(0);
+  const [closedDates, setClosedDates] = useState<string[]>([]);
+
+  // Jours de fermeture plage (indépendants du restaurant)
+  useEffect(() => {
+    supabase
+      .from('restaurant_settings')
+      .select('value')
+      .eq('key', 'beach_closed_dates')
+      .maybeSingle()
+      .then(({ data }) => { if (data?.value) setClosedDates(data.value as string[]); });
+  }, []);
+
+  const isDateClosed = closedDates.includes(state.date);
 
   // Charger les prix saisonniers pour chaque transat sélectionné (par zone)
   useEffect(() => {
@@ -234,6 +247,10 @@ export function useBeachBooking() {
 
   const submitBooking = useCallback(async () => {
     if (state.selectedSunbeds.length === 0) return { success: false };
+    if (closedDates.includes(state.date)) {
+      setError(i18n.t('beachClosedThisDay'));
+      return { success: false };
+    }
     setSubmitting(true);
     setError(null);
 
@@ -299,7 +316,7 @@ export function useBeachBooking() {
       setSubmitting(false);
       return { success: false, reservationId: undefined, qrCode: undefined };
     }
-  }, [state, totalPrice, depositAmount]);
+  }, [state, totalPrice, depositAmount, closedDates]);
 
   const reset = useCallback(() => {
     setState({
@@ -318,6 +335,7 @@ export function useBeachBooking() {
     ...state,
     submitting,
     error,
+    isDateClosed,
     basePrice,
     addonsTotal,
     totalPrice,
