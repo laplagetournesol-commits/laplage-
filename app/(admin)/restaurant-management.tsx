@@ -30,6 +30,15 @@ export default function RestaurantManagementScreen() {
   const [dinnerExtraDates, setDinnerExtraDates] = useState<string[]>([]);
   const [closures, setClosures] = useState<{ date: string; slot: string }[]>([]);
   const [newClosedDate, setNewClosedDate] = useState('');
+  // Service continu (heure début → fin)
+  const [contEnabled, setContEnabled] = useState(false);
+  const [contStart, setContStart] = useState('12:00');
+  const [contEnd, setContEnd] = useState('23:00');
+  const [contInterval, setContInterval] = useState('30');
+  const [contDates, setContDates] = useState<{ date: string; start: string; end: string }[]>([]);
+  const [newContDate, setNewContDate] = useState('');
+  const [newContStart, setNewContStart] = useState('12:00');
+  const [newContEnd, setNewContEnd] = useState('23:00');
   const [maxTerrasse, setMaxTerrasse] = useState('40');
   const [maxInterieur, setMaxInterieur] = useState('30');
   const [lunchSlots, setLunchSlots] = useState<string[]>([]);
@@ -55,6 +64,11 @@ export default function RestaurantManagementScreen() {
         if (row.key === 'lunch_label') setLunchLabel(row.value as string);
         if (row.key === 'dinner_label') setDinnerLabel(row.value as string);
         if (row.key === 'require_deposit') setRequireDeposit(row.value as boolean);
+        if (row.key === 'continuous_service') {
+          const v = row.value as any;
+          setContEnabled(!!v.enabled); setContStart(v.start || '12:00'); setContEnd(v.end || '23:00'); setContInterval(String(v.interval || 30));
+        }
+        if (row.key === 'continuous_service_dates') setContDates(row.value as { date: string; start: string; end: string }[]);
       }
     }
     const { data: cl } = await supabase.from('restaurant_closures').select('date, slot');
@@ -123,11 +137,22 @@ export default function RestaurantManagementScreen() {
     setClosures((prev) => prev.filter((c) => !(c.date === date && c.slot === slot)));
   };
 
+  const addContDate = () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newContDate)) { Alert.alert('Format incorrect', 'Date au format AAAA-MM-JJ'); return; }
+    if (!/^\d{1,2}:\d{2}$/.test(newContStart) || !/^\d{1,2}:\d{2}$/.test(newContEnd)) { Alert.alert('Format incorrect', 'Heures au format HH:MM'); return; }
+    setContDates((prev) => [...prev.filter((d) => d.date !== newContDate), { date: newContDate, start: newContStart, end: newContEnd }].sort((a, b) => a.date.localeCompare(b.date)));
+    setNewContDate('');
+    markChanged();
+  };
+  const removeContDate = (date: string) => { setContDates((prev) => prev.filter((d) => d.date !== date)); markChanged(); };
+
   const saveAll = async () => {
     setSaving(true);
     const updates = [
       { key: 'dinner_days', value: dinnerDays },
       { key: 'dinner_extra_dates', value: dinnerExtraDates },
+      { key: 'continuous_service', value: { enabled: contEnabled, start: contStart, end: contEnd, interval: parseInt(contInterval, 10) || 30 } },
+      { key: 'continuous_service_dates', value: contDates },
       { key: 'max_covers_terrasse', value: parseInt(maxTerrasse, 10) || 0 },
       { key: 'max_covers_interieur', value: parseInt(maxInterieur, 10) || 0 },
       { key: 'lunch_slots', value: lunchSlots },
@@ -260,6 +285,55 @@ export default function RestaurantManagementScreen() {
             <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
               Aucune date exceptionnelle
             </Text>
+          )}
+        </Card>
+
+        {/* ========== SERVICE CONTINU ========== */}
+        <Text style={[styles.subtitle, { color: theme.textSecondary, marginTop: 4 }]}>
+          Service continu (horaire personnalisé)
+        </Text>
+        <Card style={styles.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600', flex: 1 }}>
+              Activer (permanent, tous les jours)
+            </Text>
+            <Switch value={contEnabled} onValueChange={(v) => { setContEnabled(v); markChanged(); }} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.emptyHint, { color: theme.textSecondary, marginTop: 0, fontStyle: 'normal' }]}>De (HH:MM)</Text>
+              <TextInput style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder }]} value={contStart} onChangeText={(t) => { setContStart(t); markChanged(); }} placeholder="12:00" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.emptyHint, { color: theme.textSecondary, marginTop: 0, fontStyle: 'normal' }]}>À (HH:MM)</Text>
+              <TextInput style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder }]} value={contEnd} onChangeText={(t) => { setContEnd(t); markChanged(); }} placeholder="23:00" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" />
+            </View>
+            <View style={{ width: 72 }}>
+              <Text style={[styles.emptyHint, { color: theme.textSecondary, marginTop: 0, fontStyle: 'normal' }]}>Interv.</Text>
+              <TextInput style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder }]} value={contInterval} onChangeText={(t) => { setContInterval(t.replace(/[^\d]/g, '')); markChanged(); }} placeholder="30" placeholderTextColor={theme.textSecondary} keyboardType="number-pad" />
+            </View>
+          </View>
+
+          <Text style={[styles.emptyHint, { color: theme.textSecondary, marginTop: 14, fontStyle: 'normal', fontWeight: '600' }]}>Ou pour un jour précis (date · début · fin) :</Text>
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, alignItems: 'center' }}>
+            <TextInput style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder, flex: 1.5 }]} value={newContDate} onChangeText={setNewContDate} placeholder="2026-07-20" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" />
+            <TextInput style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder, flex: 1 }]} value={newContStart} onChangeText={setNewContStart} placeholder="12:00" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" />
+            <TextInput style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder, flex: 1 }]} value={newContEnd} onChangeText={setNewContEnd} placeholder="23:00" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" />
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.deepSea }]} onPress={addContDate}>
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {contDates.length > 0 && (
+            <View style={[styles.extraDatesList, { marginTop: 10 }]}>
+              {contDates.map((d) => (
+                <View key={d.date} style={[styles.extraDateChip, { backgroundColor: colors.deepSea + '15', borderColor: colors.deepSea + '30' }]}>
+                  <Text style={[styles.extraDateText, { color: colors.deepSea }]}>{formatDateFR(d.date)} · {d.start}–{d.end}</Text>
+                  <TouchableOpacity onPress={() => removeContDate(d.date)}>
+                    <Ionicons name="close-circle" size={18} color={colors.deepSea} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
           )}
         </Card>
 

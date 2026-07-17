@@ -16,6 +16,23 @@ const DEFAULT_LUNCH = ['12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15
 const DEFAULT_DINNER = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00'];
 const DEFAULT_DINNER_DAYS = [5, 6, 0]; // vendredi, samedi, dimanche
 
+type ContinuousCfg = { enabled: boolean; start: string; end: string; interval: number };
+
+/** Génère les créneaux d'un service continu (ex. 12:00 → 23:00 toutes les 30 min). */
+function genSlots(start: string, end: string, interval: number): string[] {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let cur = sh * 60 + sm;
+  const endM = eh * 60 + em;
+  const step = interval > 0 ? interval : 30;
+  const out: string[] = [];
+  while (cur <= endM && out.length < 60) {
+    out.push(`${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`);
+    cur += step;
+  }
+  return out;
+}
+
 export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelectorProps) {
   const { theme } = useSunMode();
   const [lunchSlots, setLunchSlots] = useState<string[]>(DEFAULT_LUNCH);
@@ -23,6 +40,8 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
   const [dinnerDays, setDinnerDays] = useState<number[]>(DEFAULT_DINNER_DAYS);
   const [dinnerExtraDates, setDinnerExtraDates] = useState<string[]>([]);
   const [closures, setClosures] = useState<{ date: string; slot: string }[]>([]);
+  const [continuous, setContinuous] = useState<ContinuousCfg>({ enabled: false, start: '12:00', end: '23:00', interval: 30 });
+  const [continuousDates, setContinuousDates] = useState<{ date: string; start: string; end: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +56,8 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
           if (row.key === 'dinner_slots') setDinnerSlots(row.value as string[]);
           if (row.key === 'dinner_days') setDinnerDays(row.value as number[]);
           if (row.key === 'dinner_extra_dates') setDinnerExtraDates(row.value as string[]);
+          if (row.key === 'continuous_service') setContinuous(row.value as ContinuousCfg);
+          if (row.key === 'continuous_service_dates') setContinuousDates(row.value as { date: string; start: string; end: string }[]);
         }
       }
       if (cl) setClosures(cl as { date: string; slot: string }[]);
@@ -47,15 +68,25 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
   const lunchClosed = closures.some((c) => c.date === selectedDate && c.slot === 'lunch');
   const dinnerClosed = closures.some((c) => c.date === selectedDate && c.slot === 'dinner');
 
-  // Le soir est ouvert : jour habituel OU date exceptionnelle — et pas fermé (événement privé)
   const dayOfWeek = new Date(selectedDate + 'T00:00:00').getDay();
   const dinnerOpenByPolicy = dinnerDays.includes(dayOfWeek) || dinnerExtraDates.includes(selectedDate);
-  const isDinnerOpen = dinnerOpenByPolicy && !dinnerClosed;
 
-  const slots = [
-    ...(lunchClosed ? [] : lunchSlots),
-    ...(isDinnerOpen ? dinnerSlots : []),
-  ];
+  // Service continu : surcharge du jour, sinon permanent, sinon créneaux midi/soir classiques
+  const override = continuousDates.find((d) => d.date === selectedDate);
+  const usingContinuous = !!override || continuous.enabled;
+  const baseSlots = override
+    ? genSlots(override.start, override.end, continuous.interval || 30)
+    : continuous.enabled
+      ? genSlots(continuous.start, continuous.end, continuous.interval || 30)
+      : [...lunchSlots, ...(dinnerOpenByPolicy ? dinnerSlots : [])];
+
+  // Retirer les créneaux fermés (midi = avant 18h, soir = 18h et après)
+  const slots = baseSlots.filter((t) => {
+    const h = parseInt(t.split(':')[0], 10);
+    if (h < 18 && lunchClosed) return false;
+    if (h >= 18 && dinnerClosed) return false;
+    return true;
+  });
 
   if (loading) {
     return (
@@ -77,7 +108,7 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
 
   return (
     <View>
-      {!dinnerOpenByPolicy && !lunchClosed && (
+      {!usingContinuous && !dinnerOpenByPolicy && !lunchClosed && (
         <View style={[styles.closedBanner, { backgroundColor: theme.card }]}>
           <Text style={[styles.closedText, { color: theme.textSecondary }]}>
             {i18n.t('dinnerWeekendOnly')}
