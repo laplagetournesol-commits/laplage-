@@ -28,7 +28,7 @@ export default function RestaurantManagementScreen() {
 
   const [dinnerDays, setDinnerDays] = useState<number[]>([5, 6, 0]);
   const [dinnerExtraDates, setDinnerExtraDates] = useState<string[]>([]);
-  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [closures, setClosures] = useState<{ date: string; slot: string }[]>([]);
   const [newClosedDate, setNewClosedDate] = useState('');
   const [maxTerrasse, setMaxTerrasse] = useState('40');
   const [maxInterieur, setMaxInterieur] = useState('30');
@@ -48,7 +48,6 @@ export default function RestaurantManagementScreen() {
       for (const row of data) {
         if (row.key === 'dinner_days') setDinnerDays(row.value as number[]);
         if (row.key === 'dinner_extra_dates') setDinnerExtraDates(row.value as string[]);
-        if (row.key === 'closed_dates') setClosedDates(row.value as string[]);
         if (row.key === 'max_covers_terrasse') setMaxTerrasse(String(row.value));
         if (row.key === 'max_covers_interieur') setMaxInterieur(String(row.value));
         if (row.key === 'lunch_slots') setLunchSlots(row.value as string[]);
@@ -58,6 +57,8 @@ export default function RestaurantManagementScreen() {
         if (row.key === 'require_deposit') setRequireDeposit(row.value as boolean);
       }
     }
+    const { data: cl } = await supabase.from('restaurant_closures').select('date, slot');
+    if (cl) setClosures(cl as { date: string; slot: string }[]);
     setLoading(false);
   }, []);
 
@@ -101,24 +102,25 @@ export default function RestaurantManagementScreen() {
     markChanged();
   };
 
-  const addClosedDate = () => {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(newClosedDate)) {
+  // Fermetures par créneau — persistées immédiatement dans restaurant_closures (garde-fou serveur).
+  const addClosures = async (slots: ('lunch' | 'dinner')[]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newClosedDate)) {
       Alert.alert('Format incorrect', 'Entrez une date au format AAAA-MM-JJ (ex: 2026-07-17)');
       return;
     }
-    if (closedDates.includes(newClosedDate)) {
-      Alert.alert('Déjà ajouté', 'Cette date est déjà fermée');
-      return;
-    }
-    setClosedDates((prev) => [...prev, newClosedDate].sort());
+    const toAdd = slots.filter((s) => !closures.some((c) => c.date === newClosedDate && c.slot === s));
+    if (toAdd.length === 0) { Alert.alert('Déjà fermé', 'Ce créneau est déjà fermé pour cette date'); return; }
+    const rows = toAdd.map((slot) => ({ date: newClosedDate, slot }));
+    const { error } = await supabase.from('restaurant_closures').insert(rows);
+    if (error) { Alert.alert('Erreur', error.message); return; }
+    setClosures((prev) => [...prev, ...rows]);
     setNewClosedDate('');
-    markChanged();
   };
 
-  const removeClosedDate = (date: string) => {
-    setClosedDates((prev) => prev.filter((d) => d !== date));
-    markChanged();
+  const removeClosure = async (date: string, slot: string) => {
+    const { error } = await supabase.from('restaurant_closures').delete().eq('date', date).eq('slot', slot);
+    if (error) { Alert.alert('Erreur', error.message); return; }
+    setClosures((prev) => prev.filter((c) => !(c.date === date && c.slot === slot)));
   };
 
   const saveAll = async () => {
@@ -126,7 +128,6 @@ export default function RestaurantManagementScreen() {
     const updates = [
       { key: 'dinner_days', value: dinnerDays },
       { key: 'dinner_extra_dates', value: dinnerExtraDates },
-      { key: 'closed_dates', value: closedDates },
       { key: 'max_covers_terrasse', value: parseInt(maxTerrasse, 10) || 0 },
       { key: 'max_covers_interieur', value: parseInt(maxInterieur, 10) || 0 },
       { key: 'lunch_slots', value: lunchSlots },
@@ -268,41 +269,42 @@ export default function RestaurantManagementScreen() {
         </Text>
 
         <Card style={styles.card}>
-          <View style={styles.extraDateInput}>
-            <TextInput
-              style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder }]}
-              value={newClosedDate}
-              onChangeText={setNewClosedDate}
-              placeholder="2026-07-17"
-              placeholderTextColor={theme.textSecondary}
-              keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
-            />
-            <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: colors.terracotta }]}
-              onPress={addClosedDate}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
+          <TextInput
+            style={[styles.dateInput, { color: theme.text, borderColor: theme.cardBorder, marginBottom: 10 }]}
+            value={newClosedDate}
+            onChangeText={setNewClosedDate}
+            placeholder="2026-07-17"
+            placeholderTextColor={theme.textSecondary}
+            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={[styles.closureSlotBtn, { borderColor: colors.terracotta }]} onPress={() => addClosures(['lunch'])}>
+              <Text style={[styles.closureSlotBtnText, { color: colors.terracotta }]}>Fermer le midi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.closureSlotBtn, { borderColor: colors.terracotta }]} onPress={() => addClosures(['dinner'])}>
+              <Text style={[styles.closureSlotBtnText, { color: colors.terracotta }]}>Fermer le soir</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.closureSlotBtn, { backgroundColor: colors.terracotta, borderColor: colors.terracotta }]} onPress={() => addClosures(['lunch', 'dinner'])}>
+              <Text style={[styles.closureSlotBtnText, { color: '#fff' }]}>Journée</Text>
             </TouchableOpacity>
           </View>
 
-          {closedDates.length > 0 && (
-            <View style={styles.extraDatesList}>
-              {closedDates.map((date) => (
-                <View key={date} style={[styles.extraDateChip, { backgroundColor: colors.terracotta + '15', borderColor: colors.terracotta + '30' }]}>
+          {closures.length > 0 ? (
+            <View style={[styles.extraDatesList, { marginTop: 12 }]}>
+              {[...closures].sort((a, b) => (a.date === b.date ? a.slot.localeCompare(b.slot) : a.date.localeCompare(b.date))).map((c) => (
+                <View key={c.date + c.slot} style={[styles.extraDateChip, { backgroundColor: colors.terracotta + '15', borderColor: colors.terracotta + '30' }]}>
                   <Text style={[styles.extraDateText, { color: colors.terracotta }]}>
-                    {formatDateFR(date)}
+                    {formatDateFR(c.date)} · {c.slot === 'lunch' ? 'Midi' : 'Soir'}
                   </Text>
-                  <TouchableOpacity onPress={() => removeClosedDate(date)}>
+                  <TouchableOpacity onPress={() => removeClosure(c.date, c.slot)}>
                     <Ionicons name="close-circle" size={18} color={colors.terracotta} />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
-          )}
-
-          {closedDates.length === 0 && (
-            <Text style={[styles.emptyHint, { color: theme.textSecondary }]}>
-              Aucun jour de fermeture
+          ) : (
+            <Text style={[styles.emptyHint, { color: theme.textSecondary, marginTop: 12 }]}>
+              Aucune fermeture
             </Text>
           )}
         </Card>
@@ -473,6 +475,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   addBtn: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  closureSlotBtn: { flex: 1, height: 40, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  closureSlotBtnText: { fontSize: 13, fontWeight: '700' },
   extraDatesList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   extraDateChip: {
     flexDirection: 'row',

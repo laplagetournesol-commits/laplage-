@@ -29,20 +29,23 @@ export function useRestaurantBooking() {
   const [error, setError] = useState<string | null>(null);
   const [forcedDeposit, setForcedDeposit] = useState(false);
   const [depositStartsOn, setDepositStartsOn] = useState<string | null>(null);
-  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [closures, setClosures] = useState<{ date: string; slot: string }[]>([]);
 
   useEffect(() => {
     supabase
       .from('restaurant_settings')
       .select('key, value')
-      .in('key', ['require_deposit', 'deposit_starts_on', 'closed_dates'])
+      .in('key', ['require_deposit', 'deposit_starts_on'])
       .then(({ data }) => {
         for (const row of data ?? []) {
           if (row.key === 'require_deposit') setForcedDeposit(row.value as boolean);
           if (row.key === 'deposit_starts_on') setDepositStartsOn(row.value as string);
-          if (row.key === 'closed_dates') setClosedDates(row.value as string[]);
         }
       });
+    supabase
+      .from('restaurant_closures')
+      .select('date, slot')
+      .then(({ data }) => { if (data) setClosures(data as { date: string; slot: string }[]); });
   }, []);
 
   // Empreinte requise si la date de la résa est au-delà du seuil OU si admin a forcé
@@ -84,7 +87,7 @@ export function useRestaurantBooking() {
 
   const submitBooking = useCallback(async () => {
     if (!state.zone) return { success: false };
-    if (closedDates.includes(state.date)) {
+    if (closures.some((c) => c.date === state.date && c.slot === timeSlotForDB)) {
       setError(i18n.t('restaurantClosedThisDay'));
       return { success: false };
     }
@@ -163,7 +166,7 @@ export function useRestaurantBooking() {
       setSubmitting(false);
       return { success: false, reservationId: undefined, qrCode: undefined };
     }
-  }, [state, depositAmount, timeSlotForDB, closedDates]);
+  }, [state, depositAmount, timeSlotForDB, closures]);
 
   const reset = useCallback(() => {
     setState({

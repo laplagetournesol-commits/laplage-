@@ -22,35 +22,40 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
   const [dinnerSlots, setDinnerSlots] = useState<string[]>(DEFAULT_DINNER);
   const [dinnerDays, setDinnerDays] = useState<number[]>(DEFAULT_DINNER_DAYS);
   const [dinnerExtraDates, setDinnerExtraDates] = useState<string[]>([]);
-  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [closures, setClosures] = useState<{ date: string; slot: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from('restaurant_settings')
-        .select('key, value');
-
+      const [{ data }, { data: cl }] = await Promise.all([
+        supabase.from('restaurant_settings').select('key, value'),
+        supabase.from('restaurant_closures').select('date, slot'),
+      ]);
       if (data) {
         for (const row of data) {
           if (row.key === 'lunch_slots') setLunchSlots(row.value as string[]);
           if (row.key === 'dinner_slots') setDinnerSlots(row.value as string[]);
           if (row.key === 'dinner_days') setDinnerDays(row.value as number[]);
           if (row.key === 'dinner_extra_dates') setDinnerExtraDates(row.value as string[]);
-          if (row.key === 'closed_dates') setClosedDates(row.value as string[]);
         }
       }
+      if (cl) setClosures(cl as { date: string; slot: string }[]);
       setLoading(false);
     })();
   }, []);
 
-  const isClosed = closedDates.includes(selectedDate);
+  const lunchClosed = closures.some((c) => c.date === selectedDate && c.slot === 'lunch');
+  const dinnerClosed = closures.some((c) => c.date === selectedDate && c.slot === 'dinner');
 
-  // Vérifier si le soir est ouvert : jour habituel OU date exceptionnelle
+  // Le soir est ouvert : jour habituel OU date exceptionnelle — et pas fermé (événement privé)
   const dayOfWeek = new Date(selectedDate + 'T00:00:00').getDay();
-  const isDinnerOpen = dinnerDays.includes(dayOfWeek) || dinnerExtraDates.includes(selectedDate);
+  const dinnerOpenByPolicy = dinnerDays.includes(dayOfWeek) || dinnerExtraDates.includes(selectedDate);
+  const isDinnerOpen = dinnerOpenByPolicy && !dinnerClosed;
 
-  const slots = isDinnerOpen ? [...lunchSlots, ...dinnerSlots] : lunchSlots;
+  const slots = [
+    ...(lunchClosed ? [] : lunchSlots),
+    ...(isDinnerOpen ? dinnerSlots : []),
+  ];
 
   if (loading) {
     return (
@@ -60,7 +65,7 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
     );
   }
 
-  if (isClosed) {
+  if (slots.length === 0) {
     return (
       <View style={[styles.closedBanner, { backgroundColor: theme.card }]}>
         <Text style={[styles.closedText, { color: theme.textSecondary }]}>
@@ -72,7 +77,7 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
 
   return (
     <View>
-      {!isDinnerOpen && (
+      {!dinnerOpenByPolicy && !lunchClosed && (
         <View style={[styles.closedBanner, { backgroundColor: theme.card }]}>
           <Text style={[styles.closedText, { color: theme.textSecondary }]}>
             {i18n.t('dinnerWeekendOnly')}
