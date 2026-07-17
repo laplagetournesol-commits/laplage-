@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lestournesols.app",
-      "buildNumber": "46"
+      "buildNumber": "47"
     },
     "android": {
       "adaptiveIcon": {

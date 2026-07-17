@@ -323,6 +323,20 @@ export default function ReservationsScreen() {
       });
     }
 
+    // Restaurant : "Modifier" rouvre la fiche où l'on édite directement (personnes, heure, date, tables, notes)
+    if (tab === 'restaurant' && r.status !== 'cancelled' && r.status !== 'completed') {
+      buttons.push({
+        text: i18n.t('modify'),
+        onPress: () => {
+          setDetail(r);
+          Alert.alert(
+            'Modifier la réservation',
+            'Modifiez directement dans la fiche : le nombre de personnes (− / +), l\'heure, la date, les tables ou les notes. Un bouton « Enregistrer » apparaît à côté de chaque champ modifié.',
+          );
+        },
+      });
+    }
+
     if (r.status !== 'cancelled' && r.status !== 'completed') {
       buttons.push({
         text: i18n.t('alertCancelReservation'),
