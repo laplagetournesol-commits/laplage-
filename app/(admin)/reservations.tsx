@@ -626,7 +626,7 @@ export default function ReservationsScreen() {
       {/* Fiche de réservation détaillée */}
       <Modal visible={!!detail} onClose={() => setDetail(null)} title={detail?.clientName}>
         {detail && (
-          <View style={{ gap: 10 }}>
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 10, paddingBottom: 6 }} showsVerticalScrollIndicator={true}>
             <View style={styles.badgeRow}>
               <Badge label={i18n.t((STATUS_CONFIG[detail.status] ?? STATUS_CONFIG.pending).labelKey)} variant={(STATUS_CONFIG[detail.status] ?? STATUS_CONFIG.pending).variant} size="sm" />
               {detail.paid && <Badge label={i18n.t('badgePaid')} variant="success" size="sm" />}
@@ -788,7 +788,7 @@ export default function ReservationsScreen() {
               <Ionicons name="options" size={18} color={colors.white} />
               <Text style={styles.detailBtnText}>Actions (check-in, annuler, supprimer…)</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         )}
       </Modal>
     </View>
