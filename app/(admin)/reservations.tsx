@@ -135,6 +135,7 @@ export default function ReservationsScreen() {
     if (error) { Alert.alert(i18n.t('error'), error.message); return; }
     setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, guestCount: guestEdit } : x));
     setDetail((d) => d ? { ...d, guestCount: guestEdit } : d);
+    Alert.alert('Enregistré ✓', 'Nombre de personnes mis à jour.');
   };
 
   // Heure + date — éditables (restaurant : heure & date ; plage : voir "Modifier" pour transats/date)
@@ -155,6 +156,7 @@ export default function ReservationsScreen() {
     if (error) { Alert.alert(i18n.t('error'), error.message); return; }
     setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, time: t, timeSlot: slot } : x));
     setDetail((d) => d ? { ...d, time: t, timeSlot: slot } : d);
+    Alert.alert('Enregistré ✓', 'Heure mise à jour.');
   };
 
   const saveDate = async () => {
@@ -167,6 +169,7 @@ export default function ReservationsScreen() {
     if (error) { Alert.alert(i18n.t('error'), error.message); return; }
     setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, date: dt } : x));
     setDetail((d) => d ? { ...d, date: dt } : d);
+    Alert.alert('Enregistré ✓', 'Date mise à jour.');
   };
 
   const saveTables = async () => {
@@ -179,6 +182,7 @@ export default function ReservationsScreen() {
     const newLabel = value ? `${i18n.t('table')} ${value}` : i18n.t('noTableAssigned');
     setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, tableNumbers: value, locationLabel: newLabel } : x));
     setDetail((d) => d ? { ...d, tableNumbers: value, locationLabel: newLabel } : d);
+    Alert.alert('Enregistré ✓', 'Tables mises à jour.');
   };
 
   const saveNote = async () => {
@@ -768,7 +772,7 @@ export default function ReservationsScreen() {
               onPress={() => { const r = detail; setDetail(null); if (r) handleCardPress(r); }}
             >
               <Ionicons name="options" size={18} color={colors.white} />
-              <Text style={styles.detailBtnText}>Actions (check-in, modifier, annuler…)</Text>
+              <Text style={styles.detailBtnText}>Actions (check-in, annuler, supprimer…)</Text>
             </TouchableOpacity>
           </View>
         )}
