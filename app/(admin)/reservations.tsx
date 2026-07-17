@@ -121,6 +121,54 @@ export default function ReservationsScreen() {
   const [savingTables, setSavingTables] = useState(false);
   useEffect(() => { setTableList(parseTables(detail?.tableNumbers)); }, [detail?.id]);
 
+  // Nombre de personnes — éditable directement dans la fiche (plage + resto)
+  const [guestEdit, setGuestEdit] = useState(1);
+  const [savingGuests, setSavingGuests] = useState(false);
+  useEffect(() => { setGuestEdit(detail?.guestCount ?? 1); }, [detail?.id]);
+
+  const saveGuests = async () => {
+    if (!detail) return;
+    setSavingGuests(true);
+    const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+    const { error } = await supabase.from(table).update({ guest_count: guestEdit }).eq('id', detail.id);
+    setSavingGuests(false);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, guestCount: guestEdit } : x));
+    setDetail((d) => d ? { ...d, guestCount: guestEdit } : d);
+  };
+
+  // Heure + date — éditables (restaurant : heure & date ; plage : voir "Modifier" pour transats/date)
+  const [timeEdit, setTimeEdit] = useState('');
+  const [dateEdit, setDateEdit] = useState('');
+  const [savingTime, setSavingTime] = useState(false);
+  const [savingDate, setSavingDate] = useState(false);
+  useEffect(() => { setTimeEdit((detail?.time ?? '').slice(0, 5)); setDateEdit(detail?.date ?? ''); }, [detail?.id]);
+
+  const saveTime = async () => {
+    if (!detail) return;
+    const t = timeEdit.trim();
+    if (!/^\d{1,2}:\d{2}$/.test(t)) { Alert.alert('Format incorrect', 'Heure au format HH:MM (ex : 20:30)'); return; }
+    setSavingTime(true);
+    const slot = parseInt(t.split(':')[0], 10) < 18 ? 'lunch' : 'dinner';
+    const { error } = await supabase.from('restaurant_reservations').update({ time: t, time_slot: slot }).eq('id', detail.id);
+    setSavingTime(false);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, time: t, timeSlot: slot } : x));
+    setDetail((d) => d ? { ...d, time: t, timeSlot: slot } : d);
+  };
+
+  const saveDate = async () => {
+    if (!detail) return;
+    const dt = dateEdit.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dt)) { Alert.alert('Format incorrect', 'Date au format AAAA-MM-JJ'); return; }
+    setSavingDate(true);
+    const { error } = await supabase.from('restaurant_reservations').update({ date: dt }).eq('id', detail.id);
+    setSavingDate(false);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, date: dt } : x));
+    setDetail((d) => d ? { ...d, date: dt } : d);
+  };
+
   const saveTables = async () => {
     if (!detail) return;
     setSavingTables(true);
@@ -573,8 +621,27 @@ export default function ReservationsScreen() {
             </View>
             <View style={styles.detailRow}>
               <Ionicons name="people-outline" size={18} color={theme.textSecondary} />
-              <Text style={[styles.detailText, { color: theme.text }]}>{detail.guestCount} pers.</Text>
+              <Text style={[styles.detailText, { color: theme.text }]}>Personnes :</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginLeft: 8 }}>
+                <TouchableOpacity onPress={() => setGuestEdit((n) => Math.max(1, n - 1))} style={[styles.guestBtn, { borderColor: theme.cardBorder }]}>
+                  <Ionicons name="remove" size={18} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16, minWidth: 22, textAlign: 'center' }}>{guestEdit}</Text>
+                <TouchableOpacity onPress={() => setGuestEdit((n) => Math.min(99, n + 1))} style={[styles.guestBtn, { borderColor: theme.cardBorder }]}>
+                  <Ionicons name="add" size={18} color={theme.text} />
+                </TouchableOpacity>
+              </View>
             </View>
+            {guestEdit !== detail.guestCount && (
+              <TouchableOpacity
+                style={[styles.detailBtn, { backgroundColor: colors.sage, marginTop: 2, marginBottom: 6 }]}
+                onPress={saveGuests}
+                disabled={savingGuests}
+              >
+                <Ionicons name="save-outline" size={18} color={colors.white} />
+                <Text style={styles.detailBtnText}>{savingGuests ? 'Enregistrement…' : 'Enregistrer le nombre de personnes'}</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={18} color={theme.textSecondary} />
               <Text style={[styles.detailText, { color: theme.text }]}>
@@ -582,12 +649,36 @@ export default function ReservationsScreen() {
                 {detail.timeSlot ? ` — ${detail.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
               </Text>
             </View>
-            {tab === 'restaurant' && detail.time && (
-              <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={18} color={theme.textSecondary} />
-                <Text style={[styles.detailText, { color: theme.text }]}>
-                  Pour <Text style={{ fontWeight: '700' }}>{detail.time.slice(0, 5)}</Text>
-                </Text>
+
+            {/* Restaurant : heure et date modifiables directement */}
+            {tab === 'restaurant' && (
+              <View style={{ gap: 8, marginTop: 4 }}>
+                <View style={styles.detailRow}>
+                  <Ionicons name="time-outline" size={18} color={theme.textSecondary} />
+                  <TextInput
+                    style={[styles.editInput, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+                    value={timeEdit} onChangeText={setTimeEdit} placeholder="20:30" placeholderTextColor={theme.textSecondary}
+                    keyboardType="numbers-and-punctuation"
+                  />
+                  {timeEdit.trim() !== (detail.time ?? '').slice(0, 5) && (
+                    <TouchableOpacity onPress={saveTime} disabled={savingTime} style={[styles.smallSave, { backgroundColor: colors.sage }]}>
+                      <Ionicons name="save-outline" size={16} color={colors.white} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={styles.detailRow}>
+                  <Ionicons name="calendar-outline" size={18} color={theme.textSecondary} />
+                  <TextInput
+                    style={[styles.editInput, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+                    value={dateEdit} onChangeText={setDateEdit} placeholder="2026-07-20" placeholderTextColor={theme.textSecondary}
+                    keyboardType="numbers-and-punctuation"
+                  />
+                  {dateEdit.trim() !== (detail.date ?? '') && (
+                    <TouchableOpacity onPress={saveDate} disabled={savingDate} style={[styles.smallSave, { backgroundColor: colors.sage }]}>
+                      <Ionicons name="save-outline" size={16} color={colors.white} />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             )}
             {detail.createdAt && (
@@ -727,6 +818,9 @@ const styles = StyleSheet.create({
   phoneText: { fontSize: 12, fontWeight: '600' },
   badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 4 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  guestBtn: { width: 34, height: 34, borderRadius: 8, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  editInput: { flex: 1, height: 40, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, fontSize: 15 },
+  smallSave: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   detailText: { fontSize: 15, flex: 1 },
   detailBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 12 },
   detailBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
