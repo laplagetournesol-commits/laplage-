@@ -214,7 +214,7 @@ export function useBeachBooking() {
    */
   const submitModification = useCallback(async () => {
     if (!modifyingReservationId || state.selectedSunbeds.length === 0) {
-      return { success: false };
+      return { success: false, error: i18n.t('selectSunbedFirst') };
     }
     setSubmitting(true);
     setError(null);
@@ -241,7 +241,7 @@ export function useBeachBooking() {
     } catch (err: any) {
       setError(err.message);
       setSubmitting(false);
-      return { success: false };
+      return { success: false, error: err.message };
     }
   }, [modifyingReservationId, state]);
 

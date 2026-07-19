@@ -284,6 +284,15 @@ export function startRemindersCron() {
     );
     const hour = now.getHours();
 
+    // Expiration des paniers plage abandonnés (pending non payé > 30 min) —
+    // à chaque tick, sinon leurs liens transats bloquent les modifications.
+    try {
+      const { expireAbandonedBeachHolds } = await import('./expire-pending');
+      await expireAbandonedBeachHolds();
+    } catch (err) {
+      console.error('[Cron] Erreur expiration paniers:', err);
+    }
+
     // J-1 à 10h
     if (hour === 10 && now.getMinutes() < 30) {
       console.log('[Cron] Envoi des rappels J-1...');
@@ -326,5 +335,5 @@ export function startRemindersCron() {
   check();
   setInterval(check, CHECK_INTERVAL);
 
-  console.log('[Cron] Rappels programmés (J-1 10h + H-2 30min + no-show 23h30)');
+  console.log('[Cron] Rappels programmés (J-1 10h + H-2 30min + no-show 23h30 + expiration paniers 30min)');
 }

@@ -75,7 +75,10 @@ export default function BeachScreen() {
     // === Mode MODIFICATION ===
     if (booking.isModifying) {
       const mod = await booking.submitModification();
-      if (!mod.success || !mod.reservationId) return { success: false };
+      if (!mod.success || !mod.reservationId) {
+        Alert.alert(i18n.t('error'), mod.error ?? i18n.t('modifyFailed'));
+        return { success: false };
+      }
 
       // S'il y a une différence à régler, ouvrir Stripe pour le complément
       if (mod.extraClientSecret && (mod.diff ?? 0) > 0) {

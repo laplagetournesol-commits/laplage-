@@ -219,6 +219,8 @@ export const translations = {
     modifySuccessExtra: 'Ta réservation a été mise à jour. {{amount}}€ supplémentaires ont été facturés.',
     modifySuccessRefund: 'Ta réservation a été mise à jour. {{amount}}€ te seront remboursés sous 5 à 10 jours.',
     modifyExtraPaymentFailed: 'Le paiement complémentaire n\'a pas pu être effectué.',
+    modifyFailed: 'La modification n\'a pas pu être enregistrée. Réessaie ou change de transats/date.',
+    selectSunbedFirst: 'Sélectionne au moins un transat.',
     mealLunch: 'Déjeuner',
     mealDinner: 'Dîner',
 
@@ -1079,6 +1081,8 @@ export const translations = {
     modifySuccessExtra: 'Tu reserva se actualizó. Se han cobrado {{amount}}€ adicionales.',
     modifySuccessRefund: 'Tu reserva se actualizó. Se te reembolsarán {{amount}}€ en 5 a 10 días.',
     modifyExtraPaymentFailed: 'El pago complementario no pudo realizarse.',
+    modifyFailed: 'No se pudo guardar la modificación. Inténtalo de nuevo o cambia de tumbonas/fecha.',
+    selectSunbedFirst: 'Selecciona al menos una tumbona.',
     mealLunch: 'Almuerzo',
     mealDinner: 'Cena',
 
@@ -1648,6 +1652,8 @@ export const translations = {
     modifySuccessExtra: 'Your reservation has been updated. An extra {{amount}}€ has been charged.',
     modifySuccessRefund: 'Your reservation has been updated. {{amount}}€ will be refunded within 5 to 10 days.',
     modifyExtraPaymentFailed: 'The additional payment could not be processed.',
+    modifyFailed: 'The change could not be saved. Try again or pick other sunbeds/date.',
+    selectSunbedFirst: 'Select at least one sunbed.',
     mealLunch: 'Lunch',
     mealDinner: 'Dinner',
 
