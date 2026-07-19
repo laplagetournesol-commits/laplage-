@@ -34,23 +34,46 @@ export async function expireAbandonedBeachHolds(): Promise<{ cancelled: number }
 
   const ids = stale.map((r) => r.id);
 
-  // Annuler les résas (le trigger SECURITY DEFINER synchronise les liens) +
-  // annuler explicitement les liens (ceinture + bretelles).
-  await supabase.from('beach_reservations').update({ status: 'cancelled' }).in('id', ids);
-  await supabase.from('beach_reservation_sunbeds').update({ status: 'cancelled' }).in('reservation_id', ids);
+  // Annuler les résas — MAIS uniquement celles ENCORE pending + non payées au
+  // moment de l'UPDATE. Garde-fou anti-race : si un client termine son paiement
+  // entre le SELECT et l'UPDATE (webhook -> confirmed + deposit_paid=true), la
+  // condition ne matche plus et on ne touche PAS sa réservation payée.
+  // .select() renvoie exactement les lignes réellement annulées.
+  const { data: cancelledRows, error: updErr } = await supabase
+    .from('beach_reservations')
+    .update({ status: 'cancelled' })
+    .in('id', ids)
+    .eq('status', 'pending')
+    .eq('deposit_paid', false)
+    .select('id, stripe_payment_intent_id');
+
+  if (updErr) {
+    console.error('[expire cron] erreur update:', updErr.message);
+    return { cancelled: 0 };
+  }
+  const cancelled = cancelledRows ?? [];
+  if (cancelled.length === 0) return { cancelled: 0 };
+  const cancelledIds = cancelled.map((r) => r.id);
+
+  // Libérer les transats des SEULES résas réellement annulées (le trigger
+  // SECURITY DEFINER le fait déjà, ceci est explicite/ceinture-bretelles et
+  // correctement borné aux ids annulés).
+  await supabase
+    .from('beach_reservation_sunbeds')
+    .update({ status: 'cancelled' })
+    .in('reservation_id', cancelledIds);
 
   // Annuler les PaymentIntents vides côté Stripe (0€ encaissé).
   const stripe = getStripe();
-  for (const r of stale) {
+  for (const r of cancelled) {
     if (!r.stripe_payment_intent_id) continue;
     try {
       await stripe.paymentIntents.cancel(r.stripe_payment_intent_id);
     } catch {
-      // PI déjà annulé/expiré/payé — on ignore (un vrai paiement passerait par
-      // deposit_paid=true et ne serait donc jamais dans cette liste).
+      // PI déjà annulé/expiré — on ignore.
     }
   }
 
-  console.log(`[expire cron] ${ids.length} résa(s) plage abandonnée(s) annulée(s)`);
-  return { cancelled: ids.length };
+  console.log(`[expire cron] ${cancelledIds.length} résa(s) plage abandonnée(s) annulée(s)`);
+  return { cancelled: cancelledIds.length };
 }
