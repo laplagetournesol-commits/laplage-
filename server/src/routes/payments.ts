@@ -399,10 +399,10 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
       return;
     }
 
-    // Vérifier que les nouveaux transats existent + récupérer leurs prix
+    // Vérifier que les nouveaux transats existent + récupérer leurs prix (type de zone inclus)
     const { data: sunbeds, error: sbErr } = await supabase
       .from('sunbeds')
-      .select('id, is_double, zone:beach_zones(base_price)')
+      .select('id, is_double, zone:beach_zones(base_price, zone_type)')
       .in('id', newSunbedIds);
 
     if (sbErr || !sunbeds || sunbeds.length !== newSunbedIds.length) {
@@ -427,10 +427,27 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
       }
     }
 
-    // Calcul nouveau prix : BED 70€, sinon base_price
+    // Prix saisonnier pour la nouvelle date (MÊME logique que la création — sinon
+    // fausse différence de prix car base_price=25€ mais saisonnier=20€).
+    const { data: seasonRows } = await supabase
+      .from('seasonal_pricing')
+      .select('pricing_category, fixed_price')
+      .lte('start_date', newDate)
+      .gte('end_date', newDate);
+    const seasonalPriceFor = (zoneType?: string): number | null => {
+      const cat = zoneType === 'front_row' ? 'transat_front_row'
+        : zoneType === 'vip_cabana' ? 'bed'
+        : zoneType === 'chaise_longue' ? 'chaise_longue'
+        : 'transat'; // standard, premium
+      const row = (seasonRows ?? []).find((r: any) => r.pricing_category === cat);
+      return row ? Number(row.fixed_price) : null;
+    };
+
+    // Calcul nouveau prix : BED (is_double) = 70€ flat, sinon prix saisonnier, fallback base_price
     const newTotal = sunbeds.reduce((sum: number, sb: any) => {
       if (sb.is_double) return sum + 70;
-      return sum + Number(sb.zone?.base_price ?? 25);
+      const seasonal = seasonalPriceFor(sb.zone?.zone_type);
+      return sum + (seasonal ?? Number(sb.zone?.base_price ?? 25));
     }, 0);
 
     const oldTotal = Number(resa.total_price);
