@@ -385,7 +385,9 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
       return;
     }
 
-    if (resa.status === 'cancelled' || resa.status === 'completed' || resa.status === 'checked_in' || resa.status === 'no_show') {
+    // On autorise la modif des résas check-in (client sur place qui change de
+    // transats/date). Seules les résas terminées/annulées restent bloquées.
+    if (resa.status === 'cancelled' || resa.status === 'completed' || resa.status === 'no_show') {
       res.status(400).json({ error: 'Cette réservation ne peut plus être modifiée' });
       return;
     }

@@ -313,8 +313,9 @@ export default function ReservationsScreen() {
       buttons.push({ text: i18n.t('statusCheckedIn'), onPress: () => updateStatus(r.id, 'checked_in') });
     }
 
-    // Bouton "Modifier" : seulement pour les résas plage futures non check-in
-    if (tab === 'beach' && r.status !== 'cancelled' && r.status !== 'completed' && r.status !== 'checked_in' && r.status !== 'no_show') {
+    // Bouton "Modifier" : résas plage actives, y compris check-in (le client
+    // sur place peut vouloir changer/ajouter un transat ou déplacer la date).
+    if (tab === 'beach' && r.status !== 'cancelled' && r.status !== 'completed' && r.status !== 'no_show') {
       buttons.push({
         text: i18n.t('modify'),
         onPress: () => {
