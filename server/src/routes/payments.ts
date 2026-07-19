@@ -482,10 +482,17 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
       refundedAmount = -diff;
     }
 
-    // Mettre à jour la résa : date + total
+    // Si on déplace une résa DÉJÀ check-in vers une AUTRE date, on la repasse en
+    // 'confirmed' : le client n'est pas "arrivé" pour un jour futur. Même date =
+    // simple changement de transats sur place -> on garde 'checked_in'.
+    const newStatus = resa.status === 'checked_in' && newDate !== resa.date
+      ? 'confirmed'
+      : resa.status;
+
+    // Mettre à jour la résa : date + total (+ statut si déplacement post-check-in)
     await supabase
       .from('beach_reservations')
-      .update({ date: newDate, total_price: newTotal, deposit_amount: newTotal })
+      .update({ date: newDate, total_price: newTotal, deposit_amount: newTotal, status: newStatus })
       .eq('id', reservationId);
 
     // Supprimer les anciens liens et insérer les nouveaux
@@ -494,7 +501,7 @@ router.post('/reservations/modify-beach', requireAuth, async (req: Authenticated
       reservation_id: reservationId,
       sunbed_id: id,
       date: newDate,
-      status: resa.status,
+      status: newStatus,
     }));
     await supabase.from('beach_reservation_sunbeds').insert(linkRows);
 
