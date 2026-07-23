@@ -19,7 +19,7 @@ const AGORA_PRINT_ENABLED = process.env.AGORA_PRINT_ENABLED === 'true';
 const AGORA_PRINTER_NAME = process.env.AGORA_PRINTER_NAME ?? '';
 // Routage des tickets de commande : boissons -> bar (imprimante par défaut si
 // vide), nourriture -> cuisine ("Cocina"). Noms validés le 23/07.
-const AGORA_PRINTER_BAR = process.env.AGORA_PRINTER_BAR ?? '';
+const AGORA_PRINTER_BAR = process.env.AGORA_PRINTER_BAR ?? 'Tickets';
 const AGORA_PRINTER_KITCHEN = process.env.AGORA_PRINTER_KITCHEN ?? 'Cocina';
 // Ordre des plats (Orden Prep. Ágora) : id -> libellé, l'id fait aussi l'ordre.
 const PREP_ORDER_NAME: Record<number, string> = { 1: 'BEBIDAS', 2: 'PRIMEROS', 3: 'SEGUNDOS' };
