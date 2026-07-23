@@ -17,5 +17,5 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- s'assurer que le bucket est public (affichage des photos)
-UPDATE storage.buckets SET public = true WHERE id = 'assets';
+-- s'assurer que le bucket est public (affichage) + limite 15 Mo par fichier
+UPDATE storage.buckets SET public = true, file_size_limit = 15728640 WHERE id = 'assets';
