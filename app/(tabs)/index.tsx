@@ -261,6 +261,12 @@ export default function HomeScreen() {
             onPress={() => router.push('/menu')}
             color={colors.sunYellow}
           />
+          <QuickAction
+            icon="fast-food"
+            label={i18n.t('orderFromSunbed') ?? 'Commander'}
+            onPress={() => router.push('/order')}
+            color="#16A34A"
+          />
         </View>
       </View>
       </AnimatedEntry>
