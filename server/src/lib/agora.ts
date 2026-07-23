@@ -51,6 +51,63 @@ async function agoraImport(payload: unknown): Promise<{ ok: boolean; status: num
   return { ok: res.ok, status: res.status, body };
 }
 
+async function agoraGet(path: string): Promise<any> {
+  const res = await fetch(`${AGORA_URL}${path}`, {
+    headers: { 'Api-Token': AGORA_TOKEN, 'User-Agent': UA, Accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Ágora GET ${path}: HTTP ${res.status}`);
+  return res.json();
+}
+
+const VAT_RATE_BY_ID: Record<number, number> = { 1: 0, 2: 0.04, 3: 0.1, 4: 0.21 };
+const PREP_BY_ID: Record<number, string> = { 1: 'BARRA', 2: 'COCINA' };
+
+/**
+ * Synchronise la carte (produits + familles) depuis Ágora vers Supabase.
+ * Met à jour prix/TVA/noms mais PRÉSERVE les interrupteurs `enabled` déjà
+ * réglés par l'admin (le champ enabled n'est jamais écrasé). Les nouveaux
+ * articles/catégories arrivent désactivés (défaut), l'admin les allume.
+ */
+export async function syncAgoraMenu(): Promise<{ families: number; items: number }> {
+  if (!AGORA_TOKEN) throw new Error('AGORA_TOKEN non configuré');
+  const data = await agoraGet('/api/export-master/?filter=Products,Families');
+  const families: any[] = data.Families ?? [];
+  const products: any[] = data.Products ?? [];
+
+  const famRows = families.map((f, i) => ({ family_id: f.Id, name: f.Name, sort_order: i, synced_at: new Date().toISOString() }));
+  if (famRows.length) {
+    // upsert SANS enabled -> préserve l'existant, nouveaux = défaut (false)
+    const { error } = await supabase.from('app_menu_families').upsert(famRows, { onConflict: 'family_id' });
+    if (error) throw new Error(`upsert families: ${error.message}`);
+  }
+
+  const famNameById: Record<number, string> = Object.fromEntries(families.map((f) => [f.Id, f.Name]));
+  const itemRows = products
+    .filter((p) => p.SaleableAsMain !== false && p.FamilyId != null)
+    .map((p) => ({
+      product_id: p.Id,
+      sale_format_id: p.BaseSaleFormatId ?? null,
+      name: p.Name,
+      price: Number(p.Prices?.[0]?.MainPrice ?? 0),
+      vat_id: p.VatId ?? null,
+      vat_rate: p.VatId != null ? VAT_RATE_BY_ID[p.VatId] ?? null : null,
+      family_id: p.FamilyId,
+      family_name: famNameById[p.FamilyId] ?? null,
+      prep_type: p.PreparationTypeId != null ? PREP_BY_ID[p.PreparationTypeId] ?? null : null,
+      saleable: p.SaleableAsMain !== false,
+      synced_at: new Date().toISOString(),
+    }));
+  // upsert par lots SANS enabled
+  for (let i = 0; i < itemRows.length; i += 200) {
+    const batch = itemRows.slice(i, i + 200);
+    const { error } = await supabase.from('app_menu_items').upsert(batch, { onConflict: 'product_id' });
+    if (error) throw new Error(`upsert items: ${error.message}`);
+  }
+
+  console.log(`[agora] carte synchronisée : ${famRows.length} familles, ${itemRows.length} articles`);
+  return { families: famRows.length, items: itemRows.length };
+}
+
 /** Numéro suivant de la série (compteur atomique côté Postgres, sans trou). */
 async function nextNumber(serie: string): Promise<number> {
   const { data, error } = await supabase.rpc('next_agora_number', { p_serie: serie });
