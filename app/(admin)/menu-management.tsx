@@ -9,7 +9,10 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +21,7 @@ import { colors } from '@/shared/theme/colors';
 import { Card } from '@/shared/ui/Card';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
+import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
 
 interface Family {
   family_id: number;
@@ -33,6 +37,8 @@ interface Item {
   family_id: number;
   prep_type: string | null;
   enabled: boolean;
+  description: string | null;
+  image_url: string | null;
 }
 
 export default function MenuManagementScreen() {
@@ -44,10 +50,43 @@ export default function MenuManagementScreen() {
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
 
+  // Édition d'un article (ingrédients + photo)
+  const [editItem, setEditItem] = useState<Item | null>(null);
+  const [editDesc, setEditDesc] = useState('');
+  const [editImage, setEditImage] = useState<string | null>(null);
+  const [savingItem, setSavingItem] = useState(false);
+  // Photo carrée, compressée -> miniature uniforme (bucket public 'assets')
+  const { pickAndUpload, uploading } = useImagePicker('assets', { aspect: [1, 1], quality: 0.5, prefix: 'menu-' });
+
+  const openEditor = (it: Item) => {
+    setEditItem(it);
+    setEditDesc(it.description ?? '');
+    setEditImage(it.image_url ?? null);
+  };
+
+  const pickPhoto = async () => {
+    const url = await pickAndUpload();
+    if (url) setEditImage(url);
+  };
+
+  const saveItemDetails = async () => {
+    if (!editItem) return;
+    setSavingItem(true);
+    const patch = { description: editDesc.trim() || null, image_url: editImage };
+    const { error } = await supabase.from('app_menu_items').update(patch).eq('product_id', editItem.product_id);
+    setSavingItem(false);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    setItems((prev) => prev.map((x) => (x.product_id === editItem.product_id ? { ...x, ...patch } : x)));
+    setEditItem(null);
+  };
+
   const load = useCallback(async () => {
     const [{ data: fams }, { data: its }] = await Promise.all([
       supabase.from('app_menu_families').select('*').order('sort_order'),
-      supabase.from('app_menu_items').select('product_id,name,price,vat_rate,family_id,prep_type,enabled').order('name'),
+      supabase.from('app_menu_items').select('product_id,name,price,vat_rate,family_id,prep_type,enabled,description,image_url').order('name'),
     ]);
     setFamilies((fams ?? []) as Family[]);
     setItems((its ?? []) as Item[]);
@@ -205,14 +244,29 @@ export default function MenuManagementScreen() {
                     </View>
                     {its.map((it) => (
                       <View key={it.product_id} style={styles.itemRow}>
+                        {it.image_url ? (
+                          <Image source={{ uri: it.image_url }} style={styles.thumb} contentFit="cover" />
+                        ) : (
+                          <View style={[styles.thumb, styles.thumbEmpty, { backgroundColor: theme.textSecondary + '15' }]}>
+                            <Ionicons
+                              name={it.prep_type === 'BARRA' ? 'wine-outline' : 'restaurant-outline'}
+                              size={16}
+                              color={theme.textSecondary}
+                            />
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.itemName, { color: theme.text, opacity: f.enabled && it.enabled ? 1 : 0.5 }]}>
                             {it.name}
                           </Text>
-                          <Text style={[styles.itemPrice, { color: theme.textSecondary }]}>
+                          <Text style={[styles.itemPrice, { color: theme.textSecondary }]} numberOfLines={1}>
                             {Number(it.price).toFixed(2)}€{it.vat_rate != null ? ` · TVA ${Math.round(it.vat_rate * 100)}%` : ''}
+                            {it.description ? ` · ${it.description}` : ''}
                           </Text>
                         </View>
+                        <TouchableOpacity onPress={() => openEditor(it)} style={styles.editBtn}>
+                          <Ionicons name="create-outline" size={18} color={colors.brand} />
+                        </TouchableOpacity>
                         <Switch value={it.enabled} onValueChange={(v) => toggleItem(it, v)} trackColor={{ true: colors.brand }} />
                       </View>
                     ))}
@@ -223,6 +277,63 @@ export default function MenuManagementScreen() {
           })}
         </ScrollView>
       )}
+
+      {/* Éditeur article : ingrédients + photo */}
+      <Modal visible={!!editItem} transparent animationType="slide" onRequestClose={() => setEditItem(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.background }]}>
+            <View style={styles.modalHead}>
+              <Text style={[styles.modalTitle, { color: theme.text }]} numberOfLines={1}>
+                {editItem?.name}
+              </Text>
+              <TouchableOpacity onPress={() => setEditItem(null)}>
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={pickPhoto} disabled={uploading} style={styles.photoPick} activeOpacity={0.7}>
+              {editImage ? (
+                <Image source={{ uri: editImage }} style={styles.photoPreview} contentFit="cover" />
+              ) : (
+                <View style={[styles.photoPreview, styles.photoEmpty, { backgroundColor: theme.textSecondary + '15' }]}>
+                  {uploading ? (
+                    <ActivityIndicator color={colors.brand} />
+                  ) : (
+                    <>
+                      <Ionicons name="camera-outline" size={26} color={theme.textSecondary} />
+                      <Text style={[styles.photoHint, { color: theme.textSecondary }]}>Ajouter une photo</Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+            {editImage ? (
+              <View style={styles.photoActions}>
+                <TouchableOpacity onPress={pickPhoto} disabled={uploading}>
+                  <Text style={[styles.photoAction, { color: colors.brand }]}>Changer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditImage(null)}>
+                  <Text style={[styles.photoAction, { color: colors.accentRed }]}>Retirer</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Ingrédients / description</Text>
+            <TextInput
+              value={editDesc}
+              onChangeText={setEditDesc}
+              placeholder="Ex : Rhum, menthe, citron vert, fruits rouges"
+              placeholderTextColor={theme.textSecondary}
+              multiline
+              style={[styles.textArea, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
+            />
+
+            <TouchableOpacity onPress={saveItemDetails} disabled={savingItem} style={[styles.saveBtn, { backgroundColor: colors.brand }]}>
+              {savingItem ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveTxt}>Enregistrer</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -243,7 +354,24 @@ const styles = StyleSheet.create({
   bulkRow: { flexDirection: 'row', gap: 16, paddingVertical: 10 },
   bulkBtn: { paddingVertical: 2 },
   bulkTxt: { fontSize: 13, fontWeight: '700' },
-  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, gap: 8 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, gap: 10 },
   itemName: { fontSize: 14, fontWeight: '600' },
   itemPrice: { fontSize: 12, marginTop: 1 },
+  thumb: { width: 40, height: 40, borderRadius: 8 },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
+  editBtn: { padding: 6 },
+  modalOverlay: { flex: 1, backgroundColor: '#00000066', justifyContent: 'flex-end' },
+  modalCard: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, gap: 12 },
+  modalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalTitle: { fontSize: 18, fontWeight: '800', flex: 1, marginRight: 12 },
+  photoPick: { alignSelf: 'center' },
+  photoPreview: { width: 120, height: 120, borderRadius: 14 },
+  photoEmpty: { alignItems: 'center', justifyContent: 'center', gap: 4 },
+  photoHint: { fontSize: 11 },
+  photoActions: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
+  photoAction: { fontSize: 13, fontWeight: '700' },
+  fieldLabel: { fontSize: 12, fontWeight: '700', marginTop: 4 },
+  textArea: { borderWidth: 1, borderRadius: 10, padding: 12, minHeight: 70, fontSize: 14, textAlignVertical: 'top' },
+  saveBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 4 },
+  saveTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

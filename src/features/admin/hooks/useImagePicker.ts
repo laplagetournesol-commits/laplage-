@@ -9,7 +9,13 @@ try {
   // expo-image-picker not available (native rebuild needed)
 }
 
-export function useImagePicker(bucket: string = 'flyers') {
+interface PickerOptions {
+  aspect?: [number, number];
+  quality?: number;
+  prefix?: string;
+}
+
+export function useImagePicker(bucket: string = 'flyers', opts: PickerOptions = {}) {
   const [uploading, setUploading] = useState(false);
 
   const pickAndUpload = useCallback(async (): Promise<string | null> => {
@@ -21,8 +27,8 @@ export function useImagePicker(bucket: string = 'flyers') {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.8,
+      aspect: opts.aspect ?? [3, 4],
+      quality: opts.quality ?? 0.8,
     });
 
     if (result.canceled || !result.assets[0]) return null;
@@ -32,7 +38,7 @@ export function useImagePicker(bucket: string = 'flyers') {
     try {
       const asset = result.assets[0];
       const ext = asset.uri.split('.').pop() ?? 'jpg';
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const fileName = `${opts.prefix ?? ''}${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
