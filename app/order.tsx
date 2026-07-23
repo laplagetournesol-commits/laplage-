@@ -155,9 +155,11 @@ export default function OrderScreen() {
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <Stack.Screen
         options={{
-          title: i18n.t('orderTitle') ?? 'Commander',
+          title: i18n.t('orderTitle'),
+          headerShown: true,
+          headerBackVisible: false,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+            <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="arrow-back" size={24} color={theme.text} />
             </TouchableOpacity>
           ),
