@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
 import { i18n } from '@/shared/i18n';
 import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
+import { usePresence } from '@/shared/hooks/usePresence';
 
 interface Profile {
   user_id: string;
@@ -37,6 +39,7 @@ interface Conn {
   status: string;
 }
 
+const ONLINE = '#22C55E';
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function SocialScreen() {
@@ -51,6 +54,7 @@ export default function SocialScreen() {
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const { pickAndUpload, uploading } = useImagePicker('assets', { aspect: [1, 1], quality: 0.5, prefix: 'social-' });
+  const onlineIds = usePresence(uid);
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getUser();
@@ -189,20 +193,32 @@ export default function SocialScreen() {
   const accepted = conns.filter((c) => c.status === 'accepted');
   const acceptedIds = new Set(accepted.map((c) => (c.requester_id === uid ? c.addressee_id : c.requester_id)));
 
-  const Avatar = ({ p, size = 46 }: { p?: Profile; size?: number }) =>
-    p?.photo_url ? (
-      <Image source={{ uri: p.photo_url }} style={{ width: size, height: size, borderRadius: size / 2 }} contentFit="cover" />
-    ) : (
-      <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.textSecondary + '22', alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="person" size={size * 0.5} color={theme.textSecondary} />
+  const Avatar = ({ p, size = 46, ring }: { p?: Profile; size?: number; ring?: boolean }) => {
+    const isOnline = !!p && onlineIds.has(p.user_id);
+    const dot = Math.max(11, size * 0.28);
+    return (
+      <View style={{ width: size, height: size }}>
+        {p?.photo_url ? (
+          <Image source={{ uri: p.photo_url }} style={{ width: size, height: size, borderRadius: size / 2, borderWidth: ring ? 2 : 0, borderColor: '#fff' }} contentFit="cover" />
+        ) : (
+          <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.textSecondary + '22', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="person" size={size * 0.5} color={theme.textSecondary} />
+          </View>
+        )}
+        {isOnline && (
+          <View style={{ position: 'absolute', right: -1, bottom: -1, width: dot, height: dot, borderRadius: dot / 2, backgroundColor: ONLINE, borderWidth: 2, borderColor: theme.background }} />
+        )}
       </View>
     );
+  };
+
+  const onlineLabel = i18n.t('socialOnline') ?? 'En ligne';
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <Stack.Screen
         options={{
-          title: i18n.t('socialTitle') ?? 'À la plage',
+          title: i18n.t('socialTitle') ?? 'Connecte-toi',
           headerShown: true,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -223,45 +239,49 @@ export default function SocialScreen() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 18 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 20 }}
           refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
         >
-          {/* Mon profil */}
-          <View style={[styles.card, { backgroundColor: theme.textSecondary + '0D' }]}>
+          {/* Mon profil — bandeau dégradé */}
+          <LinearGradient colors={[colors.brand, colors.terracotta]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
             <View style={styles.meRow}>
               <TouchableOpacity onPress={changePhoto} disabled={uploading}>
-                {uploading ? <ActivityIndicator color={colors.brand} /> : <Avatar p={me ?? undefined} size={58} />}
-                <View style={[styles.camBadge, { backgroundColor: colors.brand }]}>
-                  <Ionicons name="camera" size={11} color="#fff" />
+                {uploading ? (
+                  <View style={styles.avatarLoad}><ActivityIndicator color="#fff" /></View>
+                ) : (
+                  <Avatar p={me ?? undefined} size={64} ring />
+                )}
+                <View style={[styles.camBadge, { backgroundColor: '#fff' }]}>
+                  <Ionicons name="camera" size={11} color={colors.brand} />
                 </View>
               </TouchableOpacity>
-              <View style={{ flex: 1, gap: 6 }}>
+              <View style={{ flex: 1, gap: 7 }}>
                 <TextInput
                   value={nickname}
                   onChangeText={setNickname}
                   onBlur={() => saveProfile({ nickname: nickname.trim() || null })}
                   placeholder={i18n.t('socialNickname') ?? 'Ton pseudo'}
-                  placeholderTextColor={theme.textSecondary}
-                  style={[styles.nick, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  style={styles.nick}
                 />
                 <TextInput
                   value={status}
                   onChangeText={setStatus}
                   onBlur={() => saveProfile({ status: status.trim() || null })}
                   placeholder={i18n.t('socialStatus') ?? 'Ton humeur du jour…'}
-                  placeholderTextColor={theme.textSecondary}
-                  style={[styles.statusInput, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  style={styles.statusInput}
                 />
               </View>
             </View>
             <View style={styles.visRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.visTitle, { color: theme.text }]}>{i18n.t('socialVisible') ?? 'Visible à la plage aujourd\'hui'}</Text>
-                <Text style={[styles.visSub, { color: theme.textSecondary }]}>{i18n.t('socialVisibleSub') ?? 'Les autres transats peuvent te voir et te dire bonjour.'}</Text>
+                <Text style={styles.visTitle}>{i18n.t('socialVisible') ?? 'Visible à la plage aujourd\'hui'}</Text>
+                <Text style={styles.visSub}>{i18n.t('socialVisibleSub') ?? 'Les autres transats peuvent te voir et te dire bonjour.'}</Text>
               </View>
-              <Switch value={!!me?.visible && me?.visible_date === today()} onValueChange={toggleVisible} trackColor={{ true: colors.brand }} />
+              <Switch value={!!me?.visible && me?.visible_date === today()} onValueChange={toggleVisible} trackColor={{ true: ONLINE, false: 'rgba(255,255,255,0.3)' }} thumbColor="#fff" />
             </View>
-          </View>
+          </LinearGradient>
 
           {/* Demandes reçues */}
           {requestsIn.length > 0 && (
@@ -270,7 +290,7 @@ export default function SocialScreen() {
               {requestsIn.map((c) => {
                 const p = profilesById[c.requester_id];
                 return (
-                  <View key={c.id} style={[styles.personRow, { borderColor: theme.textSecondary + '18' }]}>
+                  <View key={c.id} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]}>
                     <Avatar p={p} />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.name, { color: theme.text }]}>{p?.nickname || 'Anonyme'}</Text>
@@ -288,21 +308,26 @@ export default function SocialScreen() {
             </View>
           )}
 
-          {/* Mes connexions */}
+          {/* Mes connexions — façon Messenger */}
           {accepted.length > 0 && (
             <View style={{ gap: 10 }}>
               <Text style={[styles.section, { color: theme.text }]}>{i18n.t('socialConnections') ?? 'Mes connexions'}</Text>
               {accepted.map((c) => {
                 const otherId = c.requester_id === uid ? c.addressee_id : c.requester_id;
                 const p = profilesById[otherId];
+                const isOnline = onlineIds.has(otherId);
                 return (
-                  <TouchableOpacity key={c.id} onPress={() => router.push(`/social/chat?peer=${otherId}`)} style={[styles.personRow, { borderColor: theme.textSecondary + '18' }]}>
-                    <Avatar p={p} />
+                  <TouchableOpacity key={c.id} onPress={() => router.push(`/social/chat?peer=${otherId}`)} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]} activeOpacity={0.7}>
+                    <Avatar p={p} size={52} />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.name, { color: theme.text }]}>{p?.nickname || 'Anonyme'}</Text>
-                      {p?.transat ? <Text style={[styles.sub, { color: theme.textSecondary }]}>Transat {p.transat}</Text> : null}
+                      <Text style={[styles.sub, { color: isOnline ? ONLINE : theme.textSecondary, fontWeight: isOnline ? '700' : '400' }]}>
+                        {isOnline ? onlineLabel : p?.transat ? `Transat ${p.transat}` : ''}
+                      </Text>
                     </View>
-                    <Ionicons name="chatbubble-ellipses" size={22} color={colors.brand} />
+                    <View style={[styles.chatPill, { backgroundColor: colors.brand + '16' }]}>
+                      <Ionicons name="chatbubble-ellipses" size={20} color={colors.brand} />
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -319,13 +344,14 @@ export default function SocialScreen() {
                 const c = connWith(p.user_id);
                 const isAccepted = acceptedIds.has(p.user_id);
                 const isPending = c?.status === 'pending';
+                const isOnline = onlineIds.has(p.user_id);
                 return (
-                  <View key={p.user_id} style={[styles.personRow, { borderColor: theme.textSecondary + '18' }]}>
-                    <Avatar p={p} />
+                  <View key={p.user_id} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]}>
+                    <Avatar p={p} size={52} />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.name, { color: theme.text }]}>{p.nickname || 'Anonyme'}</Text>
-                      <Text style={[styles.sub, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {p.transat ? `Transat ${p.transat}` : ''}{p.status ? `${p.transat ? ' · ' : ''}${p.status}` : ''}
+                      <Text style={[styles.sub, { color: isOnline ? ONLINE : theme.textSecondary, fontWeight: isOnline ? '700' : '400' }]} numberOfLines={1}>
+                        {isOnline ? `${onlineLabel}${p.transat ? ` · Transat ${p.transat}` : ''}` : `${p.transat ? `Transat ${p.transat}` : ''}${p.status ? `${p.transat ? ' · ' : ''}${p.status}` : ''}`}
                       </Text>
                     </View>
                     {isAccepted ? (
@@ -362,19 +388,21 @@ const styles = StyleSheet.create({
   muted: { fontSize: 14, textAlign: 'center' },
   primaryBtn: { paddingVertical: 13, paddingHorizontal: 26, borderRadius: 12 },
   primaryTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
-  card: { borderRadius: 16, padding: 14, gap: 14 },
-  meRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  camBadge: { position: 'absolute', right: -2, bottom: -2, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
-  nick: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 7, fontSize: 15, fontWeight: '700' },
-  statusInput: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 7, fontSize: 13 },
-  visRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  visTitle: { fontSize: 14, fontWeight: '800' },
-  visSub: { fontSize: 12, marginTop: 2 },
+  hero: { borderRadius: 20, padding: 16, gap: 16 },
+  meRow: { flexDirection: 'row', gap: 14, alignItems: 'center' },
+  avatarLoad: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  camBadge: { position: 'absolute', right: -2, bottom: -2, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  nick: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 16, fontWeight: '800', color: '#fff' },
+  statusInput: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, color: '#fff' },
+  visRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 12, padding: 12 },
+  visTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  visSub: { fontSize: 12, marginTop: 2, color: 'rgba(255,255,255,0.85)' },
   section: { fontSize: 17, fontWeight: '800' },
-  personRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 10 },
+  messRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, padding: 12 },
   name: { fontSize: 15, fontWeight: '700' },
-  sub: { fontSize: 12, marginTop: 1 },
-  smallBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 9 },
+  sub: { fontSize: 12.5, marginTop: 2 },
+  chatPill: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  smallBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10 },
   smallBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },
   iconBtn: { padding: 6 },
 });
