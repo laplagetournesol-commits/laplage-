@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import { verifyStripeWebhook, StripeWebhookRequest } from '../middleware/stripe-webhook';
 import { supabase } from '../lib/supabase';
 import { sendPushToUser } from '../lib/push';
-import { syncBeachSaleToAgora } from '../lib/agora';
+import { syncBeachSaleToAgora, printReservaSlip } from '../lib/agora';
 
 const router = Router();
 
@@ -66,6 +66,8 @@ router.post(
             // Déclaration fiscale Ágora (série W). No-op si AGORA_SYNC_ENABLED
             // n'est pas activé. Ne bloque jamais le webhook (erreurs loguées).
             await syncBeachSaleToAgora(reservationId, paymentIntent.id, paymentIntent.amount);
+            // Bon "RESERVA APP" imprimé à la plage (no-op si AGORA_PRINT_ENABLED off).
+            await printReservaSlip(reservationId);
           }
 
           if (error) {
