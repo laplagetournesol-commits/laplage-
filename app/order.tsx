@@ -146,6 +146,20 @@ export default function OrderScreen() {
   const sub = (id: number) => setCart((c) => ({ ...c, [id]: Math.max(0, (c[id] ?? 0) - 1) }));
 
   const pay = async () => {
+    // Connexion obligatoire pour commander (savoir qui commande + encaisser).
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setCheckout(false);
+      Alert.alert(
+        i18n.t('orderLoginTitle') ?? 'Connexion requise',
+        i18n.t('orderLoginMsg') ?? 'Connecte-toi pour commander à ton transat.',
+        [
+          { text: i18n.t('cancel') ?? 'Annuler', style: 'cancel' },
+          { text: i18n.t('login') ?? 'Se connecter', onPress: () => router.push('/(auth)/login') },
+        ],
+      );
+      return;
+    }
     if (!sunbed.trim()) {
       Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderNeedSunbed') ?? 'Indique ton numéro de transat.');
       return;
