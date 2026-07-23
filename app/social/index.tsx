@@ -133,8 +133,21 @@ export default function SocialScreen() {
           transat = sb?.label ? String(sb.label) : null;
         }
       }
+      // sinon, une commande payée du jour donne aussi un transat (présence)
       if (!transat) {
-        Alert.alert(i18n.t('socialNeedResaTitle') ?? 'Réservation requise', i18n.t('socialNeedResaMsg') ?? 'Réserve un transat aujourd\'hui pour être visible à la plage.');
+        const { data: orders } = await supabase
+          .from('app_orders')
+          .select('sunbed, created_at')
+          .eq('user_id', uid)
+          .eq('status', 'paid')
+          .gte('created_at', `${today()}T00:00:00`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        const os = orders?.[0]?.sunbed;
+        if (os && String(os).trim()) transat = String(os).trim();
+      }
+      if (!transat) {
+        Alert.alert(i18n.t('socialNeedResaTitle') ?? 'Présence requise', i18n.t('socialNeedResaMsg') ?? 'Réserve un transat ou passe une commande aujourd\'hui pour être visible à la plage.');
         return;
       }
       await saveProfile({ visible: true, visible_date: today(), transat } as any);
