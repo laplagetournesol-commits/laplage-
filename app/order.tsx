@@ -58,6 +58,8 @@ export default function OrderScreen() {
   const [sunbed, setSunbed] = useState('');
   const [paying, setPaying] = useState(false);
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const [famLabels, setFamLabels] = useState<Record<number, string>>({});
+  const [famOrder, setFamOrder] = useState<Record<number, number>>({});
   const { payWithClientSecret } = usePayment();
 
   const toggleCat = (fam: string) =>
@@ -69,9 +71,22 @@ export default function OrderScreen() {
     });
 
   const load = useCallback(async () => {
-    // Familles activées
-    const { data: fams } = await supabase.from('app_menu_families').select('family_id').eq('enabled', true);
+    // Familles activées + libellés traduits
+    const { data: fams } = await supabase
+      .from('app_menu_families')
+      .select('family_id,name,label_fr,label_es,label_en,sort_order')
+      .eq('enabled', true);
     const okFams = new Set((fams ?? []).map((f) => f.family_id));
+    const loc = (i18n.locale || 'fr').slice(0, 2);
+    const labels: Record<number, string> = {};
+    const order: Record<number, number> = {};
+    for (const f of fams ?? []) {
+      const l = loc === 'es' ? f.label_es : loc === 'en' ? f.label_en : f.label_fr;
+      labels[f.family_id] = l || f.name;
+      order[f.family_id] = f.sort_order ?? 0;
+    }
+    setFamLabels(labels);
+    setFamOrder(order);
     const { data: its } = await supabase
       .from('app_menu_items')
       .select('product_id,name,price,family_id,family_name,prep_type,description,image_url')
@@ -109,14 +124,15 @@ export default function OrderScreen() {
   }, [load]);
 
   const grouped = useMemo(() => {
-    const m = new Map<string, MenuItem[]>();
+    const m = new Map<number, MenuItem[]>();
     for (const it of items) {
-      const key = it.family_name ?? 'Autres';
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(it);
+      if (!m.has(it.family_id)) m.set(it.family_id, []);
+      m.get(it.family_id)!.push(it);
     }
-    return Array.from(m.entries());
-  }, [items]);
+    return Array.from(m.entries())
+      .sort((a, b) => (famOrder[a[0]] ?? 0) - (famOrder[b[0]] ?? 0))
+      .map(([fid, its]) => [famLabels[fid] ?? its[0]?.family_name ?? 'Autres', its] as [string, MenuItem[]]);
+  }, [items, famLabels, famOrder]);
 
   const byId = useMemo(() => new Map(items.map((i) => [i.product_id, i])), [items]);
   const cartLines = useMemo(

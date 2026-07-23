@@ -28,6 +28,9 @@ interface Family {
   name: string;
   enabled: boolean;
   sort_order: number;
+  label_fr: string | null;
+  label_es: string | null;
+  label_en: string | null;
 }
 interface Item {
   product_id: number;
@@ -49,6 +52,33 @@ export default function MenuManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
+
+  // Édition d'une catégorie (noms FR/ES/EN)
+  const [editFam, setEditFam] = useState<Family | null>(null);
+  const [famFr, setFamFr] = useState('');
+  const [famEs, setFamEs] = useState('');
+  const [famEn, setFamEn] = useState('');
+  const [savingFam, setSavingFam] = useState(false);
+
+  const openFamEditor = (f: Family) => {
+    setEditFam(f);
+    setFamFr(f.label_fr ?? '');
+    setFamEs(f.label_es ?? '');
+    setFamEn(f.label_en ?? '');
+  };
+  const saveFamLabels = async () => {
+    if (!editFam) return;
+    setSavingFam(true);
+    const patch = { label_fr: famFr.trim() || null, label_es: famEs.trim() || null, label_en: famEn.trim() || null };
+    const { error } = await supabase.from('app_menu_families').update(patch).eq('family_id', editFam.family_id);
+    setSavingFam(false);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    setFamilies((prev) => prev.map((x) => (x.family_id === editFam.family_id ? { ...x, ...patch } : x)));
+    setEditFam(null);
+  };
 
   // Édition d'un article (ingrédients + photo)
   const [editItem, setEditItem] = useState<Item | null>(null);
@@ -208,7 +238,7 @@ export default function MenuManagementScreen() {
                 >
                   <View style={{ flex: 1 }}>
                     <View style={styles.famTitleRow}>
-                      <Text style={[styles.famName, { color: theme.text }]}>{f.name}</Text>
+                      <Text style={[styles.famName, { color: theme.text }]}>{f.label_fr || f.name}</Text>
                       {prep ? (
                         <View style={[styles.prepBadge, { backgroundColor: prep === 'BARRA' ? colors.deepSea : colors.terracotta }]}>
                           <Text style={styles.prepTxt}>{prep === 'BARRA' ? 'BAR' : 'CUISINE'}</Text>
@@ -216,9 +246,12 @@ export default function MenuManagementScreen() {
                       ) : null}
                     </View>
                     <Text style={[styles.famSub, { color: theme.textSecondary }]}>
-                      {activeCount}/{its.length} article(s) actif(s)
+                      {f.label_fr ? `${f.name} · ` : ''}{activeCount}/{its.length} article(s) actif(s)
                     </Text>
                   </View>
+                  <TouchableOpacity onPress={() => openFamEditor(f)} style={styles.editBtn}>
+                    <Ionicons name="pencil" size={16} color={colors.brand} />
+                  </TouchableOpacity>
                   <Switch
                     value={f.enabled}
                     onValueChange={(v) => toggleFamily(f, v)}
@@ -277,6 +310,34 @@ export default function MenuManagementScreen() {
           })}
         </ScrollView>
       )}
+
+      {/* Éditeur catégorie : noms FR/ES/EN */}
+      <Modal visible={!!editFam} transparent animationType="slide" onRequestClose={() => setEditFam(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.background }]}>
+            <View style={styles.modalHead}>
+              <Text style={[styles.modalTitle, { color: theme.text }]} numberOfLines={1}>
+                {editFam?.name}
+              </Text>
+              <TouchableOpacity onPress={() => setEditFam(null)}>
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.hint, { color: theme.textSecondary }]}>
+              Nom affiché au client (ex. « Entrées »). Vide = nom d'origine ({editFam?.name}).
+            </Text>
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>🇫🇷 Français</Text>
+            <TextInput value={famFr} onChangeText={setFamFr} placeholder="Ex : Entrées" placeholderTextColor={theme.textSecondary} style={[styles.famInput, { color: theme.text, borderColor: theme.textSecondary + '33' }]} />
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>🇪🇸 Español</Text>
+            <TextInput value={famEs} onChangeText={setFamEs} placeholder="Ej : Entrantes" placeholderTextColor={theme.textSecondary} style={[styles.famInput, { color: theme.text, borderColor: theme.textSecondary + '33' }]} />
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>🇬🇧 English</Text>
+            <TextInput value={famEn} onChangeText={setFamEn} placeholder="Ex : Starters" placeholderTextColor={theme.textSecondary} style={[styles.famInput, { color: theme.text, borderColor: theme.textSecondary + '33' }]} />
+            <TouchableOpacity onPress={saveFamLabels} disabled={savingFam} style={[styles.saveBtn, { backgroundColor: colors.brand }]}>
+              {savingFam ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveTxt}>Enregistrer</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Éditeur article : ingrédients + photo */}
       <Modal visible={!!editItem} transparent animationType="slide" onRequestClose={() => setEditItem(null)}>
@@ -372,6 +433,7 @@ const styles = StyleSheet.create({
   photoAction: { fontSize: 13, fontWeight: '700' },
   fieldLabel: { fontSize: 12, fontWeight: '700', marginTop: 4 },
   textArea: { borderWidth: 1, borderRadius: 10, padding: 12, minHeight: 70, fontSize: 14, textAlignVertical: 'top' },
+  famInput: { borderWidth: 1, borderRadius: 10, padding: 11, fontSize: 15 },
   saveBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 4 },
   saveTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });
