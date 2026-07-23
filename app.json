@@ -2,7 +2,7 @@
   "expo": {
     "name": "Les Tournesols",
     "slug": "laplagetournesols",
-    "version": "1.3.8",
+    "version": "1.3.9",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "tournesol",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lestournesols.app",
-      "buildNumber": "54"
+      "buildNumber": "55"
     },
     "android": {
       "adaptiveIcon": {
