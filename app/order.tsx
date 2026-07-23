@@ -57,7 +57,16 @@ export default function OrderScreen() {
   const [checkout, setCheckout] = useState(false);
   const [sunbed, setSunbed] = useState('');
   const [paying, setPaying] = useState(false);
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const { payWithClientSecret } = usePayment();
+
+  const toggleCat = (fam: string) =>
+    setOpenCats((s) => {
+      const n = new Set(s);
+      if (n.has(fam)) n.delete(fam);
+      else n.add(fam);
+      return n;
+    });
 
   const load = useCallback(async () => {
     // Familles activées
@@ -176,10 +185,25 @@ export default function OrderScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: count > 0 ? 120 : insets.bottom + 40, gap: 20 }}>
-          {grouped.map(([fam, its]) => (
+          {grouped.map(([fam, its]) => {
+            const open = openCats.has(fam);
+            const inCart = its.reduce((s, it) => s + (cart[it.product_id] ?? 0), 0);
+            return (
             <View key={fam} style={{ gap: 10 }}>
-              <Text style={[styles.catTitle, { color: theme.text }]}>{fam}</Text>
-              {its.map((it) => {
+              <TouchableOpacity style={[styles.catHeader, { backgroundColor: theme.textSecondary + '0D' }]} onPress={() => toggleCat(fam)} activeOpacity={0.7}>
+                <Text style={[styles.catTitle, { color: theme.text }]}>{fam}</Text>
+                <View style={styles.catRight}>
+                  {inCart > 0 ? (
+                    <View style={[styles.catBadge, { backgroundColor: colors.brand }]}>
+                      <Text style={styles.catBadgeTxt}>{inCart}</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.catCount, { color: theme.textSecondary }]}>{its.length}</Text>
+                  )}
+                  <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={theme.textSecondary} />
+                </View>
+              </TouchableOpacity>
+              {open && its.map((it) => {
                 const qty = cart[it.product_id] ?? 0;
                 return (
                   <View key={it.product_id} style={[styles.item, { borderColor: theme.textSecondary + '18' }]}>
@@ -218,7 +242,8 @@ export default function OrderScreen() {
                 );
               })}
             </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
 
@@ -287,7 +312,12 @@ export default function OrderScreen() {
 const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
   emptyTxt: { fontSize: 15, textAlign: 'center' },
-  catTitle: { fontSize: 20, fontWeight: '800' },
+  catTitle: { fontSize: 18, fontWeight: '800', flex: 1 },
+  catHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderRadius: 12 },
+  catRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  catCount: { fontSize: 14, fontWeight: '700' },
+  catBadge: { minWidth: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  catBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 10 },
   thumb: { width: 56, height: 56, borderRadius: 10 },
   thumbEmoji: { alignItems: 'center', justifyContent: 'center' },
