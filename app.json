@@ -69,7 +69,13 @@
       ],
       "expo-image",
       "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Autorise le micro pour envoyer des notes vocales dans le chat."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web && node -e \"const f=require('fs');const h=f.readFileSync('dist/index.html','utf8');f.writeFileSync('dist/index.html',h.replace('overflow: hidden;','overflow: hidden;\\n        display: flex;\\n        flex-direction: column;'))\"",
+    "build:web": "expo export --platform web && node ./scripts/post-web-build.js",
     "reset-project": "node ./scripts/reset-project.js"
   },
   "dependencies": {
@@ -17,11 +17,12 @@
     "@react-navigation/bottom-tabs": "^7.0.0",
     "@react-navigation/native": "^7.0.0",
     "@stripe/stripe-js": "^8.10.0",
-    "@stripe/stripe-react-native": "0.58.0",
+    "@stripe/stripe-react-native": "^0.62.0",
     "@supabase/supabase-js": "^2.45.0",
     "buffer": "^6.0.3",
     "expo": "~55.0.5",
     "expo-apple-authentication": "~55.0.9",
+    "expo-audio": "~55.0.16",
     "expo-auth-session": "~55.0.8",
     "expo-build-properties": "~55.0.10",
     "expo-camera": "~55.0.10",
@@ -61,6 +62,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~19.2.2",
+    "babel-preset-expo": "~55.0.22",
     "typescript": "~5.9.2"
   },
   "private": true

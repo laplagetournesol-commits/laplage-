@@ -9,26 +9,85 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
 import { i18n } from '@/shared/i18n';
 import { usePresence } from '@/shared/hooks/usePresence';
 
+let ImagePicker: typeof import('expo-image-picker') | null = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch {
+  // sélecteur d'images indispo si pas de build natif
+}
+
 interface Msg {
   id: string;
   sender_id: string;
   recipient_id: string;
   body: string;
+  kind?: string;
+  attachment_url?: string | null;
+  duration_ms?: number | null;
   created_at: string;
 }
 
 const ONLINE = '#22C55E';
+const canRecord = Platform.OS !== 'web';
+
+const fmt = (ms: number) => {
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+/** Bulle audio — un lecteur par note vocale (bouton play + durée). */
+function AudioBubble({ uri, durationMs, mine, tint }: { uri: string; durationMs?: number | null; mine: boolean; tint: string }) {
+  const player = useAudioPlayer({ uri });
+  const status = useAudioPlayerStatus(player);
+  const playing = status.playing;
+  const total = durationMs ? durationMs / 1000 : status.duration || 0;
+  const pos = status.currentTime || 0;
+  const pct = total > 0 ? Math.min(1, pos / total) : 0;
+
+  const toggle = () => {
+    if (playing) {
+      player.pause();
+    } else {
+      if (status.currentTime >= (status.duration || 0) && status.duration > 0) player.seekTo(0);
+      player.play();
+    }
+  };
+
+  return (
+    <TouchableOpacity onPress={toggle} activeOpacity={0.8} style={styles.audioRow}>
+      <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={34} color={mine ? '#fff' : tint} />
+      <View style={{ flex: 1, gap: 5 }}>
+        <View style={[styles.audioTrack, { backgroundColor: mine ? 'rgba(255,255,255,0.35)' : tint + '33' }]}>
+          <View style={{ width: `${pct * 100}%`, height: '100%', borderRadius: 2, backgroundColor: mine ? '#fff' : tint }} />
+        </View>
+        <Text style={{ color: mine ? 'rgba(255,255,255,0.9)' : tint, fontSize: 11, fontVariant: ['tabular-nums'] }}>
+          {fmt(playing || pos > 0 ? pos * 1000 : (durationMs ?? 0))}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function ChatScreen() {
   const { theme } = useSunMode();
@@ -41,9 +100,13 @@ export default function ChatScreen() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const onlineIds = usePresence(uid);
   const peerOnline = onlineIds.has(peerId);
+
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recState = useAudioRecorderState(recorder, 250);
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getUser();
@@ -63,7 +126,6 @@ export default function ChatScreen() {
       .order('created_at', { ascending: true })
       .limit(200);
     setMsgs((data ?? []) as Msg[]);
-    // Marquer reçus comme lus
     await supabase.from('social_messages').update({ read: true }).eq('recipient_id', id).eq('sender_id', peerId).eq('read', false);
     setLoading(false);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 100);
@@ -73,7 +135,7 @@ export default function ChatScreen() {
     load();
   }, [load]);
 
-  // Temps réel : nouveaux messages entrants de ce contact
+  // Temps réel : messages entrants de ce contact
   useEffect(() => {
     if (!uid || !peerId) return;
     const ch = supabase
@@ -95,19 +157,94 @@ export default function ChatScreen() {
     };
   }, [uid, peerId]);
 
-  const send = async () => {
+  const pushMine = (m: Msg) => {
+    setMsgs((prev) => [...prev, m]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+  };
+
+  const insertMsg = async (fields: Partial<Msg>) => {
+    if (!uid || !peerId) return;
+    const { data, error } = await supabase
+      .from('social_messages')
+      .insert({ sender_id: uid, recipient_id: peerId, body: '', kind: 'text', ...fields })
+      .select('*')
+      .single();
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    if (data) pushMine(data as Msg);
+  };
+
+  const uploadToAssets = async (uri: string, prefix: string, contentType: string, ext: string): Promise<string | null> => {
+    try {
+      const fileName = `${prefix}${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const resp = await fetch(uri);
+      const buf = await resp.arrayBuffer();
+      const { error } = await supabase.storage.from('assets').upload(fileName, buf, { contentType, upsert: false });
+      if (error) {
+        Alert.alert('Erreur upload', error.message);
+        return null;
+      }
+      return supabase.storage.from('assets').getPublicUrl(fileName).data.publicUrl;
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.message ?? 'Upload impossible');
+      return null;
+    }
+  };
+
+  const sendText = async () => {
     const body = text.trim();
     if (!body || !uid || !peerId) return;
     setText('');
-    const { data, error } = await supabase
-      .from('social_messages')
-      .insert({ sender_id: uid, recipient_id: peerId, body })
-      .select('*')
-      .single();
-    if (!error && data) {
-      setMsgs((prev) => [...prev, data as Msg]);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    await insertMsg({ kind: 'text', body });
+  };
+
+  const sendPhoto = async () => {
+    if (!ImagePicker) {
+      Alert.alert('Non disponible', 'Le sélecteur de photos nécessite un build natif.');
+      return;
     }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6 });
+    if (res.canceled || !res.assets[0]) return;
+    setSending(true);
+    const asset = res.assets[0];
+    const ext = (asset.uri.split('.').pop() || 'jpg').split('?')[0];
+    const url = await uploadToAssets(asset.uri, 'chat-', asset.mimeType ?? 'image/jpeg', ext);
+    if (url) await insertMsg({ kind: 'image', attachment_url: url });
+    setSending(false);
+  };
+
+  const startRec = async () => {
+    const perm = await requestRecordingPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Micro', 'Autorise le micro pour enregistrer une note vocale.');
+      return;
+    }
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    await recorder.prepareToRecordAsync();
+    recorder.record();
+  };
+
+  const cancelRec = async () => {
+    try {
+      await recorder.stop();
+    } catch {}
+    await setAudioModeAsync({ allowsRecording: false });
+  };
+
+  const stopAndSend = async () => {
+    const dur = recState.durationMillis;
+    try {
+      await recorder.stop();
+    } catch {}
+    await setAudioModeAsync({ allowsRecording: false });
+    const uri = recorder.uri;
+    if (!uri || dur < 700) return; // ignore les enregistrements < 0,7s
+    setSending(true);
+    const url = await uploadToAssets(uri, 'chat-audio-', 'audio/m4a', 'm4a');
+    if (url) await insertMsg({ kind: 'audio', attachment_url: url, duration_ms: dur });
+    setSending(false);
   };
 
   const PeerAvatar = ({ size = 34 }: { size?: number }) =>
@@ -118,6 +255,8 @@ export default function ChatScreen() {
         <Ionicons name="person" size={size * 0.5} color={theme.textSecondary} />
       </View>
     );
+
+  const recording = recState.isRecording;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -158,36 +297,70 @@ export default function ChatScreen() {
               const mine = m.sender_id === uid;
               const prev = msgs[i - 1];
               const grouped = prev && prev.sender_id === m.sender_id;
+              const isImage = m.kind === 'image' && m.attachment_url;
+              const isAudio = m.kind === 'audio' && m.attachment_url;
+              const bubbleBg = mine ? colors.brand : theme.textSecondary + '1F';
               return (
                 <View
                   key={m.id}
                   style={[
-                    styles.bubble,
-                    { marginTop: grouped ? 1 : 8 },
+                    isImage ? styles.imageBubble : styles.bubble,
+                    { marginTop: grouped ? 1 : 8, backgroundColor: isImage ? 'transparent' : bubbleBg },
                     mine
-                      ? { alignSelf: 'flex-end', backgroundColor: colors.brand, borderBottomRightRadius: grouped ? 18 : 5 }
-                      : { alignSelf: 'flex-start', backgroundColor: theme.textSecondary + '1F', borderBottomLeftRadius: grouped ? 18 : 5 },
+                      ? { alignSelf: 'flex-end', borderBottomRightRadius: grouped ? 18 : 5 }
+                      : { alignSelf: 'flex-start', borderBottomLeftRadius: grouped ? 18 : 5 },
                   ]}
                 >
-                  <Text style={{ color: mine ? '#fff' : theme.text, fontSize: 15.5, lineHeight: 21 }}>{m.body}</Text>
+                  {isImage ? (
+                    <Image source={{ uri: m.attachment_url! }} style={styles.chatImage} contentFit="cover" />
+                  ) : isAudio ? (
+                    <AudioBubble uri={m.attachment_url!} durationMs={m.duration_ms} mine={mine} tint={colors.brand} />
+                  ) : (
+                    <Text style={{ color: mine ? '#fff' : theme.text, fontSize: 15.5, lineHeight: 21 }}>{m.body}</Text>
+                  )}
                 </View>
               );
             })}
           </ScrollView>
         )}
-        <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8, borderTopColor: theme.textSecondary + '22', backgroundColor: theme.background }]}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder={i18n.t('socialTypeMessage') ?? 'Écris un message…'}
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text, backgroundColor: theme.textSecondary + '14' }]}
-            multiline
-          />
-          <TouchableOpacity onPress={send} disabled={!text.trim()} style={[styles.sendBtn, { backgroundColor: colors.brand, opacity: text.trim() ? 1 : 0.5 }]}>
-            <Ionicons name="send" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
+
+        {recording ? (
+          <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8, borderTopColor: theme.textSecondary + '22', backgroundColor: theme.background }]}>
+            <TouchableOpacity onPress={cancelRec} style={styles.iconRound}>
+              <Ionicons name="trash" size={22} color={colors.accentRed} />
+            </TouchableOpacity>
+            <View style={[styles.recBar, { backgroundColor: colors.accentRed + '14' }]}>
+              <View style={styles.recDot} />
+              <Text style={{ color: colors.accentRed, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{fmt(recState.durationMillis)}</Text>
+            </View>
+            <TouchableOpacity onPress={stopAndSend} style={[styles.sendBtn, { backgroundColor: colors.brand }]}>
+              <Ionicons name="send" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8, borderTopColor: theme.textSecondary + '22', backgroundColor: theme.background }]}>
+            <TouchableOpacity onPress={sendPhoto} disabled={sending} style={styles.iconRound}>
+              {sending ? <ActivityIndicator color={colors.brand} /> : <Ionicons name="image" size={24} color={colors.brand} />}
+            </TouchableOpacity>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder={i18n.t('socialTypeMessage') ?? 'Écris un message…'}
+              placeholderTextColor={theme.textSecondary}
+              style={[styles.input, { color: theme.text, backgroundColor: theme.textSecondary + '14' }]}
+              multiline
+            />
+            {text.trim() ? (
+              <TouchableOpacity onPress={sendText} style={[styles.sendBtn, { backgroundColor: colors.brand }]}>
+                <Ionicons name="send" size={18} color="#fff" />
+              </TouchableOpacity>
+            ) : canRecord ? (
+              <TouchableOpacity onPress={startRec} style={[styles.sendBtn, { backgroundColor: colors.brand }]}>
+                <Ionicons name="mic" size={20} color="#fff" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
       </KeyboardAvoidingView>
     </View>
   );
@@ -201,7 +374,14 @@ const styles = StyleSheet.create({
   emptyWrap: { alignItems: 'center', gap: 10, paddingVertical: 60 },
   emptyTxt: { fontSize: 14 },
   bubble: { maxWidth: '78%', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 13 },
+  imageBubble: { maxWidth: '70%', borderRadius: 18, overflow: 'hidden', padding: 0 },
+  chatImage: { width: 210, height: 210, borderRadius: 18 },
+  audioRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 180 },
+  audioTrack: { height: 4, borderRadius: 2, overflow: 'hidden' },
   inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth },
   input: { flex: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9, fontSize: 15, maxHeight: 100 },
+  iconRound: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  recBar: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, height: 40, borderRadius: 20, paddingHorizontal: 16 },
+  recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444' },
   sendBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });
