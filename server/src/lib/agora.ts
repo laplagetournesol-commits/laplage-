@@ -632,7 +632,8 @@ export async function printMenuOrderTicket(orderId: string): Promise<void> {
 
     const kitchen = lines.filter((l) => l.prep_type === 'COCINA');
     const bar = lines.filter((l) => l.prep_type !== 'COCINA');
-    const header = (dest: string) => ['', `  *** PEDIDO APP - ${dest} ***`, '========================', `HAMACA: ${order.sunbed || '-'}`, '------------------------'];
+    const noteLine = order.note ? [String(order.note)] : [];
+    const header = (dest: string) => ['', `  *** PEDIDO APP - ${dest} ***`, '========================', `HAMACA: ${order.sunbed || '-'}`, ...noteLine, '------------------------'];
     const footer = ['========================', '', ''];
 
     let anyOk = false;

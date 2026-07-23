@@ -18,7 +18,8 @@ function getStripe() {
  */
 router.post('/order', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const { sunbed, lines } = req.body as { sunbed?: string; lines?: Array<{ product_id: number; qty: number }> };
+    const { sunbed, lines, note } = req.body as { sunbed?: string; lines?: Array<{ product_id: number; qty: number }>; note?: string };
+    const cleanNote = typeof note === 'string' ? note.trim().slice(0, 200) : '';
     if (!Array.isArray(lines) || lines.length === 0) {
       res.status(400).json({ error: 'Commande vide' });
       return;
@@ -76,7 +77,7 @@ router.post('/order', requireAuth, async (req: AuthenticatedRequest, res) => {
     // Créer la commande + ses lignes
     const { data: order, error: oErr } = await supabase
       .from('app_orders')
-      .insert({ user_id: req.user!.id, sunbed: String(sunbed).trim(), total, status: 'pending' })
+      .insert({ user_id: req.user!.id, sunbed: String(sunbed).trim(), total, status: 'pending', note: cleanNote || null })
       .select('id')
       .single();
     if (oErr || !order) {

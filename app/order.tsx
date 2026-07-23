@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
+  TextInput,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,6 +63,8 @@ export default function OrderScreen() {
   const [authChecked, setAuthChecked] = useState(false);
   const [mySunbeds, setMySunbeds] = useState<{ id: string; label: string }[]>([]);
   const [selectedSunbed, setSelectedSunbed] = useState('');
+  const [note, setNote] = useState('');
+  const [giftTransat, setGiftTransat] = useState('');
   const [paying, setPaying] = useState(false);
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const [famLabels, setFamLabels] = useState<Record<number, string>>({});
@@ -123,7 +127,7 @@ export default function OrderScreen() {
     const { data: sbs } = await supabase.from('sunbeds').select('id,label').in('id', sids);
     const list = (sbs ?? []).map((s: any) => ({ id: s.id, label: String(s.label) }));
     setMySunbeds(list);
-    if (list.length === 1) setSelectedSunbed(list[0].label);
+    if (list.length === 1) setSelectedSunbed((prev) => prev || list[0].label);
   }, []);
 
   useEffect(() => {
@@ -131,10 +135,29 @@ export default function OrderScreen() {
     loadMySunbeds();
   }, [load]);
 
-  // Transat imposé par le QR de la table
+  // Transat imposé par le QR de la table (prioritaire)
   useEffect(() => {
     if (qrTransat) setSelectedSunbed(qrTransat);
   }, [qrTransat]);
+
+  // Mémoire du transat pour la journée (si ni QR ni réservation ne l'ont fixé)
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('@order_sunbed');
+        if (!raw) return;
+        const { label, date } = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
+        if (date === today && label) setSelectedSunbed((prev) => prev || String(label));
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (selectedSunbed) {
+      AsyncStorage.setItem('@order_sunbed', JSON.stringify({ label: selectedSunbed, date: new Date().toISOString().slice(0, 10) })).catch(() => {});
+    }
+  }, [selectedSunbed]);
 
   const grouped = useMemo(() => {
     const m = new Map<number, MenuItem[]>();
@@ -178,10 +201,19 @@ export default function OrderScreen() {
       return;
     }
     if (cartLines.length === 0) return;
+    // Offrir à un autre transat : la livraison va au transat destinataire, avec
+    // la mention "de la part du transat X".
+    const gift = giftTransat.trim();
+    const delivery = gift || selectedSunbed.trim();
+    const finalNote = [
+      gift ? `🎁 ${(i18n.t('orderGiftFrom') ?? 'De la part du transat')} ${selectedSunbed.trim()}` : '',
+      note.trim(),
+    ].filter(Boolean).join(' — ');
     setPaying(true);
     try {
       const { clientSecret } = await apiCall<{ clientSecret: string }>('/api/menu/order', {
-        sunbed: selectedSunbed,
+        sunbed: delivery,
+        note: finalNote || undefined,
         lines: cartLines.map((l) => ({ product_id: l.item.product_id, qty: l.qty })),
       });
       if (!clientSecret) {
@@ -192,9 +224,11 @@ export default function OrderScreen() {
       if (!result.success) return;
       setCart({});
       setCheckout(false);
+      setNote('');
+      setGiftTransat('');
       Alert.alert(
         i18n.t('orderConfirmedTitle') ?? 'Commande envoyée ! 🍹',
-        (i18n.t('orderConfirmedMsg') ?? 'Ta commande arrive au transat {{sunbed}}.').replace('{{sunbed}}', selectedSunbed),
+        (i18n.t('orderConfirmedMsg') ?? 'Ta commande arrive au transat {{sunbed}}.').replace('{{sunbed}}', delivery),
       );
     } catch (e: any) {
       Alert.alert(i18n.t('error') ?? 'Erreur', e?.message ?? 'Commande impossible.');
@@ -314,7 +348,7 @@ export default function OrderScreen() {
                 <Ionicons name="close" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 260 }}>
+            <ScrollView style={{ maxHeight: 150 }}>
               {cartLines.map((l) => (
                 <View key={l.item.product_id} style={styles.recapRow}>
                   <Text style={[styles.recapQty, { color: colors.brand }]}>{l.qty}×</Text>
@@ -333,15 +367,6 @@ export default function OrderScreen() {
                   <Text style={styles.payTxt}>{i18n.t('login') ?? 'Se connecter'}</Text>
                 </TouchableOpacity>
               </View>
-            ) : !qrTransat && mySunbeds.length === 0 ? (
-              // Ni QR de table, ni réservation -> impossible (anti fausses commandes)
-              <View style={styles.gate}>
-                <Ionicons name="qr-code-outline" size={28} color={colors.brand} />
-                <Text style={[styles.gateTxt, { color: theme.text }]}>{i18n.t('orderScanTableMsg') ?? 'Scanne le QR sur ta table pour commander, ou réserve un transat.'}</Text>
-                <TouchableOpacity onPress={() => { setCheckout(false); router.push('/(tabs)/beach'); }} style={[styles.payBtn, { backgroundColor: colors.brand, alignSelf: 'stretch' }]}>
-                  <Text style={styles.payTxt}>{i18n.t('reserve') ?? 'Réserver un transat'}</Text>
-                </TouchableOpacity>
-              </View>
             ) : (
               <>
                 <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{i18n.t('orderYourSunbed') ?? 'Ton transat'}</Text>
@@ -350,7 +375,7 @@ export default function OrderScreen() {
                     <Ionicons name="umbrella" size={18} color={colors.brand} />
                     <Text style={[styles.sunbedOneTxt, { color: theme.text }]}>{(i18n.t('sunbed') ?? 'Transat')} {qrTransat || mySunbeds[0].label}</Text>
                   </View>
-                ) : (
+                ) : mySunbeds.length > 1 ? (
                   <View style={styles.chips}>
                     {mySunbeds.map((s) => (
                       <TouchableOpacity
@@ -362,13 +387,41 @@ export default function OrderScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                ) : (
+                  <TextInput
+                    value={selectedSunbed}
+                    onChangeText={setSelectedSunbed}
+                    placeholder={i18n.t('orderSunbedPlaceholder') ?? 'N° de transat (donné par le staff)'}
+                    placeholderTextColor={theme.textSecondary}
+                    keyboardType="number-pad"
+                    style={[styles.input, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
+                  />
                 )}
+
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{i18n.t('orderNoteLabel') ?? 'Message pour le serveur (optionnel)'}</Text>
+                <TextInput
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder={i18n.t('orderNotePlaceholder') ?? 'Ex : sans glace, merci !'}
+                  placeholderTextColor={theme.textSecondary}
+                  style={[styles.input, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
+                />
+
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{i18n.t('orderGiftLabel') ?? '🎁 Offrir à un autre transat (optionnel)'}</Text>
+                <TextInput
+                  value={giftTransat}
+                  onChangeText={setGiftTransat}
+                  placeholder={i18n.t('orderGiftPlaceholder') ?? 'N° du transat à qui offrir'}
+                  placeholderTextColor={theme.textSecondary}
+                  keyboardType="number-pad"
+                  style={[styles.input, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
+                />
 
                 <View style={styles.totalRow}>
                   <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total') ?? 'Total'}</Text>
                   <Text style={[styles.totalVal, { color: theme.text }]}>{total.toFixed(2)}€</Text>
                 </View>
-                <TouchableOpacity onPress={pay} disabled={paying || !selectedSunbed} style={[styles.payBtn, { backgroundColor: colors.brand, opacity: paying || !selectedSunbed ? 0.6 : 1 }]}>
+                <TouchableOpacity onPress={pay} disabled={paying || !selectedSunbed.trim()} style={[styles.payBtn, { backgroundColor: colors.brand, opacity: paying || !selectedSunbed.trim() ? 0.6 : 1 }]}>
                   {paying ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
@@ -420,7 +473,8 @@ const styles = StyleSheet.create({
   recapQty: { fontSize: 15, fontWeight: '800', minWidth: 28 },
   recapName: { flex: 1, fontSize: 15 },
   recapPrice: { fontSize: 14, fontWeight: '700' },
-  fieldLabel: { fontSize: 12, fontWeight: '700', marginTop: 4 },
+  fieldLabel: { fontSize: 12, fontWeight: '700', marginTop: 10 },
+  input: { borderWidth: 1, borderRadius: 10, padding: 11, fontSize: 15, marginTop: 4 },
   gate: { alignItems: 'center', gap: 12, paddingVertical: 10 },
   gateTxt: { fontSize: 15, fontWeight: '600', textAlign: 'center', lineHeight: 20 },
   sunbedOne: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderRadius: 10, paddingVertical: 11, paddingHorizontal: 14 },
