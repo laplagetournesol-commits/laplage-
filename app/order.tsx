@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
-  TextInput,
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -55,7 +54,10 @@ export default function OrderScreen() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<Record<number, number>>({});
   const [checkout, setCheckout] = useState(false);
-  const [sunbed, setSunbed] = useState('');
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [mySunbeds, setMySunbeds] = useState<{ id: string; label: string }[]>([]);
+  const [selectedSunbed, setSelectedSunbed] = useState('');
   const [paying, setPaying] = useState(false);
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const [famLabels, setFamLabels] = useState<Record<number, string>>({});
@@ -96,31 +98,34 @@ export default function OrderScreen() {
     setLoading(false);
   }, []);
 
+  const loadMySunbeds = useCallback(async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: sess } = await supabase.auth.getUser();
+    const uid = sess?.user?.id;
+    setUser(uid ? { id: uid } : null);
+    setAuthChecked(true);
+    if (!uid) return;
+    // Tous les transats réservés par le client aujourd'hui (réservation active)
+    const { data: resas } = await supabase
+      .from('beach_reservations')
+      .select('id')
+      .eq('user_id', uid)
+      .eq('date', today)
+      .in('status', ['confirmed', 'checked_in']);
+    const rids = (resas ?? []).map((r) => r.id);
+    if (!rids.length) return;
+    const { data: links } = await supabase.from('beach_reservation_sunbeds').select('sunbed_id').in('reservation_id', rids);
+    const sids = [...new Set((links ?? []).map((l) => l.sunbed_id))];
+    if (!sids.length) return;
+    const { data: sbs } = await supabase.from('sunbeds').select('id,label').in('id', sids);
+    const list = (sbs ?? []).map((s: any) => ({ id: s.id, label: String(s.label) }));
+    setMySunbeds(list);
+    if (list.length === 1) setSelectedSunbed(list[0].label);
+  }, []);
+
   useEffect(() => {
     load();
-    // Pré-remplir le transat depuis une réservation plage active aujourd'hui
-    (async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      const { data: sess } = await supabase.auth.getUser();
-      const uid = sess?.user?.id;
-      if (!uid) return;
-      const { data: resa } = await supabase
-        .from('beach_reservations')
-        .select('id')
-        .eq('user_id', uid)
-        .eq('date', today)
-        .in('status', ['confirmed', 'checked_in'])
-        .limit(1)
-        .maybeSingle();
-      if (resa?.id) {
-        const { data: links } = await supabase.from('beach_reservation_sunbeds').select('sunbed_id').eq('reservation_id', resa.id).limit(1);
-        const sid = links?.[0]?.sunbed_id;
-        if (sid) {
-          const { data: sb } = await supabase.from('sunbeds').select('label').eq('id', sid).single();
-          if (sb?.label) setSunbed(String(sb.label));
-        }
-      }
-    })();
+    loadMySunbeds();
   }, [load]);
 
   const grouped = useMemo(() => {
@@ -160,15 +165,22 @@ export default function OrderScreen() {
       );
       return;
     }
-    if (!sunbed.trim()) {
-      Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderNeedSunbed') ?? 'Indique ton numéro de transat.');
+    if (mySunbeds.length === 0) {
+      Alert.alert(
+        i18n.t('orderNeedResaTitle') ?? 'Réservation requise',
+        i18n.t('orderNeedResaMsg') ?? 'Réserve un transat pour pouvoir commander.',
+      );
+      return;
+    }
+    if (!selectedSunbed) {
+      Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderPickSunbed') ?? 'Choisis ton transat.');
       return;
     }
     if (cartLines.length === 0) return;
     setPaying(true);
     try {
       const { clientSecret } = await apiCall<{ clientSecret: string }>('/api/menu/order', {
-        sunbed: sunbed.trim(),
+        sunbed: selectedSunbed,
         lines: cartLines.map((l) => ({ product_id: l.item.product_id, qty: l.qty })),
       });
       if (!clientSecret) {
@@ -181,7 +193,7 @@ export default function OrderScreen() {
       setCheckout(false);
       Alert.alert(
         i18n.t('orderConfirmedTitle') ?? 'Commande envoyée ! 🍹',
-        (i18n.t('orderConfirmedMsg') ?? 'Ta commande arrive au transat {{sunbed}}.').replace('{{sunbed}}', sunbed.trim()),
+        (i18n.t('orderConfirmedMsg') ?? 'Ta commande arrive au transat {{sunbed}}.').replace('{{sunbed}}', selectedSunbed),
       );
     } catch (e: any) {
       Alert.alert(i18n.t('error') ?? 'Erreur', e?.message ?? 'Commande impossible.');
@@ -280,7 +292,7 @@ export default function OrderScreen() {
       {count > 0 && (
         <TouchableOpacity
           style={[styles.cartBar, { bottom: insets.bottom + 12, backgroundColor: colors.brand }]}
-          onPress={() => setCheckout(true)}
+          onPress={() => { loadMySunbeds(); setCheckout(true); }}
           activeOpacity={0.85}
         >
           <View style={styles.cartCount}>
@@ -311,27 +323,59 @@ export default function OrderScreen() {
               ))}
             </ScrollView>
 
-            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{i18n.t('orderYourSunbed') ?? 'Ton numéro de transat'}</Text>
-            <TextInput
-              value={sunbed}
-              onChangeText={setSunbed}
-              placeholder="Ex : 615"
-              placeholderTextColor={theme.textSecondary}
-              keyboardType="number-pad"
-              style={[styles.input, { color: theme.text, borderColor: theme.textSecondary + '33' }]}
-            />
+            {authChecked && !user ? (
+              // Pas connecté
+              <View style={styles.gate}>
+                <Ionicons name="log-in-outline" size={28} color={colors.brand} />
+                <Text style={[styles.gateTxt, { color: theme.text }]}>{i18n.t('orderLoginMsg') ?? 'Connecte-toi pour commander à ton transat.'}</Text>
+                <TouchableOpacity onPress={() => router.push('/(auth)/login')} style={[styles.payBtn, { backgroundColor: colors.brand, alignSelf: 'stretch' }]}>
+                  <Text style={styles.payTxt}>{i18n.t('login') ?? 'Se connecter'}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : mySunbeds.length === 0 ? (
+              // Connecté mais pas de réservation aujourd'hui
+              <View style={styles.gate}>
+                <Ionicons name="umbrella-outline" size={28} color={colors.brand} />
+                <Text style={[styles.gateTxt, { color: theme.text }]}>{i18n.t('orderNeedResaMsg') ?? 'Réserve un transat pour pouvoir commander.'}</Text>
+                <TouchableOpacity onPress={() => { setCheckout(false); router.push('/(tabs)/beach'); }} style={[styles.payBtn, { backgroundColor: colors.brand, alignSelf: 'stretch' }]}>
+                  <Text style={styles.payTxt}>{i18n.t('reserve') ?? 'Réserver un transat'}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{i18n.t('orderYourSunbed') ?? 'Ton transat'}</Text>
+                {mySunbeds.length === 1 ? (
+                  <View style={[styles.sunbedOne, { borderColor: colors.brand }]}>
+                    <Ionicons name="umbrella" size={18} color={colors.brand} />
+                    <Text style={[styles.sunbedOneTxt, { color: theme.text }]}>{(i18n.t('sunbed') ?? 'Transat')} {mySunbeds[0].label}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.chips}>
+                    {mySunbeds.map((s) => (
+                      <TouchableOpacity
+                        key={s.id}
+                        onPress={() => setSelectedSunbed(s.label)}
+                        style={[styles.chip, selectedSunbed === s.label ? { backgroundColor: colors.brand, borderColor: colors.brand } : { borderColor: theme.textSecondary + '40' }]}
+                      >
+                        <Text style={[styles.chipTxt, { color: selectedSunbed === s.label ? '#fff' : theme.text }]}>{s.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
 
-            <View style={styles.totalRow}>
-              <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total') ?? 'Total'}</Text>
-              <Text style={[styles.totalVal, { color: theme.text }]}>{total.toFixed(2)}€</Text>
-            </View>
-            <TouchableOpacity onPress={pay} disabled={paying} style={[styles.payBtn, { backgroundColor: colors.brand, opacity: paying ? 0.7 : 1 }]}>
-              {paying ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.payTxt}>{(i18n.t('pay') ?? 'Payer')} {total.toFixed(2)}€</Text>
-              )}
-            </TouchableOpacity>
+                <View style={styles.totalRow}>
+                  <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total') ?? 'Total'}</Text>
+                  <Text style={[styles.totalVal, { color: theme.text }]}>{total.toFixed(2)}€</Text>
+                </View>
+                <TouchableOpacity onPress={pay} disabled={paying || !selectedSunbed} style={[styles.payBtn, { backgroundColor: colors.brand, opacity: paying || !selectedSunbed ? 0.6 : 1 }]}>
+                  {paying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.payTxt}>{(i18n.t('pay') ?? 'Payer')} {total.toFixed(2)}€</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -376,7 +420,13 @@ const styles = StyleSheet.create({
   recapName: { flex: 1, fontSize: 15 },
   recapPrice: { fontSize: 14, fontWeight: '700' },
   fieldLabel: { fontSize: 12, fontWeight: '700', marginTop: 4 },
-  input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 16 },
+  gate: { alignItems: 'center', gap: 12, paddingVertical: 10 },
+  gateTxt: { fontSize: 15, fontWeight: '600', textAlign: 'center', lineHeight: 20 },
+  sunbedOne: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderRadius: 10, paddingVertical: 11, paddingHorizontal: 14 },
+  sunbedOneTxt: { fontSize: 16, fontWeight: '800' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { borderWidth: 1.5, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 16 },
+  chipTxt: { fontSize: 15, fontWeight: '800' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   totalLabel: { fontSize: 16, fontWeight: '700' },
   totalVal: { fontSize: 20, fontWeight: '900' },
