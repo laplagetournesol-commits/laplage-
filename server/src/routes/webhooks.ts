@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 import { verifyStripeWebhook, StripeWebhookRequest } from '../middleware/stripe-webhook';
 import { supabase } from '../lib/supabase';
 import { sendPushToUser } from '../lib/push';
+import { syncBeachSaleToAgora } from '../lib/agora';
 
 const router = Router();
 
@@ -61,6 +62,10 @@ router.post(
               .update({ status: 'confirmed' })
               .eq('reservation_id', reservationId)
               .eq('status', 'pending');
+
+            // Déclaration fiscale Ágora (série W). No-op si AGORA_SYNC_ENABLED
+            // n'est pas activé. Ne bloque jamais le webhook (erreurs loguées).
+            await syncBeachSaleToAgora(reservationId, paymentIntent.id, paymentIntent.amount);
           }
 
           if (error) {
