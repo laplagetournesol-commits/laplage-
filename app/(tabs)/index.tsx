@@ -267,6 +267,12 @@ export default function HomeScreen() {
             onPress={() => router.push('/order')}
             color="#16A34A"
           />
+          <QuickAction
+            icon="people"
+            label={i18n.t('socialTitle') ?? 'À la plage'}
+            onPress={() => router.push('/social')}
+            color="#EC4899"
+          />
         </View>
       </View>
       </AnimatedEntry>

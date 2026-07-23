@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.social_profiles (
   nickname     text,
   photo_url    text,
   status       text,                              -- humeur / statut du jour
+  transat      text,                              -- son transat du jour (pour la découverte)
   visible      boolean NOT NULL DEFAULT false,    -- opt-in
   visible_date date,                              -- visible seulement si = aujourd'hui
   created_at   timestamptz NOT NULL DEFAULT now(),
@@ -69,6 +70,16 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, p
   );
 $$;
 
+-- Lien actif (demande en cours ou acceptée) : permet de voir le profil de l'autre
+CREATE OR REPLACE FUNCTION public.social_has_link(a uuid, b uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.social_connections c
+    WHERE c.status IN ('pending', 'accepted')
+      AND ((c.requester_id = a AND c.addressee_id = b) OR (c.requester_id = b AND c.addressee_id = a))
+  );
+$$;
+
 -- ===================== RLS =====================
 ALTER TABLE public.social_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.social_connections ENABLE ROW LEVEL SECURITY;
@@ -81,6 +92,7 @@ CREATE POLICY social_profiles_read ON public.social_profiles FOR SELECT
   USING (
     user_id = auth.uid()
     OR (visible = true AND visible_date = current_date AND NOT public.social_is_blocked(auth.uid(), user_id))
+    OR public.social_has_link(auth.uid(), user_id)
   );
 DROP POLICY IF EXISTS social_profiles_write ON public.social_profiles;
 CREATE POLICY social_profiles_write ON public.social_profiles FOR ALL
