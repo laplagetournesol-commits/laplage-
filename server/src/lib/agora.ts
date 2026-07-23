@@ -17,6 +17,12 @@ const AGORA_ENABLED = process.env.AGORA_SYNC_ENABLED === 'true';
 // AGORA_PRINTER_NAME = nom Windows de l'imprimante plage (vide = imprimante par défaut).
 const AGORA_PRINT_ENABLED = process.env.AGORA_PRINT_ENABLED === 'true';
 const AGORA_PRINTER_NAME = process.env.AGORA_PRINTER_NAME ?? '';
+// Routage des tickets de commande : boissons -> bar (imprimante par défaut si
+// vide), nourriture -> cuisine ("Cocina"). Noms validés le 23/07.
+const AGORA_PRINTER_BAR = process.env.AGORA_PRINTER_BAR ?? '';
+const AGORA_PRINTER_KITCHEN = process.env.AGORA_PRINTER_KITCHEN ?? 'Cocina';
+// Ordre des plats (Orden Prep. Ágora) : id -> libellé, l'id fait aussi l'ordre.
+const PREP_ORDER_NAME: Record<number, string> = { 1: 'BEBIDAS', 2: 'PRIMEROS', 3: 'SEGUNDOS' };
 
 // Constantes de config Ágora (découvertes via l'API export-master)
 const POS = { Id: 1, Name: 'TPV1' };
@@ -94,6 +100,7 @@ export async function syncAgoraMenu(): Promise<{ families: number; items: number
       family_id: p.FamilyId,
       family_name: famNameById[p.FamilyId] ?? null,
       prep_type: p.PreparationTypeId != null ? PREP_BY_ID[p.PreparationTypeId] ?? null : null,
+      prep_order_id: p.PreparationOrderId ?? null,
       saleable: p.SaleableAsMain !== false,
       synced_at: new Date().toISOString(),
     }));
@@ -451,6 +458,7 @@ interface OrderLine {
   vat_id: number | null;
   vat_rate: number | null;
   prep_type: string | null;
+  prep_order_id?: number | null;
 }
 
 /** Facture W multi-TVA à partir des lignes d'une commande (TVA regroupée par taux). */
@@ -598,35 +606,61 @@ export async function syncMenuOrderToAgora(orderId: string, paymentIntentId: str
   }
 }
 
-/** Imprime le ticket de commande au bar (transat + articles). Non-bloquant. */
+async function sendToPrinter(printerName: string, data: string): Promise<boolean> {
+  const body: Record<string, unknown> = { Format: 'plain', Data: data };
+  if (printerName) body.PrinterName = printerName; // vide = imprimante par défaut
+  const res = await fetch(`${AGORA_URL}/api/print/`, {
+    method: 'POST',
+    headers: { 'Api-Token': AGORA_TOKEN, 'User-Agent': UA, Accept: 'application/json', 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) console.error(`[agora] échec impression (${printerName || 'défaut'}): HTTP ${res.status} ${await res.text()}`);
+  return res.ok;
+}
+
+/**
+ * Imprime la commande en la RÉPARTISSANT : articles boissons (BARRA) -> bar
+ * (imprimante par défaut), articles cuisine (COCINA) -> imprimante "Cocina",
+ * triés/regroupés par ordre des plats (Primeros -> Segundos). Non-bloquant.
+ */
 export async function printMenuOrderTicket(orderId: string): Promise<void> {
   if (!AGORA_PRINT_ENABLED || !AGORA_TOKEN) return;
   try {
     const data = await loadOrder(orderId);
     if (!data) return;
-    const { order, lines } = data as any;
-    const rows = [
-      '',
-      '    *** PEDIDO APP ***',
-      '========================',
-      `HAMACA: ${order.sunbed || '-'}`,
-      '------------------------',
-      ...lines.map((l: OrderLine) => `${l.qty} x ${l.name}`),
-      '------------------------',
-      `TOTAL: ${Number(order.total).toFixed(2)}EUR (pagado)`,
-      '========================',
-      '',
-      '',
-    ];
-    const body: Record<string, unknown> = { Format: 'plain', Data: rows.join('\n') };
-    if (AGORA_PRINTER_NAME) body.PrinterName = AGORA_PRINTER_NAME;
-    const res = await fetch(`${AGORA_URL}/api/print/`, {
-      method: 'POST',
-      headers: { 'Api-Token': AGORA_TOKEN, 'User-Agent': UA, Accept: 'application/json', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) await supabase.from('app_orders').update({ printed_at: new Date().toISOString() }).eq('id', orderId);
-    else console.error(`[agora] échec impression commande ${orderId}: HTTP ${res.status}`);
+    const { order, lines } = data as any as { order: any; lines: (OrderLine & { prep_order_id?: number | null })[] };
+
+    const kitchen = lines.filter((l) => l.prep_type === 'COCINA');
+    const bar = lines.filter((l) => l.prep_type !== 'COCINA');
+    const header = (dest: string) => ['', `  *** PEDIDO APP - ${dest} ***`, '========================', `HAMACA: ${order.sunbed || '-'}`, '------------------------'];
+    const footer = ['========================', '', ''];
+
+    let anyOk = false;
+
+    // Ticket BAR (boissons + tout ce qui n'est pas cuisine)
+    if (bar.length) {
+      const rows = [...header('BAR'), ...bar.map((l) => `${l.qty} x ${l.name}`), footer[0], footer[1], footer[2]];
+      anyOk = (await sendToPrinter(AGORA_PRINTER_BAR, rows.join('\n'))) || anyOk;
+    }
+
+    // Ticket CUISINE, trié par ordre des plats avec en-têtes de service
+    if (kitchen.length) {
+      const sorted = [...kitchen].sort((a, b) => (a.prep_order_id ?? 99) - (b.prep_order_id ?? 99));
+      const rows: string[] = [...header('COCINA')];
+      let lastCourse: number | null | undefined;
+      for (const l of sorted) {
+        if (l.prep_order_id !== lastCourse) {
+          lastCourse = l.prep_order_id;
+          const label = l.prep_order_id != null ? PREP_ORDER_NAME[l.prep_order_id] ?? '' : '';
+          if (label) rows.push(`-- ${label} --`);
+        }
+        rows.push(`${l.qty} x ${l.name}`);
+      }
+      rows.push(...footer);
+      anyOk = (await sendToPrinter(AGORA_PRINTER_KITCHEN, rows.join('\n'))) || anyOk;
+    }
+
+    if (anyOk) await supabase.from('app_orders').update({ printed_at: new Date().toISOString() }).eq('id', orderId);
   } catch (err: any) {
     console.error(`[agora] erreur impression commande ${orderId}:`, err?.message ?? err);
   }

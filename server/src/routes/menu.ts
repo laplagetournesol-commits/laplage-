@@ -43,7 +43,7 @@ router.post('/order', requireAuth, async (req: AuthenticatedRequest, res) => {
     // Articles réellement proposés (activés + catégorie activée), prix/TVA depuis la base
     const { data: items } = await supabase
       .from('app_menu_items')
-      .select('product_id,name,price,vat_id,vat_rate,prep_type,enabled,family_id')
+      .select('product_id,name,price,vat_id,vat_rate,prep_type,prep_order_id,enabled,family_id')
       .in('product_id', ids)
       .eq('enabled', true);
     const { data: fams } = await supabase.from('app_menu_families').select('family_id').eq('enabled', true);
@@ -64,6 +64,7 @@ router.post('/order', requireAuth, async (req: AuthenticatedRequest, res) => {
         vat_id: it.vat_id,
         vat_rate: it.vat_rate,
         prep_type: it.prep_type,
+        prep_order_id: it.prep_order_id,
       };
     });
     const total = Math.round(orderLines.reduce((s, l) => s + l.unit_price * l.qty, 0) * 100) / 100;
