@@ -270,6 +270,16 @@ export default function DashboardScreen() {
             <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Extras & packs</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.managementBtn, { backgroundColor: '#16A34A' + '15', borderColor: '#16A34A' + '30' }]}
+            onPress={() => router.push('/(admin)/menu-management')}
+          >
+            <View style={[styles.managementIcon, { backgroundColor: '#16A34A' + '22' }]}>
+              <Ionicons name="fast-food" size={22} color="#16A34A" />
+            </View>
+            <Text style={[styles.managementLabel, { color: theme.text }]}>Carte app</Text>
+            <Text style={[styles.managementSub, { color: theme.textSecondary }]}>Commande transat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.managementBtn, { backgroundColor: colors.sunYellow + '12', borderColor: colors.sunYellow + '30' }]}
             onPress={() => router.push('/(admin)/broadcast')}
           >
