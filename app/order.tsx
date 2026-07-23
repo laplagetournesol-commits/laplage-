@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
@@ -50,6 +50,9 @@ function emojiFor(familyName: string | null, prep: string | null): string {
 export default function OrderScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ transat?: string }>();
+  // Transat verrouillé provenant du QR collé sur la table (preuve de présence physique).
+  const qrTransat = typeof params.transat === 'string' ? params.transat.trim() : '';
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<Record<number, number>>({});
@@ -128,6 +131,11 @@ export default function OrderScreen() {
     loadMySunbeds();
   }, [load]);
 
+  // Transat imposé par le QR de la table
+  useEffect(() => {
+    if (qrTransat) setSelectedSunbed(qrTransat);
+  }, [qrTransat]);
+
   const grouped = useMemo(() => {
     const m = new Map<number, MenuItem[]>();
     for (const it of items) {
@@ -165,15 +173,8 @@ export default function OrderScreen() {
       );
       return;
     }
-    if (mySunbeds.length === 0) {
-      Alert.alert(
-        i18n.t('orderNeedResaTitle') ?? 'Réservation requise',
-        i18n.t('orderNeedResaMsg') ?? 'Réserve un transat pour pouvoir commander.',
-      );
-      return;
-    }
-    if (!selectedSunbed) {
-      Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderPickSunbed') ?? 'Choisis ton transat.');
+    if (!selectedSunbed.trim()) {
+      Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderPickSunbed') ?? 'Indique ton transat.');
       return;
     }
     if (cartLines.length === 0) return;
@@ -332,11 +333,11 @@ export default function OrderScreen() {
                   <Text style={styles.payTxt}>{i18n.t('login') ?? 'Se connecter'}</Text>
                 </TouchableOpacity>
               </View>
-            ) : mySunbeds.length === 0 ? (
-              // Connecté mais pas de réservation aujourd'hui
+            ) : !qrTransat && mySunbeds.length === 0 ? (
+              // Ni QR de table, ni réservation -> impossible (anti fausses commandes)
               <View style={styles.gate}>
-                <Ionicons name="umbrella-outline" size={28} color={colors.brand} />
-                <Text style={[styles.gateTxt, { color: theme.text }]}>{i18n.t('orderNeedResaMsg') ?? 'Réserve un transat pour pouvoir commander.'}</Text>
+                <Ionicons name="qr-code-outline" size={28} color={colors.brand} />
+                <Text style={[styles.gateTxt, { color: theme.text }]}>{i18n.t('orderScanTableMsg') ?? 'Scanne le QR sur ta table pour commander, ou réserve un transat.'}</Text>
                 <TouchableOpacity onPress={() => { setCheckout(false); router.push('/(tabs)/beach'); }} style={[styles.payBtn, { backgroundColor: colors.brand, alignSelf: 'stretch' }]}>
                   <Text style={styles.payTxt}>{i18n.t('reserve') ?? 'Réserver un transat'}</Text>
                 </TouchableOpacity>
@@ -344,10 +345,10 @@ export default function OrderScreen() {
             ) : (
               <>
                 <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{i18n.t('orderYourSunbed') ?? 'Ton transat'}</Text>
-                {mySunbeds.length === 1 ? (
+                {qrTransat || mySunbeds.length === 1 ? (
                   <View style={[styles.sunbedOne, { borderColor: colors.brand }]}>
                     <Ionicons name="umbrella" size={18} color={colors.brand} />
-                    <Text style={[styles.sunbedOneTxt, { color: theme.text }]}>{(i18n.t('sunbed') ?? 'Transat')} {mySunbeds[0].label}</Text>
+                    <Text style={[styles.sunbedOneTxt, { color: theme.text }]}>{(i18n.t('sunbed') ?? 'Transat')} {qrTransat || mySunbeds[0].label}</Text>
                   </View>
                 ) : (
                   <View style={styles.chips}>
