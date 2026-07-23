@@ -5,6 +5,32 @@ import { apiCall } from '@/shared/lib/api';
 export function usePayment() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
+  // Paie un PaymentIntent déjà créé côté serveur (ex: commande depuis le transat).
+  const payWithClientSecret = async (clientSecret: string): Promise<{ success: boolean }> => {
+    try {
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'La Plage Tournesol',
+        applePay: { merchantCountryCode: 'ES' },
+        googlePay: { merchantCountryCode: 'ES', testEnv: false },
+      });
+      if (initError) {
+        Alert.alert('Erreur', initError.message);
+        return { success: false };
+      }
+      const { error: payError } = await presentPaymentSheet();
+      if (payError) {
+        if (payError.code === 'Canceled') return { success: false };
+        Alert.alert('Erreur de paiement', payError.message);
+        return { success: false };
+      }
+      return { success: true };
+    } catch (err: any) {
+      Alert.alert('Erreur', err.message ?? 'Impossible de procéder au paiement');
+      return { success: false };
+    }
+  };
+
   const pay = async (params: {
     type: 'beach' | 'restaurant' | 'event';
     reservationId: string;
@@ -48,5 +74,5 @@ export function usePayment() {
     }
   };
 
-  return { pay };
+  return { pay, payWithClientSecret };
 }

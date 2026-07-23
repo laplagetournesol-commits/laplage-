@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import { verifyStripeWebhook, StripeWebhookRequest } from '../middleware/stripe-webhook';
 import { supabase } from '../lib/supabase';
 import { sendPushToUser } from '../lib/push';
-import { syncBeachSaleToAgora, printReservaSlip } from '../lib/agora';
+import { syncBeachSaleToAgora, printReservaSlip, syncMenuOrderToAgora, printMenuOrderTicket } from '../lib/agora';
 
 const router = Router();
 
@@ -30,6 +30,18 @@ router.post(
         case 'payment_intent.succeeded': {
           const paymentIntent = event.data.object;
           const { type, reservationId, table, userId } = paymentIntent.metadata;
+
+          // Commande "depuis le transat" : marquer payée -> ticket bar + déclaration W
+          if (type === 'menu_order') {
+            const orderId = paymentIntent.metadata.orderId;
+            if (orderId) {
+              await supabase.from('app_orders').update({ status: 'paid' }).eq('id', orderId);
+              await printMenuOrderTicket(orderId);
+              await syncMenuOrderToAgora(orderId, paymentIntent.id);
+              console.log(`Commande payée: ${orderId}`);
+            }
+            break;
+          }
 
           if (!table || !reservationId) {
             console.warn('Webhook: metadata incomplète', paymentIntent.metadata);

@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
+import { usePayment } from '@/shared/hooks/usePayment';
 import { i18n } from '@/shared/i18n';
 
 interface MenuItem {
@@ -54,6 +56,8 @@ export default function OrderScreen() {
   const [cart, setCart] = useState<Record<number, number>>({});
   const [checkout, setCheckout] = useState(false);
   const [sunbed, setSunbed] = useState('');
+  const [paying, setPaying] = useState(false);
+  const { payWithClientSecret } = usePayment();
 
   const load = useCallback(async () => {
     // Familles activées
@@ -116,13 +120,35 @@ export default function OrderScreen() {
   const add = (id: number) => setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
   const sub = (id: number) => setCart((c) => ({ ...c, [id]: Math.max(0, (c[id] ?? 0) - 1) }));
 
-  const pay = () => {
+  const pay = async () => {
     if (!sunbed.trim()) {
       Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderNeedSunbed') ?? 'Indique ton numéro de transat.');
       return;
     }
-    // Étape 3 : paiement Stripe + envoi au bar + déclaration Ágora.
-    Alert.alert('Bientôt', 'Le paiement de la commande arrive à l\'étape suivante.');
+    if (cartLines.length === 0) return;
+    setPaying(true);
+    try {
+      const { clientSecret } = await apiCall<{ clientSecret: string }>('/api/menu/order', {
+        sunbed: sunbed.trim(),
+        lines: cartLines.map((l) => ({ product_id: l.item.product_id, qty: l.qty })),
+      });
+      if (!clientSecret) {
+        Alert.alert(i18n.t('error') ?? 'Erreur', i18n.t('orderFailed') ?? 'Commande impossible.');
+        return;
+      }
+      const result = await payWithClientSecret(clientSecret);
+      if (!result.success) return;
+      setCart({});
+      setCheckout(false);
+      Alert.alert(
+        i18n.t('orderConfirmedTitle') ?? 'Commande envoyée ! 🍹',
+        (i18n.t('orderConfirmedMsg') ?? 'Ta commande arrive au transat {{sunbed}}.').replace('{{sunbed}}', sunbed.trim()),
+      );
+    } catch (e: any) {
+      Alert.alert(i18n.t('error') ?? 'Erreur', e?.message ?? 'Commande impossible.');
+    } finally {
+      setPaying(false);
+    }
   };
 
   return (
@@ -242,8 +268,12 @@ export default function OrderScreen() {
               <Text style={[styles.totalLabel, { color: theme.text }]}>{i18n.t('total') ?? 'Total'}</Text>
               <Text style={[styles.totalVal, { color: theme.text }]}>{total.toFixed(2)}€</Text>
             </View>
-            <TouchableOpacity onPress={pay} style={[styles.payBtn, { backgroundColor: colors.brand }]}>
-              <Text style={styles.payTxt}>{(i18n.t('pay') ?? 'Payer')} {total.toFixed(2)}€</Text>
+            <TouchableOpacity onPress={pay} disabled={paying} style={[styles.payBtn, { backgroundColor: colors.brand, opacity: paying ? 0.7 : 1 }]}>
+              {paying ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.payTxt}>{(i18n.t('pay') ?? 'Payer')} {total.toFixed(2)}€</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

@@ -440,3 +440,194 @@ export async function syncBeachRefundToAgora(reservationId: string, paymentInten
     console.error(`[agora] erreur syncBeachRefund ${reservationId}:`, err?.message ?? err);
   }
 }
+
+// ============================ Commandes (bar/cuisine) ============================
+
+interface OrderLine {
+  product_id: number;
+  name: string;
+  qty: number;
+  unit_price: number;
+  vat_id: number | null;
+  vat_rate: number | null;
+  prep_type: string | null;
+}
+
+/** Facture W multi-TVA à partir des lignes d'une commande (TVA regroupée par taux). */
+function buildMenuInvoice(opts: { number: number; date: string; businessDay: string; location: string; lines: OrderLine[]; paidAmount: number; piId: string }) {
+  const invLines = opts.lines.map((l, i) => {
+    const rate = Number(l.vat_rate ?? 0.21);
+    return {
+      Index: i,
+      CreationDate: opts.date,
+      Type: 'Standard',
+      ParentIndex: null,
+      ProductId: l.product_id,
+      ProductName: l.name,
+      SaleFormatId: l.product_id,
+      SaleFormatName: l.name,
+      SaleFormatRatio: 1.0,
+      MainBarcode: '',
+      ProductPrice: round2(l.unit_price),
+      VatId: l.vat_id ?? 4,
+      VatRate: rate,
+      SurchargeRate: 0,
+      ProductCostPrice: 0.0,
+      MenuGroup: '',
+      PreparationTypeId: null,
+      PreparationTypeName: l.prep_type ?? '',
+      PLU: '',
+      FamilyId: null,
+      FamilyName: '',
+      PreparationOrderId: null,
+      PreparationOrderName: '',
+      Quantity: l.qty,
+      UnitCostPrice: 0.0,
+      TotalCostPrice: 0.0,
+      UserId: USER.Id,
+      UnitPrice: round2(l.unit_price),
+      DiscountRate: 0.0,
+      CashDiscount: 0.0,
+      OfferId: null,
+      OfferCode: '',
+      TotalAmount: round2(l.unit_price * l.qty),
+      PriceListId: 1,
+    };
+  });
+
+  // Regroupement TVA par taux
+  const byRate = new Map<number, number>(); // rate -> gross
+  for (const l of opts.lines) {
+    const rate = Number(l.vat_rate ?? 0.21);
+    byRate.set(rate, (byRate.get(rate) ?? 0) + l.unit_price * l.qty);
+  }
+  const taxes = Array.from(byRate.entries()).map(([rate, gross]) => {
+    const g = round2(gross);
+    const net = round2(g / (1 + rate));
+    return { VatRate: rate, SurchargeRate: 0, GrossAmount: g, NetAmount: net, VatAmount: round2(g - net), SurchargeAmount: 0 };
+  });
+  const gross = round2(taxes.reduce((s, t) => s + t.GrossAmount, 0));
+  const net = round2(taxes.reduce((s, t) => s + t.NetAmount, 0));
+  const totals = { GrossAmount: gross, NetAmount: net, VatAmount: round2(gross - net), SurchargeAmount: 0, Taxes: taxes };
+
+  return {
+    Invoices: [
+      {
+        Serie: SERIE_SALE,
+        Number: opts.number,
+        BusinessDay: opts.businessDay,
+        VatIncluded: true,
+        PrintCount: 1,
+        Date: opts.date,
+        Pos: POS,
+        Workplace: WORKPLACE,
+        User: USER,
+        DocumentType: 'BasicInvoice',
+        FixTotalToPayments: true,
+        InvoiceItems: [
+          {
+            ContentType: 'T',
+            Pos: POS,
+            User: USER,
+            BusinessDay: opts.businessDay,
+            Date: opts.date,
+            SaleCenter: { ...SALECENTER_PLAYA, Location: opts.location },
+            VatIncluded: true,
+            Lines: invLines,
+            Discounts: { DiscountRate: 0.0, CashDiscount: 0.0 },
+            Payments: [],
+            Offers: [],
+            Totals: totals,
+          },
+        ],
+        Payments: [
+          {
+            MethodId: PAYMENT_METHOD.Id,
+            MethodName: PAYMENT_METHOD.Name,
+            Amount: round2(opts.paidAmount),
+            PaidAmount: round2(opts.paidAmount),
+            ChangeAmount: 0.0,
+            TipAmount: 0.0,
+            Date: opts.date,
+            PosId: POS.Id,
+            IsPrepayment: false,
+            ExtraInformation: `PEDIDO APP - Stripe ${opts.piId}`,
+          },
+        ],
+        Totals: totals,
+      },
+    ],
+  };
+}
+
+async function loadOrder(orderId: string) {
+  const { data: order } = await supabase.from('app_orders').select('*').eq('id', orderId).single();
+  if (!order) return null;
+  const { data: lines } = await supabase.from('app_order_lines').select('*').eq('order_id', orderId);
+  return { order, lines: (lines ?? []) as OrderLine[] };
+}
+
+/** Déclare la commande payée dans Ágora (facture W). Idempotent, non-bloquant. */
+export async function syncMenuOrderToAgora(orderId: string, paymentIntentId: string): Promise<void> {
+  if (!agoraConfigured()) return;
+  try {
+    const data = await loadOrder(orderId);
+    if (!data || !data.lines.length) return;
+    if ((data.order as any).agora_number) return; // déjà déclarée
+
+    const number = await nextNumber(SERIE_SALE);
+    const now = new Date();
+    const payload = buildMenuInvoice({
+      number,
+      date: now.toISOString().slice(0, 19),
+      businessDay: now.toISOString().slice(0, 10),
+      location: (data.order as any).sunbed || 'APP',
+      lines: data.lines,
+      paidAmount: Number((data.order as any).total),
+      piId: paymentIntentId,
+    });
+    const r = await agoraImport(payload);
+    if (!r.ok) {
+      console.error(`[agora] échec import commande ${SERIE_SALE}-${number} (order ${orderId}): HTTP ${r.status} ${r.body}`);
+      return;
+    }
+    await supabase.from('app_orders').update({ agora_serie: SERIE_SALE, agora_number: number, agora_synced_at: now.toISOString() }).eq('id', orderId);
+    console.log(`[agora] commande déclarée ${SERIE_SALE}-${number} (order ${orderId})`);
+  } catch (err: any) {
+    console.error(`[agora] erreur syncMenuOrder ${orderId}:`, err?.message ?? err);
+  }
+}
+
+/** Imprime le ticket de commande au bar (transat + articles). Non-bloquant. */
+export async function printMenuOrderTicket(orderId: string): Promise<void> {
+  if (!AGORA_PRINT_ENABLED || !AGORA_TOKEN) return;
+  try {
+    const data = await loadOrder(orderId);
+    if (!data) return;
+    const { order, lines } = data as any;
+    const rows = [
+      '',
+      '    *** PEDIDO APP ***',
+      '========================',
+      `HAMACA: ${order.sunbed || '-'}`,
+      '------------------------',
+      ...lines.map((l: OrderLine) => `${l.qty} x ${l.name}`),
+      '------------------------',
+      `TOTAL: ${Number(order.total).toFixed(2)}EUR (pagado)`,
+      '========================',
+      '',
+      '',
+    ];
+    const body: Record<string, unknown> = { Format: 'plain', Data: rows.join('\n') };
+    if (AGORA_PRINTER_NAME) body.PrinterName = AGORA_PRINTER_NAME;
+    const res = await fetch(`${AGORA_URL}/api/print/`, {
+      method: 'POST',
+      headers: { 'Api-Token': AGORA_TOKEN, 'User-Agent': UA, Accept: 'application/json', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) await supabase.from('app_orders').update({ printed_at: new Date().toISOString() }).eq('id', orderId);
+    else console.error(`[agora] échec impression commande ${orderId}: HTTP ${res.status}`);
+  } catch (err: any) {
+    console.error(`[agora] erreur impression commande ${orderId}:`, err?.message ?? err);
+  }
+}

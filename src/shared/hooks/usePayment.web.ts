@@ -62,7 +62,27 @@ export function usePayment() {
     }
   };
 
-  return { pay };
+  // Paie un PaymentIntent déjà créé côté serveur (commande depuis le transat).
+  const payWithClientSecret = async (clientSecret: string): Promise<{ success: boolean }> => {
+    try {
+      if (isInAppWebView()) {
+        showInAppWebViewWarning();
+        return { success: false };
+      }
+      if (!clientSecret) return { success: false };
+      const stripe = await stripePromise;
+      if (!stripe) return { success: false };
+      const result = await showPaymentModal(stripe, clientSecret);
+      if (result.status === 'cancelled' || result.status === 'error') return { success: false };
+      return {
+        success: result.paymentIntentStatus === 'succeeded' || result.paymentIntentStatus === 'requires_capture',
+      };
+    } catch {
+      return { success: false };
+    }
+  };
+
+  return { pay, payWithClientSecret };
 }
 
 function isInAppWebView(): boolean {
