@@ -92,8 +92,8 @@ export function BeachMap({
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('selected')}</Text>
           </View>
         </View>
-        <Text style={[styles.legendNote, { color: theme.textSecondary }]}>
-          {i18n.t('beachFrontRowNote') ?? 'Les nº 100 (1ère rangée) sont des chaises longues'}
+        <Text style={[styles.legendNote, { color: theme.text, backgroundColor: colors.sunYellow + '40' }]}>
+          {`ℹ️  ${i18n.t('beachFrontRowNote') ?? 'Les nº 100 (1ère rangée) sont des chaises longues'}`}
         </Text>
       </View>
 
@@ -208,10 +208,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   legendNote: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 8,
+    alignSelf: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   scrollView: { flex: 1 },
   scrollContent: {
