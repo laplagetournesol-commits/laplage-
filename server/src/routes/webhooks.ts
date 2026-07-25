@@ -5,6 +5,7 @@ import { verifyStripeWebhook, StripeWebhookRequest } from '../middleware/stripe-
 import { supabase } from '../lib/supabase';
 import { sendPushToUser } from '../lib/push';
 import { syncBeachSaleToAgora, printReservaSlip, syncMenuOrderToAgora, printMenuOrderTicket } from '../lib/agora';
+import { buildReservationEmail } from '../lib/reservationEmail';
 
 const router = Router();
 
@@ -100,19 +101,11 @@ router.post(
             const firstName = profile?.full_name?.trim().split(/\s+/)[0] ?? '';
 
             if (profile?.email) {
-              // Email spécifique au paiement de l'acompte
-              await getResend().emails.send({
-                from: fromEmail,
-                to: profile.email,
-                subject: 'Acompte reçu - La Plage Tournesol',
-                html: `
-                  <h2>Acompte bien reçu</h2>
-                  <p>Bonjour ${firstName},</p>
-                  <p>Votre acompte pour votre réservation <strong>${type}</strong> a bien été reçu.</p>
-                  <p>Numéro de réservation : <strong>${reservationId}</strong></p>
-                  <p>Merci et à bientôt à La Plage Tournesol !</p>
-                `,
-              });
+              // Email de confirmation complet (date, heure, personnes, transat/table + QR)
+              const mail = await buildReservationEmail(table, reservationId, firstName);
+              if (mail) {
+                await getResend().emails.send({ from: fromEmail, to: profile.email, subject: mail.subject, html: mail.html });
+              }
             }
 
             // Push spécifique au paiement de l'acompte
