@@ -53,6 +53,11 @@ interface Msg {
 const ONLINE = '#22C55E';
 const ACCENT = '#E8730C'; // ambre « coucher de soleil »
 const canRecord = Platform.OS !== 'web';
+const LANGS = [
+  { code: 'fr', label: 'Français' },
+  { code: 'es', label: 'Español' },
+  { code: 'en', label: 'English' },
+];
 
 const fmt = (ms: number) => {
   const s = Math.round(ms / 1000);
@@ -106,6 +111,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [trans, setTrans] = useState<Record<string, string>>({});
   const [transLoading, setTransLoading] = useState<Record<string, boolean>>({});
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const geo = useBeachGeofence();
   const [peerLoc, setPeerLoc] = useState<{ lat?: number | null; lng?: number | null; loc_updated_at?: string | null }>({});
@@ -187,18 +193,18 @@ export default function ChatScreen() {
     }
   };
 
-  const translate = async (m: Msg) => {
-    if (trans[m.id]) {
-      setTrans((p) => {
-        const n = { ...p };
-        delete n[m.id];
-        return n;
-      });
-      return;
-    }
+  const clearTrans = (id: string) =>
+    setTrans((p) => {
+      const n = { ...p };
+      delete n[id];
+      return n;
+    });
+
+  const translate = async (m: Msg, target: string) => {
+    setPickerFor(null);
     setTransLoading((s) => ({ ...s, [m.id]: true }));
     try {
-      const { translated } = await apiCall<{ translated: string }>('/api/social/translate', { text: m.body, target: i18n.locale });
+      const { translated } = await apiCall<{ translated: string }>('/api/social/translate', { text: m.body, target });
       if (translated) setTrans((p) => ({ ...p, [m.id]: translated }));
     } catch {
       // silencieux
@@ -351,17 +357,30 @@ export default function ChatScreen() {
                       {!mine && !!m.body?.trim() && (
                         <>
                           {trans[m.id] ? (
-                            <Text style={{ color: theme.text, fontSize: 15, lineHeight: 20, marginTop: 6, fontStyle: 'italic', opacity: 0.85 }}>{trans[m.id]}</Text>
-                          ) : null}
-                          <TouchableOpacity onPress={() => translate(m)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} style={{ marginTop: 5 }}>
-                            {transLoading[m.id] ? (
-                              <ActivityIndicator size="small" color={ACCENT} />
-                            ) : (
-                              <Text style={{ color: ACCENT, fontSize: 12, fontWeight: '700' }}>
-                                {trans[m.id] ? (i18n.t('socialSeeOriginal') ?? 'Voir l\'original') : `🌐 ${i18n.t('socialTranslate') ?? 'Traduire'}`}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
+                            <>
+                              <Text style={{ color: theme.text, fontSize: 15, lineHeight: 20, marginTop: 6, fontStyle: 'italic', opacity: 0.85 }}>{trans[m.id]}</Text>
+                              <TouchableOpacity onPress={() => clearTrans(m.id)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} style={{ marginTop: 5 }}>
+                                <Text style={{ color: ACCENT, fontSize: 12, fontWeight: '700' }}>{i18n.t('socialSeeOriginal') ?? 'Voir l\'original'}</Text>
+                              </TouchableOpacity>
+                            </>
+                          ) : transLoading[m.id] ? (
+                            <ActivityIndicator size="small" color={ACCENT} style={{ marginTop: 6, alignSelf: 'flex-start' }} />
+                          ) : pickerFor === m.id ? (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                              {LANGS.map((l) => (
+                                <TouchableOpacity key={l.code} onPress={() => translate(m, l.code)} style={{ backgroundColor: ACCENT + '1F', paddingVertical: 5, paddingHorizontal: 10, borderRadius: 12 }}>
+                                  <Text style={{ color: ACCENT, fontSize: 12.5, fontWeight: '700' }}>{l.label}</Text>
+                                </TouchableOpacity>
+                              ))}
+                              <TouchableOpacity onPress={() => setPickerFor(null)} style={{ paddingVertical: 5, paddingHorizontal: 8 }}>
+                                <Text style={{ color: theme.textSecondary, fontSize: 12.5 }}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <TouchableOpacity onPress={() => setPickerFor(m.id)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} style={{ marginTop: 5 }}>
+                              <Text style={{ color: ACCENT, fontSize: 12, fontWeight: '700' }}>{`🌐 ${i18n.t('socialTranslate') ?? 'Traduire'}`}</Text>
+                            </TouchableOpacity>
+                          )}
                         </>
                       )}
                     </>

@@ -92,6 +92,9 @@ export function BeachMap({
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('selected')}</Text>
           </View>
         </View>
+        <Text style={[styles.legendNote, { color: theme.textSecondary }]}>
+          {i18n.t('beachFrontRowNote') ?? 'Les nº 100 (1ère rangée) sont des chaises longues'}
+        </Text>
       </View>
 
       {/* Carte zoomable (pinch-to-zoom iOS) */}
@@ -203,6 +206,12 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  legendNote: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 6,
   },
   scrollView: { flex: 1 },
   scrollContent: {
