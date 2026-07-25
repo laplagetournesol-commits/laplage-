@@ -142,15 +142,16 @@ export default function SocialScreen() {
 
   // Position GPS (silencieux = pas d'alerte, pour le heartbeat)
   const getPosition = async (silent = false): Promise<{ lat: number; lng: number } | null> => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      if (!silent) Alert.alert(i18n.t('socialLocTitle') ?? 'Position requise', i18n.t('socialLocMsg') ?? 'Autorise la position pour voir qui est sur la plage.');
-      return null;
-    }
     try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        if (!silent) Alert.alert(i18n.t('socialLocTitle') ?? 'Position requise', i18n.t('socialLocMsg') ?? 'Autorise la position pour voir qui est sur la plage.');
+        return null;
+      }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       return { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch {
+      if (!silent) Alert.alert(i18n.t('socialLocTitle') ?? 'Position requise', i18n.t('socialLocMsg') ?? 'Autorise la position pour voir qui est sur la plage.');
       return null;
     }
   };
