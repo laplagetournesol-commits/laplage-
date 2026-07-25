@@ -2,7 +2,7 @@
   "expo": {
     "name": "Les Tournesols",
     "slug": "laplagetournesols",
-    "version": "1.3.9",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "tournesol",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lestournesols.app",
-      "buildNumber": "55"
+      "buildNumber": "56"
     },
     "android": {
       "adaptiveIcon": {
@@ -74,6 +74,12 @@
         "expo-audio",
         {
           "microphonePermission": "Autorise le micro pour envoyer des notes vocales dans le chat."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Ta position sert uniquement à afficher les personnes présentes sur la plage des Tournesols autour de toi."
         }
       ]
     ],

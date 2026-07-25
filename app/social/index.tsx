@@ -19,8 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { i18n } from '@/shared/i18n';
+import * as Location from 'expo-location';
 import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
-import { usePresence } from '@/shared/hooks/usePresence';
+import { useBeachGeofence } from '@/shared/hooks/useBeachGeofence';
+import { isAtBeach, isInside } from '@/shared/lib/geo';
 
 interface Profile {
   user_id: string;
@@ -30,6 +32,9 @@ interface Profile {
   transat: string | null;
   visible: boolean;
   visible_date: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  loc_updated_at?: string | null;
 }
 interface Conn {
   id: string;
@@ -54,7 +59,7 @@ export default function SocialScreen() {
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const { pickAndUpload, uploading } = useImagePicker('assets', { aspect: [1, 1], quality: 0.5, prefix: 'social-' });
-  const onlineIds = usePresence(uid);
+  const geo = useBeachGeofence();
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getUser();
@@ -105,6 +110,28 @@ export default function SocialScreen() {
     load();
   }, [load]);
 
+  // Heartbeat position : tant que visible aujourd'hui, on rafraîchit la position.
+  // Si on quitte le rayon de la plage -> on redevient invisible automatiquement.
+  useEffect(() => {
+    if (!uid || !geo || !me?.visible || me?.visible_date !== today()) return;
+    let alive = true;
+    const beat = async () => {
+      const loc = await getPosition(true);
+      if (!alive || !loc) return;
+      if (isInside(loc.lat, loc.lng, geo)) {
+        await saveProfile({ lat: loc.lat, lng: loc.lng, loc_updated_at: new Date().toISOString() } as any);
+      } else {
+        await saveProfile({ visible: false } as any);
+      }
+    };
+    const t = setInterval(beat, 60000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, geo, me?.visible, me?.visible_date]);
+
   const connWith = (otherId: string) => conns.find((c) => c.requester_id === otherId || c.addressee_id === otherId);
 
   const saveProfile = async (patch: Partial<Profile>) => {
@@ -113,47 +140,57 @@ export default function SocialScreen() {
     setMe((m) => (m ? { ...m, ...patch } : m));
   };
 
+  // Position GPS (silencieux = pas d'alerte, pour le heartbeat)
+  const getPosition = async (silent = false): Promise<{ lat: number; lng: number } | null> => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      if (!silent) Alert.alert(i18n.t('socialLocTitle') ?? 'Position requise', i18n.t('socialLocMsg') ?? 'Autorise la position pour voir qui est sur la plage.');
+      return null;
+    }
+    try {
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch {
+      return null;
+    }
+  };
+
+  // Transat (résa ou commande du jour) — facultatif, juste pour l'affichage
+  const findTransat = async (): Promise<string | null> => {
+    if (!uid) return null;
+    const { data: resas } = await supabase.from('beach_reservations').select('id').eq('user_id', uid).eq('date', today()).in('status', ['confirmed', 'checked_in']);
+    const rids = (resas ?? []).map((r) => r.id);
+    if (rids.length) {
+      const { data: links } = await supabase.from('beach_reservation_sunbeds').select('sunbed_id').in('reservation_id', rids).limit(1);
+      const sid = links?.[0]?.sunbed_id;
+      if (sid) {
+        const { data: sb } = await supabase.from('sunbeds').select('label').eq('id', sid).single();
+        if (sb?.label) return String(sb.label);
+      }
+    }
+    const { data: orders } = await supabase.from('app_orders').select('sunbed').eq('user_id', uid).eq('status', 'paid').gte('created_at', `${today()}T00:00:00`).order('created_at', { ascending: false }).limit(1);
+    const os = orders?.[0]?.sunbed;
+    return os && String(os).trim() ? String(os).trim() : null;
+  };
+
   const toggleVisible = async (on: boolean) => {
     if (!uid) return;
-    if (on) {
-      // Besoin d'un transat du jour (présent)
-      const { data: resas } = await supabase
-        .from('beach_reservations')
-        .select('id')
-        .eq('user_id', uid)
-        .eq('date', today())
-        .in('status', ['confirmed', 'checked_in']);
-      const rids = (resas ?? []).map((r) => r.id);
-      let transat: string | null = null;
-      if (rids.length) {
-        const { data: links } = await supabase.from('beach_reservation_sunbeds').select('sunbed_id').in('reservation_id', rids).limit(1);
-        const sid = links?.[0]?.sunbed_id;
-        if (sid) {
-          const { data: sb } = await supabase.from('sunbeds').select('label').eq('id', sid).single();
-          transat = sb?.label ? String(sb.label) : null;
-        }
-      }
-      // sinon, une commande payée du jour donne aussi un transat (présence)
-      if (!transat) {
-        const { data: orders } = await supabase
-          .from('app_orders')
-          .select('sunbed, created_at')
-          .eq('user_id', uid)
-          .eq('status', 'paid')
-          .gte('created_at', `${today()}T00:00:00`)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        const os = orders?.[0]?.sunbed;
-        if (os && String(os).trim()) transat = String(os).trim();
-      }
-      if (!transat) {
-        Alert.alert(i18n.t('socialNeedResaTitle') ?? 'Présence requise', i18n.t('socialNeedResaMsg') ?? 'Réserve un transat ou passe une commande aujourd\'hui pour être visible à la plage.');
-        return;
-      }
-      await saveProfile({ visible: true, visible_date: today(), transat } as any);
-    } else {
+    if (!on) {
       await saveProfile({ visible: false } as any);
+      return;
     }
+    if (!geo) {
+      Alert.alert(i18n.t('socialLocTitle') ?? 'Position requise', 'Configuration de la plage indisponible pour le moment.');
+      return;
+    }
+    const loc = await getPosition();
+    if (!loc) return;
+    if (!isInside(loc.lat, loc.lng, geo)) {
+      Alert.alert(i18n.t('socialTooFarTitle') ?? 'Tu n\'es pas sur la plage', i18n.t('socialTooFarMsg') ?? 'Tu dois être sur la plage des Tournesols pour te rendre visible.');
+      return;
+    }
+    const transat = await findTransat();
+    await saveProfile({ visible: true, visible_date: today(), transat, lat: loc.lat, lng: loc.lng, loc_updated_at: new Date().toISOString() } as any);
   };
 
   const changePhoto = async () => {
@@ -206,8 +243,10 @@ export default function SocialScreen() {
   const accepted = conns.filter((c) => c.status === 'accepted');
   const acceptedIds = new Set(accepted.map((c) => (c.requester_id === uid ? c.addressee_id : c.requester_id)));
 
+  const hereNow = present.filter((p) => isAtBeach(p, geo));
+
   const Avatar = ({ p, size = 46, ring }: { p?: Profile; size?: number; ring?: boolean }) => {
-    const isOnline = !!p && onlineIds.has(p.user_id);
+    const isOnline = !!p && isAtBeach(p, geo);
     const dot = Math.max(11, size * 0.28);
     return (
       <View style={{ width: size, height: size }}>
@@ -328,7 +367,7 @@ export default function SocialScreen() {
               {accepted.map((c) => {
                 const otherId = c.requester_id === uid ? c.addressee_id : c.requester_id;
                 const p = profilesById[otherId];
-                const isOnline = onlineIds.has(otherId);
+                const isOnline = !!p && isAtBeach(p, geo);
                 return (
                   <TouchableOpacity key={c.id} onPress={() => router.push(`/social/chat?peer=${otherId}`)} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]} activeOpacity={0.7}>
                     <Avatar p={p} size={52} />
@@ -350,14 +389,14 @@ export default function SocialScreen() {
           {/* À la plage aujourd'hui */}
           <View style={{ gap: 10 }}>
             <Text style={[styles.section, { color: theme.text }]}>{i18n.t('socialHereToday') ?? 'À la plage aujourd\'hui'}</Text>
-            {present.length === 0 ? (
+            {hereNow.length === 0 ? (
               <Text style={[styles.muted, { color: theme.textSecondary }]}>{i18n.t('socialNobody') ?? 'Personne d\'autre n\'est visible pour l\'instant.'}</Text>
             ) : (
-              present.map((p) => {
+              hereNow.map((p) => {
                 const c = connWith(p.user_id);
                 const isAccepted = acceptedIds.has(p.user_id);
                 const isPending = c?.status === 'pending';
-                const isOnline = onlineIds.has(p.user_id);
+                const isOnline = isAtBeach(p, geo);
                 return (
                   <View key={p.user_id} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]}>
                     <Avatar p={p} size={52} />

@@ -28,7 +28,8 @@ import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
 import { i18n } from '@/shared/i18n';
-import { usePresence } from '@/shared/hooks/usePresence';
+import { useBeachGeofence } from '@/shared/hooks/useBeachGeofence';
+import { isAtBeach } from '@/shared/lib/geo';
 
 let ImagePicker: typeof import('expo-image-picker') | null = null;
 try {
@@ -103,8 +104,9 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const onlineIds = usePresence(uid);
-  const peerOnline = onlineIds.has(peerId);
+  const geo = useBeachGeofence();
+  const [peerLoc, setPeerLoc] = useState<{ lat?: number | null; lng?: number | null; loc_updated_at?: string | null }>({});
+  const peerOnline = isAtBeach(peerLoc, geo);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recState = useAudioRecorderState(recorder, 250);
@@ -117,9 +119,10 @@ export default function ChatScreen() {
       setLoading(false);
       return;
     }
-    const { data: prof } = await supabase.from('social_profiles').select('nickname, photo_url').eq('user_id', peerId).maybeSingle();
+    const { data: prof } = await supabase.from('social_profiles').select('nickname, photo_url, lat, lng, loc_updated_at').eq('user_id', peerId).maybeSingle();
     setPeerName(prof?.nickname || (i18n.t('socialAnonymous') ?? 'Anonyme'));
     setPeerPhoto(prof?.photo_url ?? null);
+    setPeerLoc({ lat: (prof as any)?.lat, lng: (prof as any)?.lng, loc_updated_at: (prof as any)?.loc_updated_at });
     const { data } = await supabase
       .from('social_messages')
       .select('*')
