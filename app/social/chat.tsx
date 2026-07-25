@@ -49,6 +49,7 @@ interface Msg {
 }
 
 const ONLINE = '#22C55E';
+const ACCENT = '#E8730C'; // ambre « coucher de soleil »
 const canRecord = Platform.OS !== 'web';
 
 const fmt = (ms: number) => {
@@ -284,7 +285,7 @@ export default function ChatScreen() {
       />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
         {loading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
+          <ActivityIndicator style={{ marginTop: 40 }} color={ACCENT} />
         ) : (
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 14, gap: 3, paddingBottom: 20 }}>
             {msgs.length === 0 && (
@@ -299,7 +300,7 @@ export default function ChatScreen() {
               const grouped = prev && prev.sender_id === m.sender_id;
               const isImage = m.kind === 'image' && m.attachment_url;
               const isAudio = m.kind === 'audio' && m.attachment_url;
-              const bubbleBg = mine ? colors.brand : theme.textSecondary + '1F';
+              const bubbleBg = mine ? ACCENT : theme.textSecondary + '1F';
               return (
                 <View
                   key={m.id}
@@ -314,7 +315,7 @@ export default function ChatScreen() {
                   {isImage ? (
                     <Image source={{ uri: m.attachment_url! }} style={styles.chatImage} contentFit="cover" />
                   ) : isAudio ? (
-                    <AudioBubble uri={m.attachment_url!} durationMs={m.duration_ms} mine={mine} tint={colors.brand} />
+                    <AudioBubble uri={m.attachment_url!} durationMs={m.duration_ms} mine={mine} tint={ACCENT} />
                   ) : (
                     <Text style={{ color: mine ? '#fff' : theme.text, fontSize: 15.5, lineHeight: 21 }}>{m.body}</Text>
                   )}
@@ -333,14 +334,14 @@ export default function ChatScreen() {
               <View style={styles.recDot} />
               <Text style={{ color: colors.accentRed, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{fmt(recState.durationMillis)}</Text>
             </View>
-            <TouchableOpacity onPress={stopAndSend} style={[styles.sendBtn, { backgroundColor: colors.brand }]}>
+            <TouchableOpacity onPress={stopAndSend} style={[styles.sendBtn, { backgroundColor: ACCENT }]}>
               <Ionicons name="send" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8, borderTopColor: theme.textSecondary + '22', backgroundColor: theme.background }]}>
             <TouchableOpacity onPress={sendPhoto} disabled={sending} style={styles.iconRound}>
-              {sending ? <ActivityIndicator color={colors.brand} /> : <Ionicons name="image" size={24} color={colors.brand} />}
+              {sending ? <ActivityIndicator color={ACCENT} /> : <Ionicons name="image" size={24} color={ACCENT} />}
             </TouchableOpacity>
             <TextInput
               value={text}
@@ -351,11 +352,11 @@ export default function ChatScreen() {
               multiline
             />
             {text.trim() ? (
-              <TouchableOpacity onPress={sendText} style={[styles.sendBtn, { backgroundColor: colors.brand }]}>
+              <TouchableOpacity onPress={sendText} style={[styles.sendBtn, { backgroundColor: ACCENT }]}>
                 <Ionicons name="send" size={18} color="#fff" />
               </TouchableOpacity>
             ) : canRecord ? (
-              <TouchableOpacity onPress={startRec} style={[styles.sendBtn, { backgroundColor: colors.brand }]}>
+              <TouchableOpacity onPress={startRec} style={[styles.sendBtn, { backgroundColor: ACCENT }]}>
                 <Ionicons name="mic" size={20} color="#fff" />
               </TouchableOpacity>
             ) : null}

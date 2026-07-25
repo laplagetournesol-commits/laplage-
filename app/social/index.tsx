@@ -17,7 +17,6 @@ import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
-import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
 import { i18n } from '@/shared/i18n';
 import { useImagePicker } from '@/features/admin/hooks/useImagePicker';
@@ -40,6 +39,7 @@ interface Conn {
 }
 
 const ONLINE = '#22C55E';
+const ACCENT = '#E8730C'; // ambre « coucher de soleil »
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function SocialScreen() {
@@ -241,12 +241,12 @@ export default function SocialScreen() {
         }}
       />
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={ACCENT} />
       ) : !uid ? (
         <View style={styles.center}>
           <Ionicons name="people-outline" size={40} color={theme.textSecondary} />
           <Text style={[styles.muted, { color: theme.textSecondary }]}>{i18n.t('orderLoginMsg') ?? 'Connecte-toi pour rejoindre la communauté.'}</Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/login')} style={[styles.primaryBtn, { backgroundColor: colors.brand }]}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')} style={[styles.primaryBtn, { backgroundColor: ACCENT }]}>
             <Text style={styles.primaryTxt}>{i18n.t('login') ?? 'Se connecter'}</Text>
           </TouchableOpacity>
         </View>
@@ -256,7 +256,7 @@ export default function SocialScreen() {
           refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
         >
           {/* Mon profil — bandeau dégradé */}
-          <LinearGradient colors={[colors.brand, colors.terracotta]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <LinearGradient colors={['#E8590C', '#F5A623']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
             <View style={styles.meRow}>
               <TouchableOpacity onPress={changePhoto} disabled={uploading}>
                 {uploading ? (
@@ -265,7 +265,7 @@ export default function SocialScreen() {
                   <Avatar p={me ?? undefined} size={64} ring />
                 )}
                 <View style={[styles.camBadge, { backgroundColor: '#fff' }]}>
-                  <Ionicons name="camera" size={11} color={colors.brand} />
+                  <Ionicons name="camera" size={11} color={ACCENT} />
                 </View>
               </TouchableOpacity>
               <View style={{ flex: 1, gap: 7 }}>
@@ -309,7 +309,7 @@ export default function SocialScreen() {
                       <Text style={[styles.name, { color: theme.text }]}>{p?.nickname || 'Anonyme'}</Text>
                       {p?.transat ? <Text style={[styles.sub, { color: theme.textSecondary }]}>Transat {p.transat}</Text> : null}
                     </View>
-                    <TouchableOpacity onPress={() => setConnStatus(c.id, 'accepted')} style={[styles.smallBtn, { backgroundColor: colors.brand }]}>
+                    <TouchableOpacity onPress={() => setConnStatus(c.id, 'accepted')} style={[styles.smallBtn, { backgroundColor: ACCENT }]}>
                       <Text style={styles.smallBtnTxt}>{i18n.t('socialAccept') ?? 'Accepter'}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setConnStatus(c.id, 'declined')} style={styles.iconBtn}>
@@ -338,8 +338,8 @@ export default function SocialScreen() {
                         {isOnline ? onlineLabel : p?.transat ? `Transat ${p.transat}` : ''}
                       </Text>
                     </View>
-                    <View style={[styles.chatPill, { backgroundColor: colors.brand + '16' }]}>
-                      <Ionicons name="chatbubble-ellipses" size={20} color={colors.brand} />
+                    <View style={[styles.chatPill, { backgroundColor: ACCENT + '16' }]}>
+                      <Ionicons name="chatbubble-ellipses" size={20} color={ACCENT} />
                     </View>
                   </TouchableOpacity>
                 );
@@ -368,13 +368,13 @@ export default function SocialScreen() {
                       </Text>
                     </View>
                     {isAccepted ? (
-                      <TouchableOpacity onPress={() => router.push(`/social/chat?peer=${p.user_id}`)} style={[styles.smallBtn, { backgroundColor: colors.brand }]}>
+                      <TouchableOpacity onPress={() => router.push(`/social/chat?peer=${p.user_id}`)} style={[styles.smallBtn, { backgroundColor: ACCENT }]}>
                         <Text style={styles.smallBtnTxt}>{i18n.t('socialMessage') ?? 'Message'}</Text>
                       </TouchableOpacity>
                     ) : isPending ? (
                       <Text style={[styles.sub, { color: theme.textSecondary }]}>{i18n.t('socialPending') ?? 'Envoyée'}</Text>
                     ) : (
-                      <TouchableOpacity onPress={() => sendRequest(p.user_id)} style={[styles.smallBtn, { backgroundColor: colors.brand }]}>
+                      <TouchableOpacity onPress={() => sendRequest(p.user_id)} style={[styles.smallBtn, { backgroundColor: ACCENT }]}>
                         <Text style={styles.smallBtnTxt}>{i18n.t('socialConnect') ?? 'Se connecter'}</Text>
                       </TouchableOpacity>
                     )}
