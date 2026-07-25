@@ -9,6 +9,9 @@ import {
   Modal,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
@@ -340,7 +343,7 @@ export default function OrderScreen() {
 
       {/* Récap + paiement */}
       <Modal visible={checkout} transparent animationType="slide" onRequestClose={() => setCheckout(false)}>
-        <View style={styles.overlay}>
+        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.sheet, { backgroundColor: theme.background, paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.sheetHead}>
               <Text style={[styles.sheetTitle, { color: theme.text }]}>{i18n.t('orderYourOrder') ?? 'Ta commande'}</Text>
@@ -348,7 +351,12 @@ export default function OrderScreen() {
                 <Ionicons name="close" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 150 }}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+            >
               {cartLines.map((l) => (
                 <View key={l.item.product_id} style={styles.recapRow}>
                   <Text style={[styles.recapQty, { color: colors.brand }]}>{l.qty}×</Text>
@@ -356,7 +364,6 @@ export default function OrderScreen() {
                   <Text style={[styles.recapPrice, { color: theme.textSecondary }]}>{(l.item.price * l.qty).toFixed(2)}€</Text>
                 </View>
               ))}
-            </ScrollView>
 
             {authChecked && !user ? (
               // Pas connecté
@@ -430,8 +437,9 @@ export default function OrderScreen() {
                 </TouchableOpacity>
               </>
             )}
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -466,7 +474,7 @@ const styles = StyleSheet.create({
   cartBarTxt: { color: '#fff', fontWeight: '800', fontSize: 16, flex: 1 },
   cartBarTotal: { color: '#fff', fontWeight: '800', fontSize: 16 },
   overlay: { flex: 1, backgroundColor: '#00000066', justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, gap: 12 },
+  sheet: { borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, gap: 12, maxHeight: '88%' },
   sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { fontSize: 20, fontWeight: '800' },
   recapRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
