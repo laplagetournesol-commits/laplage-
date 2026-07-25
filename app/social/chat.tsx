@@ -27,6 +27,7 @@ import {
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
+import { apiCall } from '@/shared/lib/api';
 import { i18n } from '@/shared/i18n';
 import { useBeachGeofence } from '@/shared/hooks/useBeachGeofence';
 import { isAtBeach } from '@/shared/lib/geo';
@@ -103,6 +104,8 @@ export default function ChatScreen() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [trans, setTrans] = useState<Record<string, string>>({});
+  const [transLoading, setTransLoading] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<ScrollView>(null);
   const geo = useBeachGeofence();
   const [peerLoc, setPeerLoc] = useState<{ lat?: number | null; lng?: number | null; loc_updated_at?: string | null }>({});
@@ -177,7 +180,30 @@ export default function ChatScreen() {
       Alert.alert('Erreur', error.message);
       return;
     }
-    if (data) pushMine(data as Msg);
+    if (data) {
+      pushMine(data as Msg);
+      // Push au destinataire, en tâche de fond (n'attend pas)
+      apiCall('/api/social/notify', { message_id: (data as Msg).id }).catch(() => {});
+    }
+  };
+
+  const translate = async (m: Msg) => {
+    if (trans[m.id]) {
+      setTrans((p) => {
+        const n = { ...p };
+        delete n[m.id];
+        return n;
+      });
+      return;
+    }
+    setTransLoading((s) => ({ ...s, [m.id]: true }));
+    try {
+      const { translated } = await apiCall<{ translated: string }>('/api/social/translate', { text: m.body, target: i18n.locale });
+      if (translated) setTrans((p) => ({ ...p, [m.id]: translated }));
+    } catch {
+      // silencieux
+    }
+    setTransLoading((s) => ({ ...s, [m.id]: false }));
   };
 
   const uploadToAssets = async (uri: string, prefix: string, contentType: string, ext: string): Promise<string | null> => {
@@ -320,7 +346,25 @@ export default function ChatScreen() {
                   ) : isAudio ? (
                     <AudioBubble uri={m.attachment_url!} durationMs={m.duration_ms} mine={mine} tint={ACCENT} />
                   ) : (
-                    <Text style={{ color: mine ? '#fff' : theme.text, fontSize: 15.5, lineHeight: 21 }}>{m.body}</Text>
+                    <>
+                      <Text style={{ color: mine ? '#fff' : theme.text, fontSize: 15.5, lineHeight: 21 }}>{m.body}</Text>
+                      {!mine && !!m.body?.trim() && (
+                        <>
+                          {trans[m.id] ? (
+                            <Text style={{ color: theme.text, fontSize: 15, lineHeight: 20, marginTop: 6, fontStyle: 'italic', opacity: 0.85 }}>{trans[m.id]}</Text>
+                          ) : null}
+                          <TouchableOpacity onPress={() => translate(m)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} style={{ marginTop: 5 }}>
+                            {transLoading[m.id] ? (
+                              <ActivityIndicator size="small" color={ACCENT} />
+                            ) : (
+                              <Text style={{ color: ACCENT, fontSize: 12, fontWeight: '700' }}>
+                                {trans[m.id] ? (i18n.t('socialSeeOriginal') ?? 'Voir l\'original') : `🌐 ${i18n.t('socialTranslate') ?? 'Traduire'}`}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </>
                   )}
                 </View>
               );

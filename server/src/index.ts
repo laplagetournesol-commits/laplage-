@@ -5,6 +5,7 @@ import webhooksRouter from './routes/webhooks';
 import emailsRouter from './routes/emails';
 import notificationsRouter from './routes/notifications';
 import menuRouter from './routes/menu';
+import socialRouter from './routes/social';
 import { startRemindersCron } from './cron/reminders';
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/webhooks', webhooksRouter);
 app.use('/api/emails', emailsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/menu', menuRouter);
+app.use('/api/social', socialRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
