@@ -69,6 +69,19 @@ export function BeachMap({
     ? { uri: REMOTE_MAP_URL }
     : require('../../../../assets/transat.png');
 
+  // 1ère rangée = chaises longues (numéros en 100). On calcule le centre de la rangée
+  // pour y afficher un gros label sur la carte.
+  const frontBeds = sunbeds.filter((s) => {
+    const n = parseInt(String(s.label ?? ''), 10);
+    return Number.isFinite(n) && n >= 100 && n < 200;
+  });
+  const frontRow = frontBeds.length
+    ? {
+        x: frontBeds.reduce((a, s) => a + s.svg_x + s.svg_width / 2, 0) / frontBeds.length,
+        y: frontBeds.reduce((a, s) => a + s.svg_y + s.svg_height / 2, 0) / frontBeds.length,
+      }
+    : null;
+
   return (
     <View style={styles.container}>
       {/* Légende */}
@@ -174,6 +187,23 @@ export function BeachMap({
               </TouchableOpacity>
             );
           })}
+
+          {/* Gros label « Chaises longues » sur la 1ère rangée (nº 100) */}
+          {frontRow && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: `${frontRow.x}%`,
+                top: `${frontRow.y}%`,
+                transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
+              }}
+            >
+              <Text style={[styles.rowLabel, rotation ? { transform: [{ rotate: `${-rotation}deg` }] } : null]}>
+                {i18n.t('beachFrontRowLabel') ?? 'Chaises longues'}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -217,6 +247,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     overflow: 'hidden',
+  },
+  rowLabel: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#1A1A1A',
+    backgroundColor: 'rgba(247, 217, 78, 0.94)',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 9,
+    overflow: 'hidden',
+    textAlign: 'center',
   },
   scrollView: { flex: 1 },
   scrollContent: {
