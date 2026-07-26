@@ -5,6 +5,19 @@ import { sendPushToUser } from '../lib/push';
 
 const router = Router();
 
+// Rate-limit simple par utilisateur (en mémoire) — anti-abus quota DeepL / spam push.
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+function rateLimited(userId: string, max: number, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const b = rateBuckets.get(userId);
+  if (!b || now > b.resetAt) {
+    rateBuckets.set(userId, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  b.count += 1;
+  return b.count > max;
+}
+
 /**
  * POST /api/social/notify — envoie un push au destinataire d'un message.
  * Le message est déjà inséré par le client (direct Supabase, RLS). Ici on
@@ -14,6 +27,10 @@ const router = Router();
 router.post('/notify', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const senderId = req.user!.id;
+    if (rateLimited(senderId, 40)) {
+      res.status(429).json({ error: 'Trop de requêtes' });
+      return;
+    }
     const { message_id } = req.body as { message_id?: string };
     if (!message_id) {
       res.status(400).json({ error: 'message_id manquant' });
@@ -55,6 +72,10 @@ const DEEPL_TARGET: Record<string, string> = { en: 'EN-GB', fr: 'FR', es: 'ES', 
 
 router.post('/translate', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
+    if (rateLimited(req.user!.id, 60)) {
+      res.status(429).json({ error: 'Trop de traductions, réessaie dans un instant.' });
+      return;
+    }
     const { text, target } = req.body as { text?: string; target?: string };
     const clean = String(text ?? '').trim();
     if (!clean) {

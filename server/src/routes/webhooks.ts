@@ -27,6 +27,14 @@ router.post(
     const event = req.stripeEvent!;
 
     try {
+      // Idempotence : Stripe rejoue les events (at-least-once). On ne traite
+      // chaque event.id qu'UNE fois -> pas de bons/tickets/push en double.
+      const { error: dupErr } = await supabase.from('processed_stripe_events').insert({ event_id: event.id });
+      if (dupErr && /duplicate|unique|already exists/i.test(dupErr.message)) {
+        res.json({ received: true, duplicate: true });
+        return;
+      }
+
       switch (event.type) {
         case 'payment_intent.succeeded': {
           const paymentIntent = event.data.object;
@@ -100,20 +108,28 @@ router.post(
 
             const firstName = profile?.full_name?.trim().split(/\s+/)[0] ?? '';
 
-            if (profile?.email) {
-              // Email de confirmation complet (date, heure, personnes, transat/table + QR)
-              const mail = await buildReservationEmail(table, reservationId, firstName);
-              if (mail) {
-                await getResend().emails.send({ from: fromEmail, to: profile.email, subject: mail.subject, html: mail.html });
+            // Email + push : NON critiques. Un échec ici ne doit pas renvoyer 500
+            // à Stripe (sinon rejeu + effets de bord dupliqués). On isole et on loge.
+            try {
+              if (profile?.email) {
+                const mail = await buildReservationEmail(table, reservationId, firstName);
+                if (mail) {
+                  await getResend().emails.send({ from: fromEmail, to: profile.email, subject: mail.subject, html: mail.html });
+                }
               }
+            } catch (mailErr) {
+              console.error('Webhook: envoi email confirmation échoué (non bloquant):', mailErr);
             }
 
-            // Push spécifique au paiement de l'acompte
-            await sendPushToUser(
-              userId,
-              'Acompte reçu',
-              `Votre acompte pour votre réservation ${type} a bien été reçu.`,
-            );
+            try {
+              await sendPushToUser(
+                userId,
+                'Acompte reçu',
+                `Votre acompte pour votre réservation ${type} a bien été reçu.`,
+              );
+            } catch (pushErr) {
+              console.error('Webhook: push confirmation échoué (non bloquant):', pushErr);
+            }
           }
           break;
         }

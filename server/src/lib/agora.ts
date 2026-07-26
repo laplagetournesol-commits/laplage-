@@ -626,6 +626,9 @@ async function sendToPrinter(printerName: string, data: string): Promise<boolean
 export async function printMenuOrderTicket(orderId: string): Promise<void> {
   if (!AGORA_PRINT_ENABLED || !AGORA_TOKEN) return;
   try {
+    // Garde anti-réimpression : si déjà imprimé, on ne refait rien.
+    const { data: prev } = await supabase.from('app_orders').select('printed_at').eq('id', orderId).maybeSingle();
+    if (prev?.printed_at) return;
     const data = await loadOrder(orderId);
     if (!data) return;
     const { order, lines } = data as any as { order: any; lines: (OrderLine & { prep_order_id?: number | null })[] };
