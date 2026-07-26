@@ -112,6 +112,13 @@ export default function HomeScreen() {
     supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date').limit(1).single().then(({ data }) => { if (data) setFeaturedEvent(data); });
   }, []);
 
+  // Photo d'avatar = photo du profil "Connecte-toi" (celle que l'utilisateur a mise).
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) { setAvatarUrl(null); return; }
+    supabase.from('social_profiles').select('photo_url').eq('user_id', user.id).maybeSingle().then(({ data }) => setAvatarUrl(data?.photo_url ?? null));
+  }, [user?.id]);
+
   const greeting = () => {
     const greetings = i18n.t('greeting', { returnObjects: true }) as any;
     return greetings?.[period] ?? i18n.t(`greeting.${period}`);
@@ -186,8 +193,12 @@ export default function HomeScreen() {
                     }
                   }}
                 >
-                  <View style={[styles.avatar, { backgroundColor: colors.sunYellow }]}>
-                    <Ionicons name="person" size={20} color={colors.black} />
+                  <View style={[styles.avatar, { backgroundColor: colors.sunYellow, overflow: 'hidden' }]}>
+                    {avatarUrl ? (
+                      <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    ) : (
+                      <Ionicons name="person" size={20} color={colors.black} />
+                    )}
                   </View>
                 </TouchableOpacity>
               </View>
