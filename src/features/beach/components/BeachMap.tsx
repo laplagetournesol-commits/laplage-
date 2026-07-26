@@ -78,7 +78,8 @@ export function BeachMap({
   const frontRow = frontBeds.length
     ? {
         x: frontBeds.reduce((a, s) => a + s.svg_x + s.svg_width / 2, 0) / frontBeds.length,
-        y: frontBeds.reduce((a, s) => a + s.svg_y + s.svg_height / 2, 0) / frontBeds.length,
+        // juste SOUS la rangée (bas des transats + marge), pas dessus
+        y: Math.max(...frontBeds.map((s) => s.svg_y + s.svg_height)) + 2,
       }
     : null;
 
@@ -196,7 +197,7 @@ export function BeachMap({
                 position: 'absolute',
                 left: `${frontRow.x}%`,
                 top: `${frontRow.y}%`,
-                transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
+                transform: [{ translateX: '-50%' }],
               }}
             >
               <Text style={[styles.rowLabel, rotation ? { transform: [{ rotate: `${-rotation}deg` }] } : null]}>
