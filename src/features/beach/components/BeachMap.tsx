@@ -77,7 +77,8 @@ export function BeachMap({
   });
   const frontRow = frontBeds.length
     ? {
-        x: frontBeds.reduce((a, s) => a + s.svg_x + s.svg_width / 2, 0) / frontBeds.length,
+        minX: Math.min(...frontBeds.map((s) => s.svg_x)),
+        maxX: Math.max(...frontBeds.map((s) => s.svg_x + s.svg_width)),
         // juste SOUS la rangée (bas des transats + marge), pas dessus
         y: Math.max(...frontBeds.map((s) => s.svg_y + s.svg_height)) + 2,
       }
@@ -195,10 +196,9 @@ export function BeachMap({
               pointerEvents="none"
               style={{
                 position: 'absolute',
-                left: `${frontRow.x}%`,
+                left: `${frontRow.minX}%`,
                 top: `${frontRow.y}%`,
-                width: 160,
-                marginLeft: -80,
+                width: `${frontRow.maxX - frontRow.minX}%`,
                 alignItems: 'center',
               }}
             >
