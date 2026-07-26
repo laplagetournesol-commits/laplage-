@@ -197,7 +197,9 @@ export function BeachMap({
                 position: 'absolute',
                 left: `${frontRow.x}%`,
                 top: `${frontRow.y}%`,
-                transform: [{ translateX: '-50%' }],
+                width: 160,
+                marginLeft: -80,
+                alignItems: 'center',
               }}
             >
               <Text style={[styles.rowLabel, rotation ? { transform: [{ rotate: `${-rotation}deg` }] } : null]}>
