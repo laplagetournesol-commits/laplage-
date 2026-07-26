@@ -69,20 +69,21 @@ export function BeachMap({
     ? { uri: REMOTE_MAP_URL }
     : require('../../../../assets/transat.png');
 
-  // 1ère rangée = chaises longues (numéros en 100). On calcule le centre de la rangée
-  // pour y afficher un gros label sur la carte.
-  const frontBeds = sunbeds.filter((s) => {
-    const n = parseInt(String(s.label ?? ''), 10);
-    return Number.isFinite(n) && n >= 100 && n < 200;
-  });
-  const frontRow = frontBeds.length
-    ? {
-        minX: Math.min(...frontBeds.map((s) => s.svg_x)),
-        maxX: Math.max(...frontBeds.map((s) => s.svg_x + s.svg_width)),
-        // juste SOUS la rangée (bas des transats + marge), pas dessus
-        y: Math.max(...frontBeds.map((s) => s.svg_y + s.svg_height)) + 2,
-      }
-    : null;
+  // Label "Chaises longues" sur le plan, 100% piloté par la base
+  // (restaurant_settings / beach_map_label) : { show, x, y (en % du plan, repère
+  // NON pivoté), text_fr/es/en }. -> déplaçable / modifiable / masquable SANS rebuild.
+  const [mapLabel, setMapLabel] = useState<any>(null);
+  useEffect(() => {
+    supabase
+      .from('restaurant_settings')
+      .select('value')
+      .eq('key', 'beach_map_label')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) setMapLabel(data.value);
+      });
+  }, []);
+  const labelText = mapLabel ? mapLabel[`text_${i18n.locale}`] || mapLabel.text_fr || 'Chaises longues' : '';
 
   return (
     <View style={styles.container}>
@@ -124,7 +125,8 @@ export function BeachMap({
         showsVerticalScrollIndicator={false}
         centerContent
       >
-        <View style={[styles.mapContainer, { width: MAP_WIDTH, height: MAP_HEIGHT, transform: [{ rotate: `${rotation}deg` }] }]}>
+        <View style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}>
+        <View style={[styles.mapContainer, { width: MAP_WIDTH, height: MAP_HEIGHT, transform: [{ rotate: `${rotation}deg` }], position: 'absolute', left: 0, top: 0 }]}>
           <Image
             source={mapSource}
             style={styles.mapImage}
@@ -190,23 +192,25 @@ export function BeachMap({
             );
           })}
 
-          {/* Gros label « Chaises longues » sur la 1ère rangée (nº 100) */}
-          {frontRow && (
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                left: `${frontRow.minX}%`,
-                top: `${frontRow.y}%`,
-                width: `${frontRow.maxX - frontRow.minX}%`,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={[styles.rowLabel, rotation ? { transform: [{ rotate: `${-rotation}deg` }] } : null]}>
-                {i18n.t('beachFrontRowLabel') ?? 'Chaises longues'}
-              </Text>
-            </View>
-          )}
+        </View>
+
+        {/* Label "Chaises longues" — calque NON pivoté, position en % visuels lus en base
+            (beach_map_label). pointerEvents none => ne bloque JAMAIS la réservation. */}
+        {mapLabel?.show && !!labelText && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: `${mapLabel.x ?? 50}%`,
+              top: `${mapLabel.y ?? 90}%`,
+              width: 200,
+              marginLeft: -100,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={styles.rowLabel}>{labelText}</Text>
+          </View>
+        )}
         </View>
       </ScrollView>
     </View>
