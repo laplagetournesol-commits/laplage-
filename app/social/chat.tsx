@@ -29,7 +29,6 @@ import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { i18n } from '@/shared/i18n';
-import { useBeachGeofence } from '@/shared/hooks/useBeachGeofence';
 import { isAtBeach } from '@/shared/lib/geo';
 
 let ImagePicker: typeof import('expo-image-picker') | null = null;
@@ -101,7 +100,9 @@ export default function ChatScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
   const { peer } = useLocalSearchParams<{ peer?: string }>();
-  const peerId = typeof peer === 'string' ? peer : '';
+  // On n'accepte qu'un UUID valide (évite toute injection dans les filtres PostgREST).
+  const rawPeer = typeof peer === 'string' ? peer : '';
+  const peerId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawPeer) ? rawPeer : '';
   const [uid, setUid] = useState<string | null>(null);
   const [peerName, setPeerName] = useState('');
   const [peerPhoto, setPeerPhoto] = useState<string | null>(null);
@@ -114,9 +115,8 @@ export default function ChatScreen() {
   const [transLoading, setTransLoading] = useState<Record<string, boolean>>({});
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const geo = useBeachGeofence();
-  const [peerLoc, setPeerLoc] = useState<{ lat?: number | null; lng?: number | null; loc_updated_at?: string | null }>({});
-  const peerOnline = isAtBeach(peerLoc, geo);
+  const [peerLoc, setPeerLoc] = useState<{ at_beach?: boolean | null; loc_updated_at?: string | null }>({});
+  const peerOnline = isAtBeach(peerLoc);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recState = useAudioRecorderState(recorder, 250);
@@ -129,11 +129,11 @@ export default function ChatScreen() {
       setLoading(false);
       return;
     }
-    const { data: prof } = await supabase.from('social_profiles').select('nickname, photo_url, transat, lat, lng, loc_updated_at').eq('user_id', peerId).maybeSingle();
+    const { data: prof } = await supabase.from('social_profiles').select('nickname, photo_url, transat, at_beach, loc_updated_at').eq('user_id', peerId).maybeSingle();
     setPeerName(prof?.nickname || (i18n.t('socialAnonymous') ?? 'Anonyme'));
     setPeerPhoto(prof?.photo_url ?? null);
     setPeerTransat((prof as any)?.transat ?? null);
-    setPeerLoc({ lat: (prof as any)?.lat, lng: (prof as any)?.lng, loc_updated_at: (prof as any)?.loc_updated_at });
+    setPeerLoc({ at_beach: (prof as any)?.at_beach, loc_updated_at: (prof as any)?.loc_updated_at });
     const { data } = await supabase
       .from('social_messages')
       .select('*')

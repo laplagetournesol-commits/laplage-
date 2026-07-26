@@ -206,8 +206,10 @@ export default function OrderScreen() {
     if (cartLines.length === 0) return;
     // Offrir à un autre transat : la livraison va au transat destinataire, avec
     // la mention "de la part du transat X".
-    const gift = giftTransat.trim();
-    const delivery = gift || selectedSunbed.trim();
+    const self = selectedSunbed.trim();
+    // Offrir à son propre transat n'a pas de sens -> on ignore le "cadeau".
+    const gift = giftTransat.trim() && giftTransat.trim() !== self ? giftTransat.trim() : '';
+    const delivery = gift || self;
     const finalNote = [
       gift ? `🎁 ${(i18n.t('orderGiftFrom') ?? 'De la part du transat')} ${selectedSunbed.trim()}` : '',
       note.trim(),

@@ -32,8 +32,7 @@ interface Profile {
   transat: string | null;
   visible: boolean;
   visible_date: string | null;
-  lat?: number | null;
-  lng?: number | null;
+  at_beach?: boolean | null;
   loc_updated_at?: string | null;
 }
 interface Conn {
@@ -58,6 +57,7 @@ export default function SocialScreen() {
   const [conns, setConns] = useState<Conn[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { pickAndUpload, uploading } = useImagePicker('assets', { aspect: [1, 1], quality: 0.5, prefix: 'social-' });
   const geo = useBeachGeofence();
 
@@ -119,9 +119,9 @@ export default function SocialScreen() {
       const loc = await getPosition(true);
       if (!alive || !loc) return;
       if (isInside(loc.lat, loc.lng, geo)) {
-        await saveProfile({ lat: loc.lat, lng: loc.lng, loc_updated_at: new Date().toISOString() } as any);
+        await saveProfile({ at_beach: true, loc_updated_at: new Date().toISOString() } as any);
       } else {
-        await saveProfile({ visible: false } as any);
+        await saveProfile({ visible: false, at_beach: false, loc_updated_at: null } as any);
       }
     };
     const t = setInterval(beat, 60000);
@@ -177,7 +177,8 @@ export default function SocialScreen() {
   const toggleVisible = async (on: boolean) => {
     if (!uid) return;
     if (!on) {
-      await saveProfile({ visible: false } as any);
+      // Invisible : on coupe AUSSI le "à la plage" pour éteindre le point vert tout de suite.
+      await saveProfile({ visible: false, at_beach: false, loc_updated_at: null } as any);
       return;
     }
     if (!geo) {
@@ -191,7 +192,8 @@ export default function SocialScreen() {
       return;
     }
     const transat = await findTransat();
-    await saveProfile({ visible: true, visible_date: today(), transat, lat: loc.lat, lng: loc.lng, loc_updated_at: new Date().toISOString() } as any);
+    // On stocke un booléen "à la plage" (pas les coords brutes) + l'heure.
+    await saveProfile({ visible: true, visible_date: today(), transat, at_beach: true, loc_updated_at: new Date().toISOString() } as any);
   };
 
   const changePhoto = async () => {
@@ -244,10 +246,10 @@ export default function SocialScreen() {
   const accepted = conns.filter((c) => c.status === 'accepted');
   const acceptedIds = new Set(accepted.map((c) => (c.requester_id === uid ? c.addressee_id : c.requester_id)));
 
-  const hereNow = present.filter((p) => isAtBeach(p, geo));
+  const hereNow = present.filter((p) => isAtBeach(p));
 
   const Avatar = ({ p, size = 46, ring }: { p?: Profile; size?: number; ring?: boolean }) => {
-    const isOnline = !!p && isAtBeach(p, geo);
+    const isOnline = !!p && isAtBeach(p);
     const dot = Math.max(11, size * 0.28);
     return (
       <View style={{ width: size, height: size }}>
@@ -293,7 +295,7 @@ export default function SocialScreen() {
       ) : (
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 20 }}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
         >
           {/* Mon profil — bandeau dégradé */}
           <LinearGradient colors={['#E8590C', '#F5A623']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
@@ -368,7 +370,7 @@ export default function SocialScreen() {
               {accepted.map((c) => {
                 const otherId = c.requester_id === uid ? c.addressee_id : c.requester_id;
                 const p = profilesById[otherId];
-                const isOnline = !!p && isAtBeach(p, geo);
+                const isOnline = !!p && isAtBeach(p);
                 return (
                   <TouchableOpacity key={c.id} onPress={() => router.push(`/social/chat?peer=${otherId}`)} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]} activeOpacity={0.7}>
                     <Avatar p={p} size={52} />
@@ -402,7 +404,7 @@ export default function SocialScreen() {
                 const c = connWith(p.user_id);
                 const isAccepted = acceptedIds.has(p.user_id);
                 const isPending = c?.status === 'pending';
-                const isOnline = isAtBeach(p, geo);
+                const isOnline = isAtBeach(p);
                 return (
                   <View key={p.user_id} style={[styles.messRow, { backgroundColor: theme.textSecondary + '0D' }]}>
                     <Avatar p={p} size={52} />

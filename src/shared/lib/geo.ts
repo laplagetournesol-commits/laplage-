@@ -24,13 +24,14 @@ export function isInside(lat: number, lng: number, geo: Geofence | null): boolea
   return haversineM(lat, lng, geo.lat, geo.lng) <= geo.radius_m;
 }
 
-/** Un profil est "à la plage maintenant" si sa position est fraîche ET dans le rayon. */
+/**
+ * Un profil est "à la plage maintenant" si le booléen at_beach (calculé côté client
+ * à partir de la position + du géofence, sans exposer les coords) est vrai ET frais.
+ */
 export function isAtBeach(
-  p: { lat?: number | null; lng?: number | null; loc_updated_at?: string | null },
-  geo: Geofence | null,
+  p: { at_beach?: boolean | null; loc_updated_at?: string | null },
   freshMs = 5 * 60 * 1000,
 ): boolean {
-  if (!geo || p.lat == null || p.lng == null || !p.loc_updated_at) return false;
-  if (Date.now() - Date.parse(p.loc_updated_at) > freshMs) return false;
-  return isInside(p.lat, p.lng, geo);
+  if (!p.at_beach || !p.loc_updated_at) return false;
+  return Date.now() - Date.parse(p.loc_updated_at) <= freshMs;
 }
