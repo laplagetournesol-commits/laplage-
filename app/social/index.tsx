@@ -378,6 +378,11 @@ export default function SocialScreen() {
                         {isOnline ? onlineLabel : p?.transat ? `Transat ${p.transat}` : ''}
                       </Text>
                     </View>
+                    {p?.transat ? (
+                      <TouchableOpacity onPress={() => router.push(`/social/map?transat=${encodeURIComponent(String(p.transat))}`)} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Ionicons name="location-outline" size={20} color={ACCENT} />
+                      </TouchableOpacity>
+                    ) : null}
                     <View style={[styles.chatPill, { backgroundColor: ACCENT + '16' }]}>
                       <Ionicons name="chatbubble-ellipses" size={20} color={ACCENT} />
                     </View>
@@ -407,6 +412,11 @@ export default function SocialScreen() {
                         {isOnline ? `${onlineLabel}${p.transat ? ` · Transat ${p.transat}` : ''}` : `${p.transat ? `Transat ${p.transat}` : ''}${p.status ? `${p.transat ? ' · ' : ''}${p.status}` : ''}`}
                       </Text>
                     </View>
+                    {p.transat ? (
+                      <TouchableOpacity onPress={() => router.push(`/social/map?transat=${encodeURIComponent(String(p.transat))}`)} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Ionicons name="location-outline" size={20} color={ACCENT} />
+                      </TouchableOpacity>
+                    ) : null}
                     {isAccepted ? (
                       <TouchableOpacity onPress={() => router.push(`/social/chat?peer=${p.user_id}`)} style={[styles.smallBtn, { backgroundColor: ACCENT }]}>
                         <Text style={styles.smallBtnTxt}>{i18n.t('socialMessage') ?? 'Message'}</Text>

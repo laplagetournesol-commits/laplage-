@@ -105,6 +105,7 @@ export default function ChatScreen() {
   const [uid, setUid] = useState<string | null>(null);
   const [peerName, setPeerName] = useState('');
   const [peerPhoto, setPeerPhoto] = useState<string | null>(null);
+  const [peerTransat, setPeerTransat] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -128,9 +129,10 @@ export default function ChatScreen() {
       setLoading(false);
       return;
     }
-    const { data: prof } = await supabase.from('social_profiles').select('nickname, photo_url, lat, lng, loc_updated_at').eq('user_id', peerId).maybeSingle();
+    const { data: prof } = await supabase.from('social_profiles').select('nickname, photo_url, transat, lat, lng, loc_updated_at').eq('user_id', peerId).maybeSingle();
     setPeerName(prof?.nickname || (i18n.t('socialAnonymous') ?? 'Anonyme'));
     setPeerPhoto(prof?.photo_url ?? null);
+    setPeerTransat((prof as any)?.transat ?? null);
     setPeerLoc({ lat: (prof as any)?.lat, lng: (prof as any)?.lng, loc_updated_at: (prof as any)?.loc_updated_at });
     const { data } = await supabase
       .from('social_messages')
@@ -316,6 +318,12 @@ export default function ChatScreen() {
               <Ionicons name="arrow-back" size={24} color={theme.text} />
             </TouchableOpacity>
           ),
+          headerRight: () =>
+            peerTransat ? (
+              <TouchableOpacity onPress={() => router.push(`/social/map?transat=${encodeURIComponent(peerTransat)}`)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="location-outline" size={23} color={ACCENT} />
+              </TouchableOpacity>
+            ) : null,
         }}
       />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
