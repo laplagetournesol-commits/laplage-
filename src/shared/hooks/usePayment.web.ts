@@ -162,7 +162,18 @@ function showPaymentModal(stripe: any, clientSecret: string): Promise<PaymentMod
     title.style.cssText = 'margin:0 0 20px 0;font-size:18px;color:#1a5276;font-family:-apple-system,sans-serif;';
 
     const cardDiv = document.createElement('div');
-    cardDiv.style.cssText = 'border:1px solid #ddd;border-radius:10px;padding:14px;margin-bottom:20px;min-height:44px;';
+    cardDiv.style.cssText = 'border:1px solid #ddd;border-radius:10px;padding:14px;margin-bottom:10px;min-height:44px;';
+
+    // Astuce toujours visible : le champ carte est une iframe Stripe souvent bloquée
+    // par les bloqueurs de pub / VPN.
+    const hint = document.createElement('div');
+    hint.textContent = 'Le champ carte ne s\'affiche pas ? Désactive ton bloqueur de pub / VPN, ou essaie avec Safari ou Chrome.';
+    hint.style.cssText = 'color:#8a8a8a;font-size:12px;margin-bottom:16px;line-height:1.4;font-family:-apple-system,sans-serif;';
+
+    // Avertissement fort affiché si l'iframe Stripe ne se charge pas (bloquée).
+    const blockedMsg = document.createElement('div');
+    blockedMsg.textContent = '⚠️ Le champ carte n\'a pas pu se charger. Il est probablement bloqué par une extension (bloqueur de pub), un VPN ou un navigateur privé. Désactive-les et rafraîchis la page, ou utilise un autre navigateur.';
+    blockedMsg.style.cssText = 'color:#c0392b;font-size:13px;margin-bottom:14px;display:none;line-height:1.45;background:#fdecea;border-radius:8px;padding:10px 12px;font-family:-apple-system,sans-serif;';
 
     const errorMsg = document.createElement('div');
     errorMsg.style.cssText = 'color:#c0392b;font-size:13px;margin-bottom:12px;display:none;font-family:-apple-system,sans-serif;';
@@ -203,7 +214,10 @@ function showPaymentModal(stripe: any, clientSecret: string): Promise<PaymentMod
 
         if (error) {
           // Erreur de carte récupérable (refus, 3DS échoué…) → reste sur la modal
-          errorMsg.textContent = error.message ?? 'Paiement refusé.';
+          const declined = error.code === 'card_declined' || error.decline_code;
+          errorMsg.textContent = declined
+            ? 'Carte refusée par votre banque. Réessayez, utilisez une autre carte, ou contactez votre banque.'
+            : (error.message ?? 'Paiement refusé. Vérifiez les informations de la carte.');
           errorMsg.style.display = 'block';
           payBtn.disabled = false;
           cancelBtn.disabled = false;
@@ -221,13 +235,27 @@ function showPaymentModal(stripe: any, clientSecret: string): Promise<PaymentMod
     };
 
     modal.appendChild(title);
+    modal.appendChild(blockedMsg);
     modal.appendChild(cardDiv);
+    modal.appendChild(hint);
     modal.appendChild(errorMsg);
     btnRow.appendChild(cancelBtn);
     btnRow.appendChild(payBtn);
     modal.appendChild(btnRow);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+
+    // Détection : si le champ carte n'est pas prêt après 5s, c'est qu'il est
+    // bloqué (extension/VPN) → on affiche l'avertissement fort et on désactive Payer.
+    let cardReady = false;
+    cardElement.on('ready', () => { cardReady = true; });
+    setTimeout(() => {
+      if (!cardReady) {
+        blockedMsg.style.display = 'block';
+        payBtn.disabled = true;
+        payBtn.style.opacity = '0.5';
+      }
+    }, 5000);
 
     // Mount Stripe card element APRÈS insertion dans le DOM
     cardElement.mount(cardDiv);
