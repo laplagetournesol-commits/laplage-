@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSunMode } from '@/shared/theme';
 import { i18n } from '@/shared/i18n';
+import { supabase } from '@/shared/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -28,11 +29,30 @@ export default function MenuScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
 
+  // Carte pilotable depuis la base (restaurant_settings / menu_page).
+  // { url } => l'app affiche cette image à la place de celle embarquée, SANS rebuild.
+  // Le ratio est calculé automatiquement à partir de l'image, donc toute nouvelle
+  // carte (n'importe quelles dimensions) s'affiche correctement.
+  const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
+  const [remoteRatio, setRemoteRatio] = useState<number | null>(null);
+  useEffect(() => {
+    supabase.from('restaurant_settings').select('value').eq('key', 'menu_page').maybeSingle().then(({ data }) => {
+      const url = (data?.value as any)?.url;
+      if (url && typeof url === 'string') {
+        setRemoteUrl(url);
+        Image.getSize(url, (w, h) => { if (w > 0) setRemoteRatio(h / w); }, () => {});
+      }
+    });
+  }, []);
+
+  const menuSource = remoteUrl ? { uri: remoteUrl } : MENU_PAGE;
+  const ratio = remoteUrl ? (remoteRatio ?? MENU_RATIO) : MENU_RATIO;
+
   // Menu paysage : on cap la largeur d'affichage pour qu'il tienne en entier
   // sur l'écran sans scroll horizontal. Sur grand écran (web/tablette) on
   // limite la taille pour garder une lecture confortable.
   const menuWidth = Math.min(width - 24, 1100);
-  const menuHeight = menuWidth * MENU_RATIO;
+  const menuHeight = menuWidth * ratio;
 
   // Photos plats : 2 colonnes sur mobile, 3 sur tablette, 4 sur desktop large.
   const columns = width >= 1100 ? 4 : width >= 700 ? 3 : 2;
@@ -71,7 +91,7 @@ export default function MenuScreen() {
           contentContainerStyle={{ alignItems: 'center' }}
         >
           <Image
-            source={MENU_PAGE}
+            source={menuSource}
             style={{ width: menuWidth, height: menuHeight, borderRadius: 8 }}
             resizeMode="contain"
           />
