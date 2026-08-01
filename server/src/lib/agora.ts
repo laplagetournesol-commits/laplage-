@@ -24,6 +24,11 @@ const AGORA_PRINTER_KITCHEN = process.env.AGORA_PRINTER_KITCHEN ?? 'Cocina';
 // Ordre des plats (Orden Prep. Ágora) : id -> libellé, l'id fait aussi l'ordre.
 const PREP_ORDER_NAME: Record<number, string> = { 1: 'BEBIDAS', 2: 'PRIMEROS', 3: 'SEGUNDOS' };
 
+// Codes ESC/POS pour agrandir le texte sur le ticket (validés sur l'imprimante Agora).
+const BIG = '\x1d\x21\x11';    // double hauteur + largeur
+const NORMAL = '\x1d\x21\x00'; // retour taille normale
+const big = (s: string) => `${BIG}${s}${NORMAL}`;
+
 // Constantes de config Ágora (découvertes via l'API export-master)
 const POS = { Id: 1, Name: 'TPV1' };
 const WORKPLACE = { Id: 1, Name: 'LES TOURNESOLS' };
@@ -635,15 +640,16 @@ export async function printMenuOrderTicket(orderId: string): Promise<void> {
 
     const kitchen = lines.filter((l) => l.prep_type === 'COCINA');
     const bar = lines.filter((l) => l.prep_type !== 'COCINA');
-    const noteLine = order.note ? [String(order.note)] : [];
-    const header = (dest: string) => ['', `  *** PEDIDO APP - ${dest} ***`, '========================', `HAMACA: ${order.sunbed || '-'}`, ...noteLine, '------------------------'];
+    const noteLine = order.note ? [big(String(order.note))] : [];
+    // Transat (HAMACA) en GROS + articles en gros pour lecture rapide au bar/cuisine.
+    const header = (dest: string) => ['', `  *** PEDIDO APP - ${dest} ***`, '========================', big(`HAMACA: ${order.sunbed || '-'}`), ...noteLine, '------------------------'];
     const footer = ['========================', '', ''];
 
     let anyOk = false;
 
     // Ticket BAR (boissons + tout ce qui n'est pas cuisine)
     if (bar.length) {
-      const rows = [...header('BAR'), ...bar.map((l) => `${l.qty} x ${l.name}`), footer[0], footer[1], footer[2]];
+      const rows = [...header('BAR'), ...bar.map((l) => big(`${l.qty} x ${l.name}`)), footer[0], footer[1], footer[2]];
       anyOk = (await sendToPrinter(AGORA_PRINTER_BAR, rows.join('\n'))) || anyOk;
     }
 
@@ -658,7 +664,7 @@ export async function printMenuOrderTicket(orderId: string): Promise<void> {
           const label = l.prep_order_id != null ? PREP_ORDER_NAME[l.prep_order_id] ?? '' : '';
           if (label) rows.push(`-- ${label} --`);
         }
-        rows.push(`${l.qty} x ${l.name}`);
+        rows.push(big(`${l.qty} x ${l.name}`));
       }
       rows.push(...footer);
       anyOk = (await sendToPrinter(AGORA_PRINTER_KITCHEN, rows.join('\n'))) || anyOk;
