@@ -69,6 +69,31 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
       return;
     }
 
+    // PLAGE : revérifier la dispo AVANT de facturer. Si un transat de cette résa
+    // est déjà pris (confirmé/checked_in) par une AUTRE réservation à cette date
+    // — y compris une résa faite par la plage/admin — on BLOQUE le paiement.
+    // Évite de débiter un client pour des transats déjà occupés (double-booking).
+    if (type === 'beach') {
+      const { data: rdate } = await supabase.from('beach_reservations').select('date').eq('id', reservationId).single();
+      const { data: myLinks } = await supabase.from('beach_reservation_sunbeds').select('sunbed_id').eq('reservation_id', reservationId);
+      const myIds = (myLinks ?? []).map((l) => l.sunbed_id);
+      if (rdate?.date && myIds.length) {
+        const { data: conflicts } = await supabase
+          .from('beach_reservation_sunbeds')
+          .select('sunbed_id')
+          .eq('date', rdate.date)
+          .in('sunbed_id', myIds)
+          .in('status', ['confirmed', 'checked_in'])
+          .neq('reservation_id', reservationId);
+        if (conflicts && conflicts.length) {
+          const { data: sbs } = await supabase.from('sunbeds').select('label').in('id', conflicts.map((c) => c.sunbed_id));
+          const labels = (sbs ?? []).map((s) => s.label).join(', ');
+          res.status(409).json({ error: `Transats déjà réservés (${labels}). Reviens en arrière et choisis d'autres transats.` });
+          return;
+        }
+      }
+    }
+
     // Créer le PaymentIntent
     // Restaurant = pré-autorisation (empreinte CB, débit uniquement en cas de no-show)
     // Plage & événements = paiement immédiat
