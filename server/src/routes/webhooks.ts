@@ -84,6 +84,31 @@ router.post(
               .eq('reservation_id', reservationId)
               .eq('status', 'pending');
 
+            // SÉCURITÉ anti double-booking : si des liens sont restés "pending"
+            // (n'ont pas pu passer confirmed = transats pris par une autre résa),
+            // le client a payé mais n'a pas ses places -> on ALERTE l'équipe tout de suite.
+            const { data: stuck } = await supabase
+              .from('beach_reservation_sunbeds')
+              .select('sunbed_id')
+              .eq('reservation_id', reservationId)
+              .eq('status', 'pending');
+            if (stuck && stuck.length) {
+              try {
+                const { data: sbs } = await supabase.from('sunbeds').select('label').in('id', stuck.map((s) => s.sunbed_id));
+                const labels = (sbs ?? []).map((s) => s.label).join(', ');
+                const { data: resInfo } = await supabase.from('beach_reservations').select('guest_name').eq('id', reservationId).single();
+                const who = resInfo?.guest_name || userId || 'client';
+                await getResend().emails.send({
+                  from: fromEmail,
+                  to: ['djbenjaminfranklin@gmail.com', 'johanna@dresscodepress.com'],
+                  subject: `⚠️ Conflit transats — client payé sans place (${labels})`,
+                  html: `<div style="font-family:sans-serif"><h2 style="color:#A3220B">⚠️ Transats déjà pris</h2><p>Le client <b>${who}</b> a <b>payé</b> sa réservation plage (réf. ${reservationId}) mais les transats <b>${labels}</b> sont déjà réservés par quelqu'un d'autre.</p><p>À gérer sur place : réinstaller le client ou le rembourser.</p></div>`,
+                });
+              } catch (alertErr) {
+                console.error('Alerte conflit transats échouée:', alertErr);
+              }
+            }
+
             // Déclaration fiscale Ágora (série W). No-op si AGORA_SYNC_ENABLED
             // n'est pas activé. Ne bloque jamais le webhook (erreurs loguées).
             await syncBeachSaleToAgora(reservationId, paymentIntent.id, paymentIntent.amount);
