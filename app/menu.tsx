@@ -29,16 +29,16 @@ export default function MenuScreen() {
   const { theme } = useSunMode();
   const insets = useSafeAreaInsets();
 
-  // Carte pilotable depuis la base (restaurant_settings / menu_page).
-  // { url } => l'app affiche cette image à la place de celle embarquée, SANS rebuild.
-  // Le ratio est calculé automatiquement à partir de l'image, donc toute nouvelle
-  // carte (n'importe quelles dimensions) s'affiche correctement.
+  // Carte pilotable depuis la base (restaurant_settings / menu_page), SANS rebuild.
+  // Multilingue : la valeur peut être { url, es, fr, en }. On affiche l'image de la
+  // langue de l'app (i18n.locale), sinon `url` par défaut. Ratio calculé auto.
   const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
   const [remoteRatio, setRemoteRatio] = useState<number | null>(null);
   useEffect(() => {
     supabase.from('restaurant_settings').select('value').eq('key', 'menu_page').maybeSingle().then(({ data }) => {
-      const url = (data?.value as any)?.url;
-      if (url && typeof url === 'string') {
+      const v = (data?.value as any) ?? {};
+      const url = (typeof v[i18n.locale] === 'string' && v[i18n.locale]) || (typeof v.url === 'string' && v.url) || null;
+      if (url) {
         setRemoteUrl(url);
         Image.getSize(url, (w, h) => { if (w > 0) setRemoteRatio(h / w); }, () => {});
       }
