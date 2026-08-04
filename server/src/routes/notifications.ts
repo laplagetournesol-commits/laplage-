@@ -20,9 +20,25 @@ async function sendConfirmationEmail(
   const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
   const { data: resa } = await supabase
     .from(table)
-    .select('date, time, time_slot, guest_count, guest_email')
+    .select('date, time, time_slot, guest_count, guest_email, special_requests, qr_code')
     .eq('id', reservationId)
     .single();
+
+  // Réservation faite PAR la plage (admin) pour un invité ? (pas une résa client)
+  const madeByBeach = (resa as any)?.special_requests === 'Réservation admin';
+
+  // QR code (image) à la place d'un numéro de référence. Échec silencieux = pas de QR.
+  let qrImgUrl: string | null = null;
+  const qrValue = (resa as any)?.qr_code;
+  if (qrValue) {
+    try {
+      const QRCode = (await import('qrcode')).default;
+      const buf = await QRCode.toBuffer(String(qrValue), { width: 320, margin: 1, errorCorrectionLevel: 'M' });
+      const path = `qr/${reservationId}.png`;
+      const { error: upErr } = await supabase.storage.from('assets').upload(path, buf, { contentType: 'image/png', upsert: true });
+      if (!upErr) qrImgUrl = supabase.storage.from('assets').getPublicUrl(path).data.publicUrl;
+    } catch { /* pas de QR si échec */ }
+  }
 
   // Si la résa a été faite "pour un ami" (guest_email renseigné), envoyer la
   // confirmation à l'invité. Sinon, à l'email du compte qui a réservé.
@@ -54,7 +70,12 @@ async function sendConfirmationEmail(
           ${formattedDate ? `<p>Date : <strong>${formattedDate}</strong></p>` : ''}
           ${service ? `<p>Créneau : <strong>${service}</strong></p>` : ''}
           ${resa?.guest_count ? `<p>Personnes : <strong>${resa.guest_count}</strong></p>` : ''}
-          <p>Référence : <strong>${reservationId}</strong></p>
+          ${type === 'beach' && madeByBeach ? `
+          <div style="background:#fdecea;border:1px solid #f5c6c0;border-radius:8px;padding:12px 14px;margin:16px 0;color:#a3220b;font-size:14px;line-height:1.5;">
+            <strong>⚠️ Important :</strong> merci d'arriver <strong>avant 13h00</strong>. Passé 13h00, ou sans nous prévenir, votre transat pourra être réattribué.<br>
+            <span style="color:#8a3b2f;">Please arrive <strong>before 1:00 PM</strong>. After 1:00 PM, or without notice, your sunbed may be reassigned.</span>
+          </div>` : ''}
+          ${qrImgUrl ? `<div style="text-align:center;margin:22px 0 6px;"><img src="${qrImgUrl}" alt="QR code" width="180" height="180" style="border:1px solid #eee;border-radius:12px;" /><p style="color:#8a8a8a;font-size:13px;margin:8px 0 0;">Présentez ce QR code à l'accueil</p></div>` : ''}
           <p>Merci et à bientôt !</p>
           <p style="color: #888; font-size: 12px;">La Plage Tournesol</p>
         </div>
