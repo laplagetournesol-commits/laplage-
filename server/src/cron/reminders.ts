@@ -277,6 +277,9 @@ export async function sendReminders() {
 export function startRemindersCron() {
   const CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
   let lastNoShowRun: string | null = null; // YYYY-MM-DD du dernier run
+  let lastMenuSync: string | null = null;  // synchro menu (1x/jour, 5h)
+  let lastCaReport: string | null = null;  // Z appli (1x/jour, 20h)
+  let lastAccountant: string | null = null; // rapport comptable (1x/mois, 1er 9h)
 
   const check = async () => {
     const now = new Date(
@@ -318,8 +321,31 @@ export function startRemindersCron() {
       }
     }
 
-    // Capture no-show à 23h30 (une seule fois par jour)
     const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+
+    // Synchro menu Agora — chaque jour à 5h (une seule fois)
+    if (hour === 5 && lastMenuSync !== todayKey) {
+      lastMenuSync = todayKey;
+      try { const { runMenuSync } = await import('./scheduled-reports'); await runMenuSync(); }
+      catch (err) { console.error('[Cron] Erreur synchro menu:', err); }
+    }
+
+    // Z appli (série W) : email + ticket caisse — chaque jour à 20h (une seule fois)
+    if (hour === 20 && lastCaReport !== todayKey) {
+      lastCaReport = todayKey;
+      try { const { runDailyCaReport } = await import('./scheduled-reports'); await runDailyCaReport(); }
+      catch (err) { console.error('[Cron] Erreur Z appli:', err); }
+    }
+
+    // Rapport comptable Stripe — le 1er de chaque mois à 9h (une seule fois par mois)
+    if (now.getDate() === 1 && hour === 9 && lastAccountant !== monthKey) {
+      lastAccountant = monthKey;
+      try { const { runMonthlyAccountantReport } = await import('./scheduled-reports'); await runMonthlyAccountantReport(); }
+      catch (err) { console.error('[Cron] Erreur rapport comptable:', err); }
+    }
+
+    // Capture no-show à 23h30 (une seule fois par jour)
     if (hour === 23 && now.getMinutes() >= 30 && lastNoShowRun !== todayKey) {
       console.log('[Cron] Capture des no-shows restaurant...');
       try {
