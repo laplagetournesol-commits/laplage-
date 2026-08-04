@@ -108,9 +108,6 @@ export function BeachMap({
             <Text style={[styles.legendText, { color: theme.textSecondary }]}>{i18n.t('selected')}</Text>
           </View>
         </View>
-        <Text style={[styles.legendNote, { color: theme.text, backgroundColor: colors.sunYellow + '40' }]}>
-          {`ℹ️  ${i18n.t('beachFrontRowNote') ?? 'Les nº 100 (1ère rangée) sont des chaises longues'}`}
-        </Text>
       </View>
 
       {/* Carte zoomable (pinch-to-zoom iOS) */}
