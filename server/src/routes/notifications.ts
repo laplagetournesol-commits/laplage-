@@ -72,8 +72,8 @@ async function sendConfirmationEmail(
           ${resa?.guest_count ? `<p>Personnes : <strong>${resa.guest_count}</strong></p>` : ''}
           ${type === 'beach' && madeByBeach ? `
           <div style="background:#fdecea;border:1px solid #f5c6c0;border-radius:8px;padding:12px 14px;margin:16px 0;color:#a3220b;font-size:14px;line-height:1.5;">
-            <strong>⚠️ Important :</strong> merci d'arriver <strong>avant 13h00</strong>. Passé 13h00, ou sans nous prévenir, votre transat pourra être réattribué.<br>
-            <span style="color:#8a3b2f;">Please arrive <strong>before 1:00 PM</strong>. After 1:00 PM, or without notice, your sunbed may be reassigned.</span>
+            <strong>⚠️ Important :</strong> merci d'arriver <strong>avant 13h00</strong>, car passé cette heure — ou sans nous prévenir — votre transat pourra être réattribué.<br>
+            <span style="color:#8a3b2f;">Please arrive <strong>before 1:00 PM</strong>, as after this time — or without notice — your sunbed may be reassigned.</span>
           </div>` : ''}
           ${qrImgUrl ? `<div style="text-align:center;margin:22px 0 6px;"><img src="${qrImgUrl}" alt="QR code" width="180" height="180" style="border:1px solid #eee;border-radius:12px;" /><p style="color:#8a8a8a;font-size:13px;margin:8px 0 0;">Présentez ce QR code à l'accueil</p></div>` : ''}
           <p>Merci et à bientôt !</p>
