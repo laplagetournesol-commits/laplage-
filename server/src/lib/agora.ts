@@ -464,6 +464,7 @@ interface OrderLine {
   vat_rate: number | null;
   prep_type: string | null;
   prep_order_id?: number | null;
+  sale_format_id?: number | null;
 }
 
 /** Facture W multi-TVA à partir des lignes d'une commande (TVA regroupée par taux). */
@@ -477,7 +478,7 @@ function buildMenuInvoice(opts: { number: number; date: string; businessDay: str
       ParentIndex: null,
       ProductId: l.product_id,
       ProductName: l.name,
-      SaleFormatId: l.product_id,
+      SaleFormatId: l.sale_format_id ?? l.product_id,
       SaleFormatName: l.name,
       SaleFormatRatio: 1.0,
       MainBarcode: '',
@@ -577,7 +578,16 @@ async function loadOrder(orderId: string) {
   const { data: order } = await supabase.from('app_orders').select('*').eq('id', orderId).single();
   if (!order) return null;
   const { data: lines } = await supabase.from('app_order_lines').select('*').eq('order_id', orderId);
-  return { order, lines: (lines ?? []) as OrderLine[] };
+  const rows = (lines ?? []) as OrderLine[];
+  // app_order_lines ne stocke pas le sale_format_id ; on le récupère depuis le menu
+  // (indispensable pour la facture Agora, qui indexe les lignes par SaleFormatId).
+  const ids = [...new Set(rows.map((l) => l.product_id))];
+  if (ids.length) {
+    const { data: menu } = await supabase.from('app_menu_items').select('product_id, sale_format_id').in('product_id', ids);
+    const sfById = new Map((menu ?? []).map((m: any) => [m.product_id, m.sale_format_id]));
+    rows.forEach((l) => { l.sale_format_id = sfById.get(l.product_id) ?? null; });
+  }
+  return { order, lines: rows };
 }
 
 /** Déclare la commande payée dans Ágora (facture W). Idempotent, non-bloquant. */
