@@ -262,7 +262,7 @@ export default function BeachManagementScreen() {
       </ScrollView>
 
       {/* Rename sunbed modal */}
-      <Modal visible={editingLabel !== null} transparent animationType="fade">
+      <Modal visible={editingLabel !== null} transparent animationType="fade" onRequestClose={() => setEditingLabel(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Renommer le transat</Text>
@@ -298,7 +298,7 @@ export default function BeachManagementScreen() {
       </Modal>
 
       {/* Price edit modal */}
-      <Modal visible={editingPrice !== null} transparent animationType="fade">
+      <Modal visible={editingPrice !== null} transparent animationType="fade" onRequestClose={() => setEditingPrice(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Modifier le prix</Text>

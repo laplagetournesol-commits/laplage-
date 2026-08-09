@@ -97,7 +97,7 @@ export default function MenuScreen() {
           />
         </ScrollView>
 
-        {Platform.OS !== 'web' && (
+        {Platform.OS === 'ios' && (
           <Text style={[styles.zoomHint, { color: theme.textSecondary }]}>
             {i18n.t('zoomHint') ?? 'Pincez pour zoomer'}
           </Text>

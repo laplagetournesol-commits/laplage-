@@ -26,6 +26,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.lestournesols.app",
+      "versionCode": 1,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -69,7 +70,6 @@
       ],
       "expo-image",
       "expo-web-browser",
-      "@react-native-google-signin/google-signin",
       [
         "expo-audio",
         {

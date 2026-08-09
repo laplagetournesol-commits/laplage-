@@ -326,7 +326,7 @@ export default function ChatScreen() {
             ) : null,
         }}
       />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         {loading ? (
           <ActivityIndicator style={{ marginTop: 40 }} color={ACCENT} />
         ) : (

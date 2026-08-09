@@ -345,7 +345,7 @@ export default function OrderScreen() {
 
       {/* Récap + paiement */}
       <Modal visible={checkout} transparent animationType="slide" onRequestClose={() => setCheckout(false)}>
-        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.sheet, { backgroundColor: theme.background, paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.sheetHead}>
               <Text style={[styles.sheetTitle, { color: theme.text }]}>{i18n.t('orderYourOrder') ?? 'Ta commande'}</Text>

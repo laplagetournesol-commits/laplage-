@@ -247,7 +247,7 @@ export default function AddonsManagementScreen() {
       </ScrollView>
 
       {/* Edit/Create Modal */}
-      <Modal visible={editingAddon !== null} transparent animationType="slide">
+      <Modal visible={editingAddon !== null} transparent animationType="slide" onRequestClose={() => setEditingAddon(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             <View style={styles.modalHeader}>

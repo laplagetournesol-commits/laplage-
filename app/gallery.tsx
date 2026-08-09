@@ -146,7 +146,7 @@ export default function GalleryScreen() {
       />
 
       {/* Fullscreen modal */}
-      <Modal visible={fullscreenIndex !== null} transparent animationType="fade">
+      <Modal visible={fullscreenIndex !== null} transparent animationType="fade" onRequestClose={() => setFullscreenIndex(null)}>
         <StatusBar hidden />
         <View style={styles.fullscreenContainer}>
           <FlatList

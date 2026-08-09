@@ -528,7 +528,7 @@ export default function EventFormScreen() {
       </ScrollView>
 
       {/* Modal sélection d'heure */}
-      <Modal visible={!!timePickerField} transparent animationType="slide">
+      <Modal visible={!!timePickerField} transparent animationType="slide" onRequestClose={() => setTimePickerField(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
             <View style={styles.modalHeader}>

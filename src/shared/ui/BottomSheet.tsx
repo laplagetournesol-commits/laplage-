@@ -39,7 +39,7 @@ export function BottomSheet({ visible, onClose, title, children, style }: Bottom
           <View style={styles.overlayTap} />
         </TouchableWithoutFeedback>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <View
