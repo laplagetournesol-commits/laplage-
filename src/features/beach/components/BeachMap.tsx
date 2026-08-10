@@ -16,7 +16,7 @@ import type { Sunbed, BeachZone } from '@/shared/types';
 import { i18n } from '@/shared/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MAP_VERSION = 6;
+const MAP_VERSION = 7;
 
 // "new transat.png" : 1118×816 (landscape)
 const MAP_WIDTH = SCREEN_WIDTH;
