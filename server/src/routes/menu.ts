@@ -18,6 +18,13 @@ function getStripe() {
  */
 router.post('/order', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
+    // Commande depuis le transat en STAND-BY (réglage restaurant_settings/order_enabled).
+    // Réactivable sans redéploiement en remettant order_enabled=true.
+    const { data: flag } = await supabase.from('restaurant_settings').select('value').eq('key', 'order_enabled').maybeSingle();
+    if (flag && flag.value === false) {
+      res.status(503).json({ error: 'Les commandes depuis le transat sont momentanément indisponibles. / Ordering from your sunbed is temporarily unavailable.' });
+      return;
+    }
     const { sunbed, lines, note } = req.body as { sunbed?: string; lines?: Array<{ product_id: number; qty: number }>; note?: string };
     const cleanNote = typeof note === 'string' ? note.trim().slice(0, 200) : '';
     if (!Array.isArray(lines) || lines.length === 0) {

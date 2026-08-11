@@ -112,6 +112,14 @@ export default function HomeScreen() {
     supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date').limit(1).single().then(({ data }) => { if (data) setFeaturedEvent(data); });
   }, []);
 
+  // Commande depuis le transat activable/désactivable en base (order_enabled).
+  const [orderEnabled, setOrderEnabled] = useState(true);
+  useEffect(() => {
+    supabase.from('restaurant_settings').select('value').eq('key', 'order_enabled').maybeSingle().then(({ data }) => {
+      if (data && data.value === false) setOrderEnabled(false);
+    });
+  }, []);
+
   // Photo d'avatar = photo du profil "Connecte-toi" (celle que l'utilisateur a mise).
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -272,12 +280,14 @@ export default function HomeScreen() {
             onPress={() => router.push('/menu')}
             color={colors.sunYellow}
           />
-          <QuickAction
-            icon="fast-food"
-            label={i18n.t('orderFromSunbed') ?? 'Commander'}
-            onPress={() => router.push('/order')}
-            color="#16A34A"
-          />
+          {orderEnabled && (
+            <QuickAction
+              icon="fast-food"
+              label={i18n.t('orderFromSunbed') ?? 'Commander'}
+              onPress={() => router.push('/order')}
+              color="#16A34A"
+            />
+          )}
           <QuickAction
             icon="people"
             label={i18n.t('socialTitle') ?? 'À la plage'}
