@@ -19,7 +19,7 @@
       ]
     },
     {
-      "source": "/(beach|order|social|restaurant|shop|profile|events|onboarding|menu)(/.*)?",
+      "source": "/(beach|order|social|restaurant|shop|profile|events|onboarding|menu|pay)(/.*)?",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
         { "key": "CDN-Cache-Control", "value": "no-store" }

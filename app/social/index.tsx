@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   TextInput,
   ActivityIndicator,
   Alert,
@@ -58,6 +57,7 @@ export default function SocialScreen() {
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [eligible, setEligible] = useState(false);
   const { pickAndUpload, uploading } = useImagePicker('assets', { aspect: [1, 1], quality: 0.5, prefix: 'social-' });
   const geo = useBeachGeofence();
 
@@ -103,6 +103,15 @@ export default function SocialScreen() {
       (profs ?? []).forEach((p: any) => (map[p.user_id] = p));
       setProfilesById(map);
     }
+
+    // Éligible à la présence AUTO = a une résa/commande active aujourd'hui
+    const [{ data: br }, { data: rr }, { data: ord }] = await Promise.all([
+      supabase.from('beach_reservations').select('id').eq('user_id', id).eq('date', today()).in('status', ['confirmed', 'checked_in']).limit(1),
+      supabase.from('restaurant_reservations').select('id').eq('user_id', id).eq('date', today()).in('status', ['confirmed', 'checked_in']).limit(1),
+      supabase.from('app_orders').select('id').eq('user_id', id).eq('status', 'paid').gte('created_at', `${today()}T00:00:00`).limit(1),
+    ]);
+    setEligible(!!(br?.length || rr?.length || ord?.length));
+
     setLoading(false);
   }, []);
 
@@ -110,27 +119,34 @@ export default function SocialScreen() {
     load();
   }, [load]);
 
-  // Heartbeat position : tant que visible aujourd'hui, on rafraîchit la position.
-  // Si on quitte le rayon de la plage -> on redevient invisible automatiquement.
+  // Présence AUTOMATIQUE (aucun switch) : si le client a une résa/commande du jour,
+  // il devient visible dès qu'il est physiquement sur la plage (GPS), et redevient
+  // invisible tout seul s'il quitte le rayon. Vérifié immédiatement puis chaque minute.
   useEffect(() => {
-    if (!uid || !geo || !me?.visible || me?.visible_date !== today()) return;
+    if (!uid || !geo || !eligible) return;
     let alive = true;
     const beat = async () => {
       const loc = await getPosition(true);
-      if (!alive || !loc) return;
-      if (isInside(loc.lat, loc.lng, geo)) {
-        await saveProfile({ at_beach: true, loc_updated_at: new Date().toISOString() } as any);
-      } else {
+      if (!alive) return;
+      const onBeach = !!loc && isInside(loc.lat, loc.lng, geo);
+      if (onBeach) {
+        const alreadyVisible = me?.visible && me?.visible_date === today() && (me as any)?.at_beach;
+        if (!alreadyVisible) {
+          const transat = await findTransat();
+          await saveProfile({ visible: true, visible_date: today(), transat, at_beach: true, loc_updated_at: new Date().toISOString() } as any);
+        }
+      } else if (me?.visible) {
         await saveProfile({ visible: false, at_beach: false, loc_updated_at: null } as any);
       }
     };
+    beat();
     const t = setInterval(beat, 60000);
     return () => {
       alive = false;
       clearInterval(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid, geo, me?.visible, me?.visible_date]);
+  }, [uid, geo, eligible]);
 
   const connWith = (otherId: string) => conns.find((c) => c.requester_id === otherId || c.addressee_id === otherId);
 
@@ -172,28 +188,6 @@ export default function SocialScreen() {
     const { data: orders } = await supabase.from('app_orders').select('sunbed').eq('user_id', uid).eq('status', 'paid').gte('created_at', `${today()}T00:00:00`).order('created_at', { ascending: false }).limit(1);
     const os = orders?.[0]?.sunbed;
     return os && String(os).trim() ? String(os).trim() : null;
-  };
-
-  const toggleVisible = async (on: boolean) => {
-    if (!uid) return;
-    if (!on) {
-      // Invisible : on coupe AUSSI le "à la plage" pour éteindre le point vert tout de suite.
-      await saveProfile({ visible: false, at_beach: false, loc_updated_at: null } as any);
-      return;
-    }
-    if (!geo) {
-      Alert.alert(i18n.t('socialLocTitle') ?? 'Position requise', 'Configuration de la plage indisponible pour le moment.');
-      return;
-    }
-    const loc = await getPosition();
-    if (!loc) return;
-    if (!isInside(loc.lat, loc.lng, geo)) {
-      Alert.alert(i18n.t('socialTooFarTitle') ?? 'Tu n\'es pas sur la plage', i18n.t('socialTooFarMsg') ?? 'Tu dois être sur la plage des Tournesols pour te rendre visible.');
-      return;
-    }
-    const transat = await findTransat();
-    // On stocke un booléen "à la plage" (pas les coords brutes) + l'heure.
-    await saveProfile({ visible: true, visible_date: today(), transat, at_beach: true, loc_updated_at: new Date().toISOString() } as any);
   };
 
   const changePhoto = async () => {
@@ -331,10 +325,22 @@ export default function SocialScreen() {
             </View>
             <View style={styles.visRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.visTitle}>{i18n.t('socialVisible') ?? 'Visible à la plage aujourd\'hui'}</Text>
-                <Text style={styles.visSub}>{i18n.t('socialVisibleSub') ?? 'Les autres transats peuvent te voir et te dire bonjour.'}</Text>
+                <Text style={styles.visTitle}>
+                  {me?.visible && me?.visible_date === today()
+                    ? (i18n.t('socialAutoOn') ?? 'Tu es visible sur la plage 🟢')
+                    : (i18n.t('socialAutoTitle') ?? 'Présence automatique')}
+                </Text>
+                <Text style={styles.visSub}>
+                  {eligible
+                    ? (i18n.t('socialAutoSubOn') ?? 'Grâce à ta réservation du jour, les autres transats te voient dès que tu es sur la plage.')
+                    : (i18n.t('socialAutoSubOff') ?? 'Réserve un transat ou une table : tu apparaîtras automatiquement quand tu seras sur la plage.')}
+                </Text>
               </View>
-              <Switch value={!!me?.visible && me?.visible_date === today()} onValueChange={toggleVisible} trackColor={{ true: ONLINE, false: 'rgba(255,255,255,0.3)' }} thumbColor="#fff" />
+              <Ionicons
+                name={me?.visible && me?.visible_date === today() ? 'sunny' : 'sunny-outline'}
+                size={26}
+                color={ONLINE}
+              />
             </View>
           </LinearGradient>
 

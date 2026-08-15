@@ -253,7 +253,7 @@ export function SunbedSheet({
                     />
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={[styles.bedAddonName, { color: theme.text }]}>
-                        {addon.icon ? `${addon.icon}  ` : ''}{/cava/i.test(addon.name) ? i18n.t('cavaFruitsOption') : addon.name}
+                        {addon.icon ? `${addon.icon}  ` : ''}{addon.name}
                         {bedCount > 1 ? ` × ${bedCount}` : ''}
                       </Text>
                     </View>

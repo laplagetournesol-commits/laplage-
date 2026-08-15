@@ -44,6 +44,8 @@ interface ReservationRow {
   guestEmail?: string | null;
   byBeach: boolean;
   paid: boolean;
+  guestPaymentRequested?: boolean; // résa "ami" avec lien de paiement envoyé
+  guestConfirmed?: boolean;        // ami confirmé (payé OU confirmé manuellement)
 }
 
 const STATUS_CONFIG: Record<string, { labelKey: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
@@ -115,6 +117,17 @@ export default function ReservationsScreen() {
   const [noteText, setNoteText] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   useEffect(() => { setNoteText(detail?.notes ?? ''); }, [detail?.id]);
+
+  // Coordonnées client — éditables (nom, téléphone, email) sur plage ET resto
+  const [nameEdit, setNameEdit] = useState('');
+  const [phoneEdit, setPhoneEdit] = useState('');
+  const [emailEdit, setEmailEdit] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+  useEffect(() => {
+    setNameEdit(detail?.guestName ?? '');
+    setPhoneEdit(detail?.guestPhone ?? '');
+    setEmailEdit(detail?.guestEmail ?? '');
+  }, [detail?.id]);
 
   // Tables assignées (resto) — éditable sur TOUTE résa (y compris celles des clients)
   const [tableList, setTableList] = useState<string[]>([]);
@@ -198,6 +211,39 @@ export default function ReservationsScreen() {
     Alert.alert(i18n.t('saved') ?? 'Enregistré', i18n.t('noteSaved') ?? 'Note enregistrée.');
   };
 
+  const saveContact = async () => {
+    if (!detail) return;
+    setSavingContact(true);
+    const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+    const payload = {
+      guest_name: nameEdit.trim() || null,
+      guest_phone: phoneEdit.trim() || null,
+      guest_email: emailEdit.trim() || null,
+    };
+    const { error } = await supabase.from(table).update(payload).eq('id', detail.id);
+    setSavingContact(false);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    const newClient = payload.guest_name || detail.clientName;
+    setReservations((prev) => prev.map((x) => x.id === detail.id
+      ? { ...x, guestName: payload.guest_name, guestPhone: payload.guest_phone, guestEmail: payload.guest_email, clientName: newClient }
+      : x));
+    setDetail((d) => d
+      ? { ...d, guestName: payload.guest_name, guestPhone: payload.guest_phone, guestEmail: payload.guest_email, clientName: newClient }
+      : d);
+    Alert.alert('Enregistré ✓', 'Coordonnées client mises à jour.');
+  };
+
+  // Confirmer une résa "ami" SANS paiement (sous la responsabilité de l'admin).
+  const confirmWithoutPayment = async () => {
+    if (!detail) return;
+    const table = tab === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+    const { error } = await supabase.from(table).update({ guest_confirmed: true, status: 'confirmed' }).eq('id', detail.id);
+    if (error) { Alert.alert(i18n.t('error'), error.message); return; }
+    setReservations((prev) => prev.map((x) => x.id === detail.id ? { ...x, guestConfirmed: true, status: 'confirmed' } : x));
+    setDetail((d) => d ? { ...d, guestConfirmed: true, status: 'confirmed' } : d);
+    Alert.alert('Confirmé ✓', 'Réservation confirmée sans paiement (sous ta responsabilité).');
+  };
+
   const fetchReservations = async () => {
     setLoading(true);
     const range = getDateRange(dateFilter);
@@ -205,7 +251,7 @@ export default function ReservationsScreen() {
     if (tab === 'beach') {
       let q = supabase
         .from('beach_reservations')
-        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, notes, created_at, profile:profiles(full_name, phone), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
+        .select('id, status, date, guest_count, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, guest_payment_requested, guest_confirmed, notes, created_at, profile:profiles(full_name, phone), sunbed:sunbeds!sunbed_id(label), linked_sunbeds:beach_reservation_sunbeds(sunbed:sunbeds(label))')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -231,13 +277,15 @@ export default function ReservationsScreen() {
             createdAt: r.created_at,
             byBeach: !!r.guest_phone,
             paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
+            guestPaymentRequested: !!r.guest_payment_requested,
+            guestConfirmed: !!r.guest_confirmed,
           };
         }),
       );
     } else {
       let q = supabase
         .from('restaurant_reservations')
-        .select('id, status, date, guest_count, time_slot, time, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, notes, table_numbers, created_at, profile:profiles(full_name, phone), table:restaurant_tables(label)')
+        .select('id, status, date, guest_count, time_slot, time, guest_name, guest_phone, guest_email, deposit_paid, deposit_amount, guest_payment_requested, guest_confirmed, notes, table_numbers, created_at, profile:profiles(full_name, phone), table:restaurant_tables(label)')
         .in('status', ['confirmed', 'checked_in', 'no_show', 'cancelled']);
       if (range.from) q = q.gte('date', range.from);
       if (range.to) q = q.lte('date', range.to);
@@ -264,6 +312,8 @@ export default function ReservationsScreen() {
           createdAt: r.created_at,
           byBeach: !!r.guest_phone,
           paid: !!r.deposit_paid && Number(r.deposit_amount) > 0,
+          guestPaymentRequested: !!r.guest_payment_requested,
+          guestConfirmed: !!r.guest_confirmed,
         })),
       );
     }
@@ -319,7 +369,11 @@ export default function ReservationsScreen() {
       buttons.push({
         text: i18n.t('modify'),
         onPress: () => {
-          router.push({ pathname: '/(tabs)/beach', params: { modify: r.id } });
+          setDetail(r);
+          Alert.alert(
+            'Modifier la réservation',
+            'Modifiez directement dans la fiche : nom, téléphone, email, nombre de personnes, notes. Pour changer le transat ou le jour, utilisez le bouton « Changer de transat / jour » dans la fiche.',
+          );
         },
       });
     }
@@ -634,6 +688,34 @@ export default function ReservationsScreen() {
               {detail.byBeach && <Badge label={i18n.t('badgeByBeach')} variant="vip" size="sm" />}
             </View>
 
+            {detail.guestPaymentRequested && (
+              <View style={{ padding: 10, borderRadius: 10, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.cardBorder, gap: 8 }}>
+                <Text style={{ fontWeight: '700', color: theme.text }}>
+                  {detail.paid
+                    ? '💳 Payé · Confirmé'
+                    : detail.guestConfirmed
+                      ? '✔️ Confirmé (sans paiement)'
+                      : '🟠 En attente — non payé, non confirmé'}
+                </Text>
+                {!detail.paid && !detail.guestConfirmed && (
+                  <TouchableOpacity
+                    style={[styles.detailBtn, { backgroundColor: colors.terracotta }]}
+                    onPress={() => Alert.alert(
+                      'Confirmer sans paiement',
+                      "Confirmer la venue de cet ami SANS qu'il ait payé ? (sous ta responsabilité)",
+                      [
+                        { text: i18n.t('cancel') ?? 'Annuler', style: 'cancel' },
+                        { text: 'Confirmer', onPress: confirmWithoutPayment },
+                      ],
+                    )}
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />
+                    <Text style={styles.detailBtnText}>Confirmer sans paiement</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
             <View style={styles.detailRow}>
               <Ionicons name={tab === 'beach' ? 'umbrella-outline' : 'restaurant-outline'} size={18} color={theme.textSecondary} />
               <Text style={[styles.detailText, { color: theme.text }]}>{detail.locationLabel}</Text>
@@ -668,6 +750,16 @@ export default function ReservationsScreen() {
                 {detail.timeSlot ? ` — ${detail.timeSlot === 'lunch' ? i18n.t('mealLunch') : i18n.t('mealDinner')}` : ''}
               </Text>
             </View>
+
+            {tab === 'beach' && detail.status !== 'cancelled' && detail.status !== 'completed' && detail.status !== 'no_show' && (
+              <TouchableOpacity
+                style={[styles.detailBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.cardBorder, marginTop: 4 }]}
+                onPress={() => { const id = detail.id; setDetail(null); router.push({ pathname: '/(tabs)/beach', params: { modify: id } }); }}
+              >
+                <Ionicons name="swap-horizontal-outline" size={18} color={theme.text} />
+                <Text style={[styles.detailBtnText, { color: theme.text }]}>Changer de transat / jour</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Restaurant : heure et date modifiables directement */}
             {tab === 'restaurant' && (
@@ -708,18 +800,51 @@ export default function ReservationsScreen() {
                 </Text>
               </View>
             )}
-            {detail.guestPhone && (
-              <TouchableOpacity style={styles.detailRow} onPress={() => callPhone(detail.guestPhone!)}>
-                <Ionicons name="call-outline" size={18} color={colors.sage} />
-                <Text style={[styles.detailText, { color: colors.sage, fontWeight: '600' }]}>{detail.guestPhone}</Text>
-              </TouchableOpacity>
-            )}
-            {detail.guestEmail && (
+            {/* Coordonnées client — éditables (nom, téléphone, email) */}
+            <View style={styles.noteBlock}>
               <View style={styles.detailRow}>
-                <Ionicons name="mail-outline" size={18} color={theme.textSecondary} />
-                <Text style={[styles.detailText, { color: theme.text }]}>{detail.guestEmail}</Text>
+                <Ionicons name="person-outline" size={18} color={theme.textSecondary} />
+                <Text style={[styles.detailText, { color: theme.textSecondary, fontSize: 13, fontWeight: '700' }]}>
+                  Coordonnées client (nom, téléphone, email)
+                </Text>
               </View>
-            )}
+              <TextInput
+                style={[styles.noteInput, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder, minHeight: 40 }]}
+                value={nameEdit} onChangeText={setNameEdit}
+                placeholder="Nom du client" placeholderTextColor={theme.textSecondary}
+              />
+              <View style={[styles.detailRow, { marginTop: 6 }]}>
+                <TextInput
+                  style={[styles.editInput, { flex: 1, color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+                  value={phoneEdit} onChangeText={setPhoneEdit}
+                  placeholder="Téléphone" placeholderTextColor={theme.textSecondary}
+                  keyboardType="phone-pad"
+                />
+                {!!phoneEdit.trim() && (
+                  <TouchableOpacity onPress={() => callPhone(phoneEdit.trim())} style={[styles.smallSave, { backgroundColor: colors.sage }]}>
+                    <Ionicons name="call-outline" size={16} color={colors.white} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TextInput
+                style={[styles.noteInput, { color: theme.text, backgroundColor: theme.card, borderColor: theme.cardBorder, minHeight: 40, marginTop: 6 }]}
+                value={emailEdit} onChangeText={setEmailEdit}
+                placeholder="Email" placeholderTextColor={theme.textSecondary}
+                keyboardType="email-address" autoCapitalize="none"
+              />
+              {(nameEdit.trim() !== (detail.guestName ?? '').trim() ||
+                phoneEdit.trim() !== (detail.guestPhone ?? '').trim() ||
+                emailEdit.trim() !== (detail.guestEmail ?? '').trim()) && (
+                <TouchableOpacity
+                  style={[styles.detailBtn, { backgroundColor: colors.sage, marginTop: 8 }]}
+                  onPress={saveContact}
+                  disabled={savingContact}
+                >
+                  <Ionicons name="save-outline" size={18} color={colors.white} />
+                  <Text style={styles.detailBtnText}>{savingContact ? 'Enregistrement…' : 'Enregistrer les coordonnées'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* Tables (restaurant) — assignables sur toute résa, client comprise */}
             {tab === 'restaurant' && (

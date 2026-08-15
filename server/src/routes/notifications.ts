@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 import { sendPushToTokens, sendPushToUser, sendPushToUsers, sendPushToAll } from '../lib/push';
-import { sendWhatsAppConfirmation, sendWhatsAppAdminNotification } from '../lib/whatsapp';
+import { sendWhatsAppConfirmation, sendWhatsAppAdminNotification, sendWhatsAppGuestPayment } from '../lib/whatsapp';
 import { sendReminders } from '../cron/reminders';
 
 const router = Router();
@@ -20,7 +20,7 @@ async function sendConfirmationEmail(
   const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
   const { data: resa } = await supabase
     .from(table)
-    .select('date, time, time_slot, guest_count, guest_email, special_requests, qr_code')
+    .select('date, time, time_slot, guest_count, guest_email, guest_name, special_requests, qr_code, guest_payment_requested, guest_payment_token, total_price')
     .eq('id', reservationId)
     .single();
 
@@ -57,6 +57,37 @@ async function sendConfirmationEmail(
     : '';
   const service = resa?.time
     ?? (resa?.time_slot === 'dinner' ? 'Dîner' : resa?.time_slot === 'lunch' ? 'Déjeuner' : '');
+
+  // Variante "pour un ami" avec paiement : email de DEMANDE DE PAIEMENT (payer = confirmer).
+  if ((resa as any)?.guest_payment_requested && (resa as any)?.guest_payment_token) {
+    const APP_URL = process.env.PUBLIC_WEB_URL ?? 'https://laplagetournesols.com';
+    const payUrl = `${APP_URL}/pay/${(resa as any).guest_payment_token}`;
+    const firstName = String((resa as any)?.guest_name ?? '').trim().split(/\s+/)[0] || '';
+    const amount = Number((resa as any)?.total_price) || 0;
+    try {
+      await new Resend(process.env.RESEND_API_KEY).emails.send({
+        from: fromEmail,
+        to,
+        subject: 'Confirmez votre place — La Plage Tournesol',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color:#3D434F;">La Plage Tournesol ☀️</h2>
+            <p>Bonjour ${firstName},</p>
+            <p>Une place vous a été réservée à La Plage Tournesol${formattedDate ? ` pour le <strong>${formattedDate}</strong>` : ''}.</p>
+            <p>Pour <strong>confirmer votre venue</strong>, réglez votre place${amount ? ` (<strong>${amount}€</strong>)` : ''} en ligne :</p>
+            <div style="text-align:center;margin:26px 0;">
+              <a href="${payUrl}" style="background:#3D434F;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;display:inline-block;">Payer &amp; confirmer</a>
+            </div>
+            <p style="color:#888;font-size:13px;">Ou copiez ce lien : ${payUrl}</p>
+            <p style="color:#888;font-size:12px;">La Plage Tournesol</p>
+          </div>
+        `,
+      });
+    } catch (err) {
+      console.error('Erreur envoi email paiement invité:', err);
+    }
+    return;
+  }
 
   try {
     await new Resend(process.env.RESEND_API_KEY).emails.send({
@@ -96,7 +127,7 @@ async function sendWhatsAppToUser(
   const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
   const { data: reservation } = await supabase
     .from(table)
-    .select('guest_name, guest_phone')
+    .select('guest_name, guest_phone, guest_payment_requested, guest_payment_token, date')
     .eq('id', reservationId)
     .single();
 
@@ -119,6 +150,22 @@ async function sendWhatsAppToUser(
   }
 
   if (!toPhone) return;
+
+  // Variante "pour un ami" avec paiement : template avec bouton de paiement.
+  if ((reservation as any)?.guest_payment_requested && (reservation as any)?.guest_payment_token) {
+    const dateLabel = (reservation as any)?.date
+      ? new Date(`${(reservation as any).date}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+      : '';
+    const r = await sendWhatsAppGuestPayment({
+      toPhoneE164: toPhone,
+      firstName,
+      bookerName: 'La Plage Tournesol',
+      dateLabel,
+      token: String((reservation as any).guest_payment_token),
+    });
+    if (!r.ok) console.error('Erreur WhatsApp paiement invité:', r.error);
+    return;
+  }
 
   const result = await sendWhatsAppConfirmation({
     toPhoneE164: toPhone,

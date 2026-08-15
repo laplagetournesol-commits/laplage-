@@ -1,6 +1,60 @@
+import { Resend } from 'resend';
 import { supabase } from '../lib/supabase';
 import { sendPushToUser } from '../lib/push';
-import { sendWhatsAppReminder } from '../lib/whatsapp';
+import { sendWhatsAppReminder, sendWhatsAppGuestPayment } from '../lib/whatsapp';
+
+/**
+ * Rappel le MATIN MÊME pour les résas "pour un ami" avec paiement demandé,
+ * toujours NON PAYÉES et NON CONFIRMÉES : on renvoie le lien de paiement
+ * (WhatsApp + email). Anti-doublon via sent_reminders ('guest_pay_reminder').
+ */
+export async function sendGuestPaymentReminders(): Promise<number> {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  const todayStr = now.toISOString().split('T')[0];
+  const APP_URL = process.env.PUBLIC_WEB_URL ?? 'https://laplagetournesols.com';
+  let count = 0;
+
+  for (const type of ['beach', 'restaurant'] as const) {
+    const table = type === 'beach' ? 'beach_reservations' : 'restaurant_reservations';
+    const { data } = await supabase
+      .from(table)
+      .select('id, date, guest_name, guest_email, guest_phone, guest_payment_token')
+      .eq('date', todayStr)
+      .eq('guest_payment_requested', true)
+      .eq('deposit_paid', false)
+      .eq('guest_confirmed', false);
+
+    for (const r of (data ?? []) as any[]) {
+      if (!r.guest_payment_token) continue;
+      if (await alreadySent(r.id, 'guest_pay_reminder')) continue;
+      const payUrl = `${APP_URL}/pay/${r.guest_payment_token}`;
+      const firstName = String(r.guest_name ?? '').trim().split(/\s+/)[0] || '';
+      const dateLabel = new Date(`${r.date}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+      if (r.guest_phone) {
+        await sendWhatsAppGuestPayment({ toPhoneE164: r.guest_phone, firstName, bookerName: 'La Plage Tournesol', dateLabel, token: String(r.guest_payment_token) }).catch(() => {});
+      }
+      if (r.guest_email && process.env.RESEND_API_KEY) {
+        try {
+          await new Resend(process.env.RESEND_API_KEY).emails.send({
+            from: process.env.RESEND_FROM_EMAIL ?? 'reservations@laplage-tournesol.com',
+            to: r.guest_email,
+            subject: "C'est aujourd'hui ! Confirmez votre place — La Plage Tournesol",
+            html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+              <h2 style="color:#3D434F;">C'est aujourd'hui ☀️</h2>
+              <p>Bonjour ${firstName},</p>
+              <p>Votre place à La Plage Tournesol vous attend. Pour <strong>confirmer votre venue</strong>, réglez-la en ligne :</p>
+              <div style="text-align:center;margin:24px 0;"><a href="${payUrl}" style="background:#3D434F;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;display:inline-block;">Payer &amp; confirmer</a></div>
+              <p style="color:#888;font-size:13px;">Ou copiez ce lien : ${payUrl}</p></div>`,
+          });
+        } catch (e) { console.error('[GuestPayReminder email]', e); }
+      }
+      await markSent(r.id, 'guest_pay_reminder');
+      count++;
+    }
+  }
+  return count;
+}
 
 async function sendReminderWhatsApp(
   userId: string,
@@ -304,6 +358,17 @@ export function startRemindersCron() {
         console.log('[Cron] Rappels J-1 envoyés:', result);
       } catch (err) {
         console.error('[Cron] Erreur rappels J-1:', err);
+      }
+    }
+
+    // Rappel "paiement du jour" (résa ami non payée) — le matin à 9h
+    if (hour === 9 && now.getMinutes() < 30) {
+      console.log('[Cron] Rappels paiement invité (matin)...');
+      try {
+        const n = await sendGuestPaymentReminders();
+        console.log(`[Cron] Rappels paiement invité envoyés: ${n}`);
+      } catch (err) {
+        console.error('[Cron] Erreur rappels paiement invité:', err);
       }
     }
 

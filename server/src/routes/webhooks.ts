@@ -36,6 +36,21 @@ router.post(
       }
 
       switch (event.type) {
+        // Résa "pour un ami" réglée via lien de paiement hébergé (Checkout).
+        // Payer = confirmer : on marque payé + confirmé.
+        case 'checkout.session.completed': {
+          const session = event.data.object as any;
+          const { table, reservationId, type } = session.metadata ?? {};
+          if (table && reservationId) {
+            await supabase.from(table).update({ deposit_paid: true, guest_confirmed: true, status: 'confirmed' }).eq('id', reservationId);
+            if (type === 'beach') {
+              await supabase.from('beach_reservation_sunbeds').update({ status: 'confirmed' }).eq('reservation_id', reservationId);
+            }
+            console.log(`Résa "ami" payée + confirmée: ${reservationId}`);
+          }
+          break;
+        }
+
         case 'payment_intent.succeeded': {
           const paymentIntent = event.data.object;
           const { type, reservationId, table, userId } = paymentIntent.metadata;

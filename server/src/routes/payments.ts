@@ -123,6 +123,63 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
 });
 
 /**
+ * POST /api/payments/guest-checkout
+ * PUBLIC (pas d'auth) : la résa "pour un ami" est réglée par l'invité, qui n'a
+ * pas de compte. Le `token` (uuid non devinable) fait office de secret.
+ * Crée une session Stripe Checkout HÉBERGÉE et renvoie l'URL de paiement.
+ * Payer = confirmer (le webhook checkout.session.completed marque payé+confirmé).
+ */
+router.post('/guest-checkout', async (req, res) => {
+  try {
+    const { token } = req.body ?? {};
+    if (!token) { res.status(400).json({ error: 'token requis' }); return; }
+
+    const APP_URL = process.env.PUBLIC_WEB_URL ?? 'https://laplagetournesols.com';
+
+    // Retrouver la résa par token dans les 2 tables.
+    let table: 'beach_reservations' | 'restaurant_reservations' | null = null;
+    let reservation: any = null;
+    for (const t of ['beach_reservations', 'restaurant_reservations'] as const) {
+      const { data } = await supabase
+        .from(t)
+        .select('id, total_price, deposit_paid, guest_payment_requested')
+        .eq('guest_payment_token', token)
+        .maybeSingle();
+      if (data) { table = t; reservation = data; break; }
+    }
+
+    if (!table || !reservation) { res.status(404).json({ error: 'Réservation introuvable' }); return; }
+    if (!reservation.guest_payment_requested) { res.status(400).json({ error: 'Aucun paiement demandé' }); return; }
+    if (reservation.deposit_paid) { res.json({ status: 'paid' }); return; }
+
+    const amount = Number(reservation.total_price);
+    if (!amount || amount <= 0) { res.status(400).json({ error: 'Montant invalide' }); return; }
+
+    const type = table === 'beach_reservations' ? 'beach' : 'restaurant';
+    const session = await getStripe().checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: { name: `La Plage Tournesol — ${type === 'beach' ? 'Transat' : 'Restaurant'}` },
+          unit_amount: Math.round(amount * 100),
+        },
+        quantity: 1,
+      }],
+      success_url: `${APP_URL}/pay/${token}?status=success`,
+      cancel_url: `${APP_URL}/pay/${token}?status=cancel`,
+      metadata: { type, reservationId: reservation.id, table, token, guest: '1' },
+    });
+
+    await supabase.from(table).update({ guest_checkout_session_id: session.id }).eq('id', reservation.id);
+    res.json({ url: session.url });
+  } catch (err: any) {
+    console.error('Erreur guest-checkout:', err);
+    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
+  }
+});
+
+/**
  * POST /api/payments/cancel-hold
  * Annule la pré-autorisation Stripe (restaurant check-in)
  */

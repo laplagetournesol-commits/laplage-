@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,8 +49,21 @@ export default function AdminBookingScreen() {
   // Plage : sélection multiple de transats
   const [selectedSunbedIds, setSelectedSunbedIds] = useState<Set<string>>(new Set());
 
+  // Résa "pour un ami" : demander le paiement (lien Stripe) — plage uniquement.
+  const [requestPayment, setRequestPayment] = useState(false);
+  const [payAmount, setPayAmount] = useState('');
+
   // Beach: réutilise le même hook + carte que les clients
   const { sunbeds, loading: beachLoading } = useSunbeds(date);
+
+  // Prix suggéré = somme des base_price des transats sélectionnés (éditable).
+  const suggestedPrice = useMemo(() => {
+    if (type !== 'beach') return 0;
+    return [...selectedSunbedIds].reduce((sum, id) => {
+      const sb = sunbeds.find((s: any) => s.id === id);
+      return sum + (sb?.zone?.base_price ?? 0);
+    }, 0);
+  }, [selectedSunbedIds, sunbeds, type]);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -145,6 +159,12 @@ export default function AdminBookingScreen() {
       return;
     }
 
+    const amountNum = type === 'beach' && requestPayment ? (parseFloat(payAmount.replace(',', '.')) || 0) : 0;
+    if (type === 'beach' && requestPayment && amountNum <= 0) {
+      Alert.alert('Montant requis', "Indique le montant à payer par l'ami (€).");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -170,9 +190,11 @@ export default function AdminBookingScreen() {
             secondary_sunbed_id: null,
             date,
             status: 'confirmed',
-            total_price: 0,
-            deposit_amount: 0,
-            deposit_paid: true,
+            total_price: amountNum,
+            deposit_amount: amountNum,
+            deposit_paid: !requestPayment,
+            guest_payment_requested: requestPayment,
+            guest_confirmed: !requestPayment,
             guest_count: guestCount,
             special_requests: 'Réservation admin',
             ...guestFields,
@@ -353,6 +375,42 @@ export default function AdminBookingScreen() {
           onChangeText={setNotes}
           multiline
         />
+
+        {/* Demander le paiement à l'ami (plage) */}
+        {type === 'beach' && (
+          <View style={{ marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.cardBorder, gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={{ color: theme.text, fontWeight: '700' }}>Demander le paiement à l'ami</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>
+                  Envoie un lien de paiement (email + WhatsApp). Payer = confirmer.
+                </Text>
+              </View>
+              <Switch
+                value={requestPayment}
+                onValueChange={(v) => { setRequestPayment(v); if (v && !payAmount) setPayAmount(suggestedPrice ? String(suggestedPrice) : ''); }}
+                trackColor={{ true: colors.sage, false: 'rgba(120,120,120,0.4)' }}
+              />
+            </View>
+            {requestPayment && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1, color: theme.text, backgroundColor: theme.background, borderColor: theme.cardBorder }]}
+                  placeholder="Montant à payer (€)"
+                  placeholderTextColor={theme.textSecondary}
+                  value={payAmount}
+                  onChangeText={setPayAmount}
+                  keyboardType="decimal-pad"
+                />
+                {suggestedPrice > 0 && (
+                  <TouchableOpacity onPress={() => setPayAmount(String(suggestedPrice))}>
+                    <Text style={{ color: colors.sage, fontSize: 12, fontWeight: '700' }}>Suggéré : {suggestedPrice}€</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Date */}
         <DateSelector selectedDate={date} onSelect={setDate} />

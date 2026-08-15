@@ -34,7 +34,7 @@ export default function BeachScreen() {
   const { sunbeds, zones, loading, availableCount, totalCount } = useSunbeds(booking.date);
   const { addons: allAddons } = useAddons(booking.date);
   const hasBedSelected = booking.selectedSunbeds.some((sb) => sb.is_double);
-  // L'add-on "Cava + plateau de fruits" est réservé aux Beds
+  // L'add-on "Bouteille de cava" est réservé aux Beds
   const addons = hasBedSelected
     ? allAddons
     : allAddons.filter((a) => !/cava/i.test(a.name));

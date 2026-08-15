@@ -154,6 +154,35 @@ export async function sendWhatsAppAdminNotification(params: {
   );
 }
 
+/**
+ * WhatsApp "réserve pour un ami" avec lien de paiement.
+ * Template `guest_payment_tournesol` (TWILIO_TEMPLATE_SID_GUEST_PAYMENT) :
+ *   {{1}} = prénom de l'invité
+ *   {{2}} = qui a réservé (ex: "La Plage Tournesol")
+ *   {{3}} = date (ex: "samedi 16 août")
+ *   {{4}} = token de paiement (suffixe de l'URL du bouton)
+ */
+export async function sendWhatsAppGuestPayment(params: {
+  toPhoneE164: string;
+  firstName: string | null;
+  bookerName: string;
+  dateLabel: string;
+  token: string;
+}) {
+  const sid = process.env.TWILIO_TEMPLATE_SID_GUEST_PAYMENT;
+  if (!sid) return { ok: false as const, error: 'TWILIO_TEMPLATE_SID_GUEST_PAYMENT absent' };
+  return sendWhatsAppTemplate(
+    params.toPhoneE164,
+    {
+      '1': params.firstName?.trim() || 'client',
+      '2': params.bookerName,
+      '3': params.dateLabel,
+      '4': params.token,
+    },
+    sid,
+  );
+}
+
 const reminderTypeLabels: Record<'beach' | 'restaurant' | 'event', string> = {
   beach: 'Plage',
   restaurant: 'Restaurant',
