@@ -20,7 +20,7 @@ export function useRestaurantBooking() {
   const [state, setState] = useState<BookingState>({
     step: 'select',
     date: getDefaultDate(),
-    time: '12:00',
+    time: '12:40',
     zone: null,
     guestCount: 2,
     specialRequests: '',
@@ -121,6 +121,43 @@ export function useRestaurantBooking() {
         }
       }
 
+      // Midi le jour même : une fois le service commencé, on bloque (soir non concerné).
+      // Heure de fermeture réglable en base (same_day_service_cutoff.lunch, défaut 12:00).
+      if (parseInt(state.time.split(':')[0], 10) < 18) {
+        const { data: cutoffSetting } = await supabase
+          .from('restaurant_settings').select('value').eq('key', 'same_day_service_cutoff').maybeSingle();
+        const lunchCut = ((cutoffSetting?.value as { lunch?: string } | null)?.lunch) || '12:00';
+        const [ch, cm] = lunchCut.split(':').map(Number);
+        const madridNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+        const madridToday = `${madridNow.getFullYear()}-${String(madridNow.getMonth() + 1).padStart(2, '0')}-${String(madridNow.getDate()).padStart(2, '0')}`;
+        const nowMin = madridNow.getHours() * 60 + madridNow.getMinutes();
+        if (state.date === madridToday && nowMin >= ch * 60 + cm) {
+          throw new Error(i18n.t('lunchClosedToday'));
+        }
+      }
+
+      // Quota par créneau horaire (lissage des arrivées) — réglage slot_quotas en base
+      // { "12:40": 20, "13:20": 30, ... } : max de couverts pour ce créneau précis.
+      const { data: quotaSetting } = await supabase
+        .from('restaurant_settings')
+        .select('value')
+        .eq('key', 'slot_quotas')
+        .maybeSingle();
+      const quotas = (quotaSetting?.value ?? {}) as Record<string, number>;
+      const slotQuota = quotas[state.time];
+      if (typeof slotQuota === 'number' && slotQuota > 0) {
+        const { data: slotRes } = await supabase
+          .from('restaurant_reservations')
+          .select('guest_count')
+          .eq('date', state.date)
+          .eq('time', state.time)
+          .in('status', ['pending', 'confirmed', 'checked_in']);
+        const slotTotal = (slotRes ?? []).reduce((sum: number, r: { guest_count: number }) => sum + (r.guest_count ?? 0), 0);
+        if (slotTotal + state.guestCount > slotQuota) {
+          throw new Error(i18n.t('slotFull', { time: state.time.replace(':', 'h') }));
+        }
+      }
+
       // Vérifier s'il existe déjà une réservation pending pour cette zone/date/créneau
       const { data: existingRes } = await supabase
         .from('restaurant_reservations')
@@ -172,7 +209,7 @@ export function useRestaurantBooking() {
     setState({
       step: 'select',
       date: getDefaultDate(),
-      time: '12:00',
+      time: '12:40',
       zone: null,
       guestCount: 2,
       specialRequests: '',
