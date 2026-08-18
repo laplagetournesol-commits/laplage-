@@ -36,7 +36,7 @@ const USER = { Id: 18, Name: 'TOURNESOLS-APP' }; // utilisateur dédié app
 const SALECENTER_PLAYA = { Id: 4, Name: 'PLAYA' };
 const HAMACA = { ProductId: 216, SaleFormatId: 226, Name: '1 HAMACA', FamilyId: 24, FamilyName: 'HAMACAS' };
 const VAT = { VatId: 3, VatRate: 0.1, SurchargeRate: 0.014 }; // Reducido 10%
-const PAYMENT_METHOD = { Id: 2, Name: 'TARJETA' }; // Stripe = carte
+const PAYMENT_METHOD = { Id: 4, Name: 'TARJETA APP' }; // forma de pago dédiée app/Stripe (Agora Id 4) — séparée de TARJETA physique (Id 2)
 const SERIE_SALE = 'W';
 const SERIE_REFUND = 'WD';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'; // Cloudflare bloque les UA non-navigateur
