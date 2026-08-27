@@ -268,7 +268,56 @@ function writeGoogleVerification() {
   console.log(`[post-build] ${name} (Google Search Console) écrit`);
 }
 
+function writePayPage() {
+  // Page de paiement statique dédiée (résa "pour un ami"). Contourne le routeur
+  // Expo (les routes dynamiques /pay/<token> ne se résolvent pas en accès direct
+  // sur l'export statique -> "Unmatched Route"). Ici : HTML pur qui lit le token,
+  // crée la session Stripe via le backend et redirige. Vercel réécrit /pay/* ici.
+  const API = 'https://laplage-tournesols.onrender.com';
+  const html = [
+    '<!doctype html><html lang="fr"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<title>Paiement - La Plage Tournesol</title>',
+    '<style>',
+    'html,body{margin:0;height:100%}',
+    'body{background:#F4D773;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:20px}',
+    '.card{background:#fff;border-radius:20px;max-width:420px;width:100%;padding:36px 24px;text-align:center;box-sizing:border-box}',
+    '.logo{font-size:44px}.brand{font-size:20px;font-weight:800;color:#3D434F;margin:6px 0 0}',
+    '.msg{font-size:15px;color:#5b6270;margin:18px 0 0;line-height:1.5}',
+    '.spin{margin:22px auto 0;width:34px;height:34px;border:4px solid #eee;border-top-color:#3D434F;border-radius:50%;animation:s 1s linear infinite}',
+    '@keyframes s{to{transform:rotate(360deg)}}',
+    '.btn{display:none;margin:22px auto 0;background:#3D434F;color:#fff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;border:0;font-size:16px;cursor:pointer}',
+    '</style></head><body><div class="card">',
+    '<div class="logo">🌻</div><div class="brand">La Plage Tournesol</div>',
+    '<div class="msg" id="msg">Redirection vers le paiement s&eacute;curis&eacute;&hellip;</div>',
+    '<div class="spin" id="spin"></div>',
+    '<button class="btn" id="retry">Payer &amp; confirmer</button>',
+    '</div><script>',
+    '(function(){',
+    'var API="' + API + '";',
+    'var msg=document.getElementById("msg"),spin=document.getElementById("spin"),retry=document.getElementById("retry");',
+    'function show(t,hideSpin){msg.innerHTML=t;if(hideSpin){spin.style.display="none";}}',
+    'var m=location.pathname.match(/\\/pay\\/([^\\/?#]+)/);var token=m?m[1]:null;',
+    'var q=new URLSearchParams(location.search);',
+    'if(q.get("status")==="success"){show("\\u2705 Paiement confirm\\u00e9. Ta place est r\\u00e9serv\\u00e9e et ta venue confirm\\u00e9e. \\u00c0 tr\\u00e8s vite \\u2600\\ufe0f",true);return;}',
+    'if(!token){show("Lien invalide.",true);return;}',
+    'function go(){show("Redirection vers le paiement s\\u00e9curis\\u00e9\\u2026",false);spin.style.display="block";retry.style.display="none";',
+    'fetch(API+"/api/payments/guest-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token})})',
+    '.then(function(r){return r.json();}).then(function(j){',
+    'if(j&&j.status==="paid"){show("\\u2705 D\\u00e9j\\u00e0 pay\\u00e9 \\u2014 ta place est confirm\\u00e9e. \\u00c0 tr\\u00e8s vite \\u2600\\ufe0f",true);return;}',
+    'if(j&&j.url){location.href=j.url;return;}',
+    'show("Lien invalide ou expir\\u00e9.",true);retry.style.display="inline-block";})',
+    '.catch(function(){show("Une erreur est survenue. R\\u00e9essaie dans un instant.",true);retry.style.display="inline-block";});}',
+    'retry.onclick=go;go();',
+    '})();',
+    '</scr'+'ipt></body></html>',
+  ].join('');
+  fs.writeFileSync(path.join(DIST, 'pay.html'), html);
+  console.log('[post-build] pay.html (page de paiement statique) écrit');
+}
+
 patchBundles();
 writeGoogleVerification();
+writePayPage();
 require('./seo-pages')();
 console.log('[post-build] done');
