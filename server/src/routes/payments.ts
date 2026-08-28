@@ -169,6 +169,10 @@ router.post('/guest-checkout', async (req, res) => {
       success_url: `${APP_URL}/pay/${token}?status=success`,
       cancel_url: `${APP_URL}/pay/${token}?status=cancel`,
       metadata: { type, reservationId: reservation.id, table, token, guest: '1' },
+      // Propage les métadonnées au PaymentIntent : sinon le webhook
+      // payment_intent.succeeded (qui déclare la vente en caisse Agora série W)
+      // ne reçoit rien pour les paiements par lien. Indispensable pour la caisse.
+      payment_intent_data: { metadata: { type, reservationId: reservation.id, table, guest: '1' } },
     });
 
     await supabase.from(table).update({ guest_checkout_session_id: session.id }).eq('id', reservation.id);
