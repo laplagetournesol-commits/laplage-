@@ -1,5 +1,6 @@
 {
   "outputDirectory": "dist",
+  "git": { "deploymentEnabled": false },
   "rewrites": [
     { "source": "/pay/(.*)", "destination": "/pay.html" },
     { "source": "/((?!_expo|assets|favicon\\.ico|og-image\\.jpg|privacy\\.html|terms\\.html|support\\.html|pay\\.html|robots\\.txt|sitemap\\.xml|google[a-z0-9]+\\.html|es(?:/|$)|en(?:/|$)|fr(?:/|$)).*)", "destination": "/index.html" }
