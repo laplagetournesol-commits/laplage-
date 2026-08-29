@@ -12,6 +12,7 @@ export function useEvents(category?: EventCategory | 'all') {
       .from('events')
       .select('*')
       .eq('is_published', true)
+      .neq('is_private', true)   // les événements privés (équipe) n'apparaissent pas sur le feed public
       .gte('date', new Date().toISOString().split('T')[0])
       .order('date', { ascending: true });
 

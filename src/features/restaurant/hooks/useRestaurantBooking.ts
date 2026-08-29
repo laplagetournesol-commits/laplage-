@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/shared/lib/supabase';
 import { apiCall } from '@/shared/lib/api';
 import { formatLocalDate } from '@/shared/lib/date';
+import { getDayPrivatization } from '@/shared/lib/privatization';
 import { i18n } from '@/shared/i18n';
 import type { RestaurantZone } from '@/shared/types';
 
@@ -133,6 +134,15 @@ export function useRestaurantBooking() {
         const nowMin = madridNow.getHours() * 60 + madridNow.getMinutes();
         if (state.date === madridToday && nowMin >= ch * 60 + cm) {
           throw new Error(i18n.t('lunchClosedToday'));
+        }
+      }
+
+      // Privatisation (événement privé confirmé) : bloque midi et/ou soir à cette date.
+      {
+        const p = await getDayPrivatization(state.date);
+        const isLunch = parseInt(state.time.split(':')[0], 10) < 18;
+        if ((isLunch && p.lunch) || (!isLunch && p.dinner)) {
+          throw new Error(i18n.t('slotPrivatized'));
         }
       }
 

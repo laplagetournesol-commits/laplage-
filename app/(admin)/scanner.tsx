@@ -103,7 +103,7 @@ export default function ScannerScreen() {
       })
     : '';
 
-  const canCheckIn = reservation && (
+  const canCheckIn = reservation && !reservation.blocked && (
     (reservation.type !== 'event' && reservation.status === 'confirmed') ||
     (reservation.type === 'event' && reservation.status === 'active')
   );
@@ -202,6 +202,25 @@ export default function ScannerScreen() {
               variant={statusLabels[reservation.status]?.variant ?? 'default'}
             />
           </View>
+
+          {/* Alerte : QR passé / déjà utilisé / autre jour */}
+          {reservation.warning && (
+            <View style={{
+              backgroundColor: (reservation.warningLevel === 'orange' ? '#F59E0B' : '#DC2626') + '1A',
+              borderWidth: 1.5,
+              borderColor: reservation.warningLevel === 'orange' ? '#F59E0B' : '#DC2626',
+              borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10,
+            }}>
+              <Ionicons
+                name={reservation.warningLevel === 'orange' ? 'alert-circle' : 'close-circle'}
+                size={26}
+                color={reservation.warningLevel === 'orange' ? '#F59E0B' : '#DC2626'}
+              />
+              <Text style={{ flex: 1, color: reservation.warningLevel === 'orange' ? '#B45309' : '#B91C1C', fontWeight: '800', fontSize: 15 }}>
+                {reservation.warning}
+              </Text>
+            </View>
+          )}
 
           {/* Client info */}
           <Card style={{ marginBottom: 12 }}>

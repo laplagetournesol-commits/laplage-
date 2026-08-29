@@ -69,6 +69,9 @@ interface FormData {
   secret_code: string;
   required_vip_level: string;
   required_tokens: string;
+  is_private: boolean;                          // masqué du feed public (équipe)
+  is_confirmed: boolean;                        // si true → bloque les résas selon la portée
+  privatize_scope: '' | 'day' | 'evening' | 'day_evening'; // ce qui est privatisé/bloqué
 }
 
 const emptyForm: FormData = {
@@ -88,6 +91,9 @@ const emptyForm: FormData = {
   secret_code: '',
   required_vip_level: '',
   required_tokens: '',
+  is_private: false,
+  is_confirmed: false,
+  privatize_scope: '',
 };
 
 export default function EventFormScreen() {
@@ -126,6 +132,9 @@ export default function EventFormScreen() {
           secret_code: e.secret_code ?? '',
           required_vip_level: e.required_vip_level ?? '',
           required_tokens: e.required_tokens?.toString() ?? '',
+          is_private: (e as any).is_private ?? false,
+          is_confirmed: (e as any).is_confirmed ?? false,
+          privatize_scope: (e as any).privatize_scope ?? '',
         });
         setTicketsSold(e.tickets_sold);
       }
@@ -173,6 +182,9 @@ export default function EventFormScreen() {
         secret_code: form.is_secret ? form.secret_code : null,
         required_vip_level: form.required_vip_level || null,
         required_tokens: form.required_tokens ? parseInt(form.required_tokens) : null,
+        is_private: form.is_private,
+        is_confirmed: form.is_confirmed,
+        privatize_scope: form.is_private ? (form.privatize_scope || null) : null,
       };
 
       if (isEditing) {
@@ -494,6 +506,47 @@ export default function EventFormScreen() {
               trackColor={{ true: colors.sage }}
             />
           </View>
+        </Card>
+
+        {/* Privé + privatisation (blocage des résas) */}
+        <Card style={styles.publishCard}>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={[styles.switchLabel, { color: theme.text }]}>Privé (équipe)</Text>
+              <Text style={[styles.switchSub, { color: theme.textSecondary }]}>N'apparaît pas sur le feed public</Text>
+            </View>
+            <Switch value={form.is_private} onValueChange={(val) => setField('is_private', val)} trackColor={{ true: colors.sage }} />
+          </View>
+
+          {form.is_private && (
+            <>
+              <Text style={[styles.switchSub, { color: theme.textSecondary, marginTop: 14, marginBottom: 6 }]}>Privatiser (bloque les réservations si confirmé) :</Text>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                {([['day', 'Journée'], ['evening', 'Soir'], ['day_evening', 'Journée + Soir']] as const).map(([val, label]) => {
+                  const active = form.privatize_scope === val;
+                  return (
+                    <TouchableOpacity
+                      key={val}
+                      onPress={() => setField('privatize_scope', active ? '' : val)}
+                      style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5, borderColor: active ? colors.brand : theme.cardBorder, backgroundColor: active ? colors.brand : 'transparent' }}
+                    >
+                      <Text style={{ color: active ? colors.white : theme.text, fontWeight: '700' }}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={[styles.switchRow, { marginTop: 16 }]}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={[styles.switchLabel, { color: theme.text }]}>Événement confirmé</Text>
+                  <Text style={[styles.switchSub, { color: theme.textSecondary }]}>
+                    {form.is_confirmed ? 'Réservations BLOQUÉES selon la portée' : 'Prévu — les réservations ne sont pas encore bloquées'}
+                  </Text>
+                </View>
+                <Switch value={form.is_confirmed} onValueChange={(val) => setField('is_confirmed', val)} trackColor={{ true: colors.accentRed }} />
+              </View>
+            </>
+          )}
         </Card>
 
         {/* Actions */}

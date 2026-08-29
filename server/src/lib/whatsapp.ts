@@ -183,6 +183,27 @@ export async function sendWhatsAppGuestPayment(params: {
   );
 }
 
+/**
+ * WhatsApp "réserve pour un ami" SANS paiement : demande de confirmation de venue.
+ * Template `guest_confirm_tournesol` (TWILIO_TEMPLATE_SID_GUEST_CONFIRM) :
+ *   {{1}} = prénom invité · {{2}} = qui a réservé · {{3}} = date · {{4}} = token (URL /confirm/{{4}})
+ */
+export async function sendWhatsAppGuestConfirm(params: {
+  toPhoneE164: string;
+  firstName: string | null;
+  bookerName: string;
+  dateLabel: string;
+  token: string;
+}) {
+  const sid = process.env.TWILIO_TEMPLATE_SID_GUEST_CONFIRM;
+  if (!sid) return { ok: false as const, error: 'TWILIO_TEMPLATE_SID_GUEST_CONFIRM absent' };
+  return sendWhatsAppTemplate(
+    params.toPhoneE164,
+    { '1': params.firstName?.trim() || 'client', '2': params.bookerName, '3': params.dateLabel, '4': params.token },
+    sid,
+  );
+}
+
 const reminderTypeLabels: Record<'beach' | 'restaurant' | 'event', string> = {
   beach: 'Plage',
   restaurant: 'Restaurant',

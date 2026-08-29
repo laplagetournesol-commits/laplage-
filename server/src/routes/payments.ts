@@ -184,6 +184,39 @@ router.post('/guest-checkout', async (req, res) => {
 });
 
 /**
+ * POST /api/payments/guest-confirm
+ * PUBLIC (pas d'auth) : l'invité confirme sa VENUE (résa "pour un ami" SANS paiement)
+ * en cliquant le lien. Le `token` (uuid) fait office de secret. Aucun paiement.
+ */
+router.post('/guest-confirm', async (req, res) => {
+  try {
+    const { token } = req.body ?? {};
+    if (!token) { res.status(400).json({ error: 'token requis' }); return; }
+
+    let table: 'beach_reservations' | 'restaurant_reservations' | null = null;
+    let reservation: any = null;
+    for (const t of ['beach_reservations', 'restaurant_reservations'] as const) {
+      const { data } = await supabase
+        .from(t)
+        .select('id, guest_confirmed, status')
+        .eq('guest_payment_token', token)
+        .maybeSingle();
+      if (data) { table = t; reservation = data; break; }
+    }
+
+    if (!table || !reservation) { res.status(404).json({ error: 'Réservation introuvable' }); return; }
+    if (reservation.status === 'cancelled') { res.json({ status: 'cancelled' }); return; }
+    if (reservation.guest_confirmed) { res.json({ status: 'already' }); return; }
+
+    await supabase.from(table).update({ guest_confirmed: true }).eq('id', reservation.id);
+    res.json({ status: 'confirmed' });
+  } catch (err: any) {
+    console.error('Erreur guest-confirm:', err);
+    res.status(500).json({ error: 'Erreur lors de la confirmation' });
+  }
+});
+
+/**
  * POST /api/payments/cancel-hold
  * Annule la pré-autorisation Stripe (restaurant check-in)
  */
@@ -432,7 +465,7 @@ router.post('/refund', requireAdmin, async (req: AuthenticatedRequest, res) => {
 });
 
 /**
- * POST /api/reservations/modify-beach
+ * POST /api/payments/reservations/modify-beach
  * Modifie une réservation Plage existante (date et/ou transats).
  * - Vérifie la règle 24h
  * - Vérifie que les nouveaux transats sont libres

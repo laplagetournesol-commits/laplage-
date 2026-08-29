@@ -194,7 +194,7 @@ export default function AdminBookingScreen() {
             deposit_amount: amountNum,
             deposit_paid: !requestPayment,
             guest_payment_requested: requestPayment,
-            guest_confirmed: !requestPayment,
+            guest_confirmed: false, // l'ami confirme via le lien (paiement OU bouton "je confirme")
             guest_count: guestCount,
             special_requests: 'Réservation admin',
             ...guestFields,

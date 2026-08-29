@@ -26,6 +26,31 @@ interface ScannedReservation {
   // Event only
   ticketType?: string;
   eventTitle?: string;
+  // Contrôle de validité au scan (QR passé / déjà utilisé / autre jour)
+  blocked?: boolean;
+  warning?: string | null;
+  warningLevel?: 'red' | 'orange' | null;
+}
+
+/** Date du jour en heure de Madrid (YYYY-MM-DD). */
+function madridToday(): string {
+  const n = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
+/** Vérifie si un QR scanné est valide POUR AUJOURD'HUI. Bloque les QR passés / déjà utilisés / d'un autre jour. */
+function computeValidity(date: string, status: string): { blocked: boolean; warning: string | null; warningLevel: 'red' | 'orange' | null } {
+  const today = madridToday();
+  const fmt = (d: string) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); } catch { return d; } };
+  const ok = { blocked: false, warning: null, warningLevel: null as null };
+
+  if (status === 'cancelled') return { blocked: true, warning: 'Réservation annulée', warningLevel: 'red' };
+  if (status === 'no_show') return { blocked: true, warning: 'Réservation non honorée (no-show)', warningLevel: 'red' };
+  if (status === 'completed' || status === 'used') return { blocked: true, warning: 'Réservation terminée — ce QR a déjà été utilisé', warningLevel: 'red' };
+  if (date && date < today) return { blocked: true, warning: `Réservation passée (${fmt(date)}) — QR expiré`, warningLevel: 'red' };
+  if (date && date > today) return { blocked: true, warning: `Réservation pour le ${fmt(date)} — pas aujourd'hui`, warningLevel: 'orange' };
+  if (status === 'checked_in') return { blocked: true, warning: 'Déjà enregistré — check-in déjà effectué', warningLevel: 'orange' };
+  return ok;
 }
 
 export function useScanReservation() {
@@ -74,6 +99,7 @@ export function useScanReservation() {
           qrCode: beach.qr_code,
           status: beach.status,
           date: beach.date,
+          ...computeValidity(beach.date, beach.status),
           clientName: (beach as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (beach as any).profile?.email ?? '',
           clientVipLevel: (beach as any).profile?.vip_level ?? 'standard',
@@ -107,6 +133,7 @@ export function useScanReservation() {
           qrCode: resto.qr_code,
           status: resto.status,
           date: resto.date,
+          ...computeValidity(resto.date, resto.status),
           clientName: (resto as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (resto as any).profile?.email ?? '',
           clientVipLevel: (resto as any).profile?.vip_level ?? 'standard',
@@ -136,6 +163,7 @@ export function useScanReservation() {
           qrCode: ticket.qr_code,
           status: ticket.status,
           date: (ticket as any).event?.date ?? '',
+          ...computeValidity((ticket as any).event?.date ?? '', ticket.status),
           clientName: (ticket as any).profile?.full_name ?? 'Inconnu',
           clientEmail: (ticket as any).profile?.email ?? '',
           clientVipLevel: (ticket as any).profile?.vip_level ?? 'standard',
@@ -160,6 +188,8 @@ export function useScanReservation() {
 
   const checkIn = useCallback(async () => {
     if (!reservation) return;
+    // Sécurité : jamais de check-in sur un QR passé / déjà utilisé / d'un autre jour.
+    if (reservation.blocked) { setError(reservation.warning ?? 'Réservation non valide pour aujourd\'hui'); return; }
 
     try {
       if (reservation.type === 'beach') {

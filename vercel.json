@@ -3,7 +3,8 @@
   "git": { "deploymentEnabled": false },
   "rewrites": [
     { "source": "/pay/(.*)", "destination": "/pay.html" },
-    { "source": "/((?!_expo|assets|favicon\\.ico|og-image\\.jpg|privacy\\.html|terms\\.html|support\\.html|pay\\.html|robots\\.txt|sitemap\\.xml|google[a-z0-9]+\\.html|es(?:/|$)|en(?:/|$)|fr(?:/|$)).*)", "destination": "/index.html" }
+    { "source": "/confirm/(.*)", "destination": "/confirm.html" },
+    { "source": "/((?!_expo|assets|favicon\\.ico|og-image\\.jpg|privacy\\.html|terms\\.html|support\\.html|pay\\.html|confirm\\.html|robots\\.txt|sitemap\\.xml|google[a-z0-9]+\\.html|es(?:/|$)|en(?:/|$)|fr(?:/|$)).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
@@ -21,7 +22,7 @@
       ]
     },
     {
-      "source": "/(beach|order|social|restaurant|shop|profile|events|onboarding|menu|pay)(/.*)?",
+      "source": "/(beach|order|social|restaurant|shop|profile|events|onboarding|menu|pay|confirm)(/.*)?",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
         { "key": "CDN-Cache-Control", "value": "no-store" }

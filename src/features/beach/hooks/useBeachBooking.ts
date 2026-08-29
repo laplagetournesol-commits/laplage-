@@ -4,6 +4,7 @@ import { apiCall } from '@/shared/lib/api';
 import { i18n } from '@/shared/i18n';
 import { getSeasonalPrice, getSeasonalInclusions, zoneToPricingCategory, pricingCategoryLabel } from '@/shared/lib/seasonalPricing';
 import { formatLocalDate } from '@/shared/lib/date';
+import { getDayPrivatization } from '@/shared/lib/privatization';
 import type { Sunbed, BeachZone, Addon } from '@/shared/types';
 
 export type BookingStep = 'select' | 'addons' | 'confirm';
@@ -225,7 +226,7 @@ export function useBeachBooking() {
         diff: number;
         extraClientSecret: string | null;
         refundedAmount: number;
-      }>('/api/reservations/modify-beach', {
+      }>('/api/payments/reservations/modify-beach', {
         reservationId: modifyingReservationId,
         newDate: state.date,
         newSunbedIds: state.selectedSunbeds.map((sb) => sb.id),
@@ -257,6 +258,9 @@ export function useBeachBooking() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error(i18n.t('errorMustBeLoggedInBooking'));
+
+      // Privatisation (événement privé confirmé, portée journée) : plage bloquée ce jour.
+      if ((await getDayPrivatization(state.date)).beach) throw new Error(i18n.t('slotPrivatized'));
 
       const firstId = state.selectedSunbeds[0].id;
 

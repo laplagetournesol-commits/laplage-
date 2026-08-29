@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator
 import { useSunMode } from '@/shared/theme';
 import { colors } from '@/shared/theme/colors';
 import { supabase } from '@/shared/lib/supabase';
+import { getDayPrivatization } from '@/shared/lib/privatization';
 import { i18n } from '@/shared/i18n';
 
 interface TimeSelectorProps {
@@ -46,6 +47,8 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
   const [bookedByTime, setBookedByTime] = useState<Record<string, number>>({});
   // Heure de fermeture des résas du jour, par service (le service se ferme quand il démarre).
   const [cutoff, setCutoff] = useState<{ lunch: string; dinner: string }>({ lunch: '12:00', dinner: '19:00' });
+  // Privatisation (événement privé confirmé) : bloque midi et/ou soir à cette date.
+  const [priv, setPriv] = useState<{ lunch: boolean; dinner: boolean; title: string | null }>({ lunch: false, dinner: false, title: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,6 +91,7 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
         }
         setBookedByTime(map);
       });
+    getDayPrivatization(selectedDate).then((p) => { if (active) setPriv({ lunch: p.lunch, dinner: p.dinner, title: p.title }); });
     return () => { active = false; };
   }, [selectedDate]);
 
@@ -162,7 +166,8 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
           const isFull = typeof quota === 'number' && quota > 0 && (bookedByTime[time] ?? 0) >= quota;
           // Midi déjà commencé aujourd'hui → créneau du midi bloqué (soir non concerné).
           const isPast = hour < 18 && lunchStartedToday;
-          const isBlocked = isFull || isPast;
+          const isPriv = hour < 18 ? priv.lunch : priv.dinner; // service privatisé (événement privé confirmé)
+          const isBlocked = isFull || isPast || isPriv;
 
           return (
             <TouchableOpacity
@@ -194,7 +199,7 @@ export function TimeSelector({ selectedTime, selectedDate, onSelect }: TimeSelec
                   { color: isSelected ? 'rgba(255,255,255,0.7)' : theme.textSecondary },
                 ]}
               >
-                {isFull ? i18n.t('slotComplete') : isPast ? i18n.t('slotTooLate') : (isEvening ? i18n.t('dinner') : i18n.t('lunch'))}
+                {isFull ? i18n.t('slotComplete') : isPriv ? 'Privatisé' : isPast ? i18n.t('slotTooLate') : (isEvening ? i18n.t('dinner') : i18n.t('lunch'))}
               </Text>
             </TouchableOpacity>
           );
